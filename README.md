@@ -1,98 +1,88 @@
-# Kentucky Rook Card Game
+# Dunk — A trick-taking, rim-rattling card game
 
 python3 -m http.server 2500
 
-A web-based implementation of the classic Kentucky Rook card game, featuring modern UI design and interactive gameplay.
+## Game Overview
 
-## 🎮 Game Overview
+Dunk is a four-person, trick-taking card game inspired by Rook, specifically the variant known as Kentucky Rook. If you've never played Rook before, it's a little like Bridge-meets-Hearts. Dunk is played with a special card deck and involves bidding, power suits, and team play.
 
-Kentucky Rook is a trick-taking card game that combines elements of Bridge and Hearts. It's played with a special Rook deck (which can be simulated with a standard deck) and involves bidding, trump selection, and strategic play.
-
-## 🃏 Game Rules
+## Game Setup
 
 ### Equipment
-- **Rook Deck**: 57 cards (1-14 in four colors: Red, Yellow, Green, Black, plus the Rook Bird card)
-- **Alternative**: Use a standard 52-card deck + 1 Joker (Joker becomes the Rook Bird)
+- **Deck of cards**: 57 cards (1-14 in four colors: Gatorade orange, Mellow yellow, Bottled water blue, Baja blast green, plus the Dunk card)
 
 ### Objective
-Score the most points by winning tricks and meeting your bid. The game combines bidding strategy with careful card play.
+Score the most points by winning tricks and meeting your bid. First team to 500 wins.
 
 ### Number of Players
-- **4 players** (best with 2 teams of 2, sitting across from each other)
-- **3 players** (each playing individually)
+- **4 players** (2 teams of 2, sitting across from each other)
 
 ### Card Values
-- **High Trump**: Rook Bird (highest card in the game)
-- **Trump Suit**: 1 (Ace) is highest, then 14, 13, 12... down to 2
-- **Non-Trump Suits**: 1 (Ace) is highest, then 14, 13, 12... down to 2
-- **Rook Bird**: Always the highest card, regardless of trump
+- **Power Suit**: 1 is highest, then 14, 13, 12... down to 2
+- **Non-Trump Suits**: 1 is highest, then 14, 13, 12... down to 2
+- **Dunk Card**: Worth 10.5 in the power suit
 
-### Game Setup
+### Pre-Game Phases
 
-1. **Deal**: Each player receives 13 cards (in 4-player game) or 17 cards (in 3-player game)
-2. **Bidding**: Players bid on how many tricks they think they can win
-3. **Trump Selection**: Highest bidder chooses the trump suit
-4. **Rook Bird**: The Rook Bird card is always the highest card
+1. **Deal**: Each player receives 13 cards. The remaining 5 cards are added to the "kitty."
+2. **Bidding**: Players bid on how many points they think they can win
+3. **Power Suit Selection + Kitty**: Highest bidder chooses the power suit and looks through the kitty. They must return any 5 cards from their hand and/or the kitty back into the kitty.
 
 ### Bidding Phase
 
-1. Starting with the dealer's left, each player bids once
+1. Starting to the dealer's left, players take turns bidding, according to the following rules
 2. **Minimum bid**: 70 points
-3. **Bid increments**: Usually in multiples of 5 or 10
-4. **Passing**: Players can pass if they don't want to bid higher
-5. **Highest bidder**: Becomes the declarer and chooses trump
+3. **Bid increments**: Must be at least 5 points higher, but can be more
+4. **Bid maximium**: Highest bid is 200
+5. **Passing**: Players can pass if they don't want to bid higher
+6. **Bidding ends**: The bidding ends when someone bids 200 or when three of the four players have passed
+7. **Highest bidder**: Becomes the declarer and chooses the power suit and looks through the kitty
 
-### Trump Selection
+### Power suit Selection
 
-The declarer (highest bidder) must:
-1. Choose one of the four suits as trump
-2. The Rook Bird automatically becomes the highest trump
-3. Announce their bid amount to the table
+The highest bidder must:
+1. Choose one of the four suits as power suit
+2. The Dunk card automatically becomes 10.5 in the power suit
 
-### Playing the Game
+## Playing the Game
 
 #### Trick-Taking Rules
-1. **Lead**: Declarer leads the first trick
+1. **Lead**: Highest bidder leads the first trick
 2. **Follow Suit**: Players must follow the led suit if possible
-3. **Trump**: Players can trump if they can't follow suit
-4. **Winning**: Highest trump wins, or highest card of led suit if no trump
-5. **Rook Bird**: Always wins the trick
+3. **Power suit**: Players can trump if they can't follow suit
+4. **Taking the trick**: Highest trump wins, or highest card of led suit if no trump
+5. **Next trick**: The winner of the previous trick leads the next trick
 
 #### Scoring System
 
-**Positive Points:**
-- **High Trump (Rook Bird)**: 20 points
-- **Low Trump (2 of trump suit)**: 20 points
-- **Each trick won**: 10 points
-- **Total possible**: 180 points (20 + 20 + 14 tricks × 10)
-
-**Bid Bonus:**
-- **Making your bid**: +50 points
-- **Failing your bid**: -50 points
+**Points:**
+- **Dunk card**: 20 points
+- **All 1s**: 15 points
+- **All 14s and 10s**: 10 points
+- **All 5s**: 5 points
+- **Taking the final trick**: 20 points
+- **Total possible**: 200 points
 
 **Team Scoring (4-player):**
 - Add both partners' scores together
-- Team with highest total score wins
+- For scoring the team with the highest bidder, see below
+- For the other team, their final score is the total of both players' scores
+  
+**Making or failing the bid:**
+For the team with the highest bidder, the following end-of-round scoring rules apply:
+- **Making your bid**: Final score is the total of both teammates' scores
+- **Failing your bid**: You lose the number of points that you bid
+
+- Scores accumulate from round-to-round
 
 ### Winning Conditions
 
 **4-Player Game:**
 - First team to reach 500 points wins
 - If both teams reach 500 in same hand, highest score wins
+- If still tied, the winner of the most recent round wins
 
-**3-Player Game:**
-- First player to reach 500 points wins
-- If multiple players reach 500, highest score wins
-
-### Special Rules
-
-1. **Rook Bird**: Always the highest card, can be played at any time
-2. **Trump 1 (Ace)**: Second highest card when trump is called
-3. **Low Trump (2)**: Worth 20 points, but not automatically highest
-4. **Bidding Strategy**: Consider your hand strength and potential tricks
-5. **Team Communication**: Partners can signal through card play
-
-### Strategy Tips
+## Strategy Tips
 
 1. **Bidding**: Count your sure tricks and estimate potential ones
 2. **Trump Selection**: Choose the suit where you have the most high cards
@@ -100,24 +90,8 @@ The declarer (highest bidder) must:
 4. **Team Play**: Coordinate with your partner through card signals
 5. **Defense**: Try to prevent opponents from making their bid
 
-## 🚀 Getting Started
 
-### Prerequisites
-- Modern web browser (Chrome, Firefox, Safari, Edge)
-- No additional software required
-
-### Installation
-1. Clone or download this repository
-2. Open `index.html` in your web browser
-3. Start playing!
-
-### How to Play
-1. Click "Start Game" to begin
-2. Use WASD or Arrow keys to move your player
-3. Avoid enemies and collect power-ups
-4. Try to achieve the highest score possible
-
-## 🛠️ Technical Details
+## Technical Details
 
 ### File Structure
 ```
