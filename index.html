@@ -10,13 +10,114 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="container">
-    </div>
-    
-    <!-- Load JavaScript files in order -->
-    <script src="js/logic.js"></script>
-    <script src="js/gameplay.js"></script>
-    <script src="js/setup.js"></script>
-    <script src="js/main.js"></script>
+  <div id="container"> <!-- NEW -->
+
+    <section class="row modal-row">
+      <div class="modal get-started">
+        <h2>Welcome to Kentucky Rook!</h2>
+        <button>Start</button>
+        <p>Quick game</p>
+      </div>
+    </section>
+
+    <section class="row modal-row your-hand">
+      <div class="modal dealing">
+        <div class="your-hand-header-dealing">
+            <img src="images/squiggle.png" width="300">
+            <h2>Your hand</h2>
+            <img src="images/squiggle.png" width="300">
+        </div>
+        <h2>DEALING ...</h2>
+      </div>
+      <button class="inactive">Next ⮑</button>
+    </section>
+
+    <section class="row modal-row your-hand">
+      <div class="modal dealing">
+        <div class="your-hand-header-dealing">
+            <img src="images/squiggle.png" width="300">
+            <h2>Your hand</h2>
+            <img src="images/squiggle.png" width="300">
+        </div>
+        <div class="card-layout">
+            <div class="card orange">14</div>
+            <div class="card orange">4</div>
+            <div class="card orange">3</div>
+            <div class="card yellow">14</div>
+            <div class="card yellow">10</div>
+            <div class="card yellow">9</div>
+            <div class="card yellow">8</div>
+            <div class="card yellow">2</div>
+            <div class="card blue">14</div>
+            <div class="card dunk">D</div>
+            <div class="card blue">11</div>
+            <div class="card blue">9</div>
+            <div class="card green">14</div>
+        </div>
+      </div>
+      <button class="">Next ⮑</button>
+    </section>
+
+    <section class="row modal-row your-hand">
+      <div class="modal dealing">
+        <div class="your-hand-header">
+            <h2>Your hand</h2>
+            <div class="pill">Power suit</div>
+            <div class="power-suit-indicator orange"></div>
+            <div class="pill">Bid</div>
+            <div class="bid-indicator">KEV 150</div>
+            <img src="images/squiggle.png" width="300">
+        </div>
+        <div class="card-layout">
+            <div class="card orange">14</div>
+            <div class="card orange">4</div>
+            <div class="card orange">3</div>
+            <div class="card yellow">14</div>
+            <div class="card yellow">10</div>
+            <div class="card yellow">9</div>
+            <div class="card yellow">8</div>
+            <div class="card yellow">2</div>
+            <div class="card blue">14</div>
+            <div class="card dunk">D</div>
+            <div class="card blue">11</div>
+            <div class="card blue">9</div>
+            <div class="card green">14</div>
+        </div>
+      </div>
+      <button class="">Next ⮑</button>
+    </section>
+
+    <section class="row">
+      <div class="cols">
+        <div class="left">
+            <div class="score-hand">
+                <span>You + Patricia</span><span class="score">145</span>
+            </div>
+        </div>
+        <div class="middle">
+            <div class="modal play-area">
+                
+            </div>
+        </div>
+        <div class="right"></div>
+      </div>
+    </section>
+
+    <section class="row modal-row">
+      <div class="bballs">
+        <img src="images/bballs-bottom.png" >
+      </div>
+    </section>
+
+  </div> <!-- /#container -->
+  
+  <div class="info"><img src="images/info.png" height="30px" width="30px"></div>
+  
+  <!-- Load JavaScript files in order -->
+  <script src="js/logic.js"></script>
+  <script src="js/gameplay.js"></script>
+  <script src="js/setup.js"></script>
+  <script src="js/main.js"></script>
 </body>
+
 </html>

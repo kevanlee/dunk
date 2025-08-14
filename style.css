@@ -6,34 +6,208 @@
 }
 
 body {
-    font-family: 'Comic Neue', Tahoma, Geneva, Verdana, sans-serif;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    position: relative;
+  font-family: 'Comic Neue', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;      /* centers the container vertically */
+  justify-content: center;  /* centers the container horizontally */
+  padding: 20px;
+  position: relative;
 }
+
 
 body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 200px;
-    background: url('images/title.svg') no-repeat center top;
-    background-size: cover;
-    z-index: -1;
+  content: '';
+  position: fixed;
+  top: 40px;
+  left: 0;
+  width: 100%;
+  height: 25vw; /* scales height with viewport width */
+  min-height: 100px;
+  max-height: 300px;
+  background: url('images/title.svg') no-repeat center top;
+  background-size: contain;
+  z-index: -1;
 }
 
+
+/* =========== Typography and main elements =========== */
+
+h1, h2, h3, h4, h5, h6 { font-weight: normal; }
+
+h1 { font-size: 2.0rem; }
+h2 { font-size: 1.5rem; }
+
+p {}
+
+button {
+    background-color: black;
+    display: inline-block;
+    padding: 12px;
+    border-radius: 5px;
+    font-size: 1.3rem;
+    color: white;
+    text-decoration: none;
+    cursor:pointer;
+    font-family: 'Comic Neue', Tahoma, Geneva, Verdana, sans-serif;
+
+}
+
+button:hover {
+    opacity: 0.8; 
+    transition: 0.5s;
+}
+
+button.inactive { background-color: #C4C4C4; border: none; }
+
+.pill {
+    background-color: #F6F6F6;
+    border-radius: 5px;
+    border: none;
+    font-size: 0.8rem;
+    padding: 3px 10px;
+}
+
+/* =========== Layout =========== */
+/* your container */
 #container {
-    min-height: 100vh;
-    width: 100%;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;   /* stacks rows */
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  gap: 24px;
+}
+.row {
+  width: 100%;
+  display: flex;
+  justify-content: center;  /* centers content within each row */
+}
+
+/* row 1: the modal */
+.modal-row { /* optional row-specific tweaks */ }
+
+.modal {
+  width: min(90vw, 640px);
+  background: white;
+  border-radius: 5px;
+  border: 1px solid #C4C4C4;
+  padding: 35px;
+}
+
+/* row 2: responsive columns */
+.cols {
+  width: min(1100px, 100%);
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr; /* first column twice as wide */
+  gap: 16px;
+}
+
+
+/* =========== Cards =========== */
+
+.card {
+    height: 65px;
+    width: 50px;
+    border-radius: 5px;
+    font-size: 1.3rem;
+    text-align: center; 
+    padding-top: 10px;
+}
+
+.orange { background-color: #FFC09F}
+.yellow { background-color: #FFEE93}
+.blue { background-color: #A0CED9}
+.green { background-color: #ADF7B6}
+.dunk { background-color: black; color: white; }
+
+/* =========== Get started =========== */
+
+.get-started {
+    text-align: center;
+    width: 365px !important; 
+    position: absolute;
+    top: 250px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    padding: 20px;
+    gap: 20px;  
 }
 
+.get-started h2 { font-size: 2.0rem; }
+
+.get-started button {
+    width: 80%; 
+}
+
+
+/* =========== Your hand =========== */
+
+.your-hand {
+    display: flex;
+    flex-direction: column;  /* stack vertically */
+    justify-content: center; /* centers vertically inside the row’s own height */
+    align-items: center;     /* centers horizontally */
+    gap: 40px;
+}
+
+.your-hand .modal, .cols {
+    min-width: 80%;
+    text-align: center; 
+}
+
+.dealing {
+    display: flex;
+    flex-direction: column;
+    gap: 55px;
+    padding-bottom: 55px; 
+}
+
+.your-hand-header-dealing, .your-hand-header {
+    display: flex;
+    flex-direction: row; 
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+}
+
+.power-suit-indicator {
+    height: 25px;
+    width: 25px;
+    border-radius: 100px;
+}
+
+.bid-indicator {
+    font-size: 1.2rem;
+}
+
+.card-layout {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center; 
+    gap: 5px;
+}
+
+
+/* =========== Misc. =========== */
+
+.info {
+    position: absolute; 
+    top: 60px;
+    right: 40px;
+    cursor: pointer; 
+}
+
+.bballs img { 
+    width: 100%;
+    margin-top: 100px;
+}
+
+
+
+.get-started { display: none; }
+/* .bballs { display: none; }
+.your-hand { display: none; } */
