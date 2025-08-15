@@ -6,7 +6,7 @@
     <title>Rook game</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@300;400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,6 +20,7 @@
       </div>
     </section>
 
+    <!-- your hand dealing -->
     <section class="row modal-row your-hand">
       <div class="modal dealing">
         <div class="your-hand-header-dealing">
@@ -173,10 +174,140 @@
       </div>
     </section>
 
+    <!-- Jumbotron vv -->
     <section class="row modal-row">
-      <div class="modal scoreboard">
-        <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
-        <div class="score"><p>220</p></div>
+      <div class="modal jumbotron">
+        <div class="jumbotron-team">
+            <div class="scoreboard-team"><p>You + Patricia</p></div>
+            <div class="scorebox"><p>220</p></div>
+          </div>
+          <div class="jumbotron-team">
+            <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+            <div class="scorebox"><p>220</p></div>
+          </div>
+      </div>
+    </section>
+
+    <!-- end of hand score vv -->
+    <section class="row">
+      <div class="cols">
+        <div class="left">
+        </div>
+        <div class="middle">
+            <div class="modal hand-score">
+              <div class="hand-score-heading">
+                <h2>Patricia + Patricia made the bid!</h2>
+                <img src="images/boom.png" width="56" height="44">
+              </div>
+              <div class="hand-score-team">
+                <div class="team">
+                  <div class="heading">
+                    <p class="names">You + Patricia</p>
+                    <p class="score">145</p>
+                  </div>
+                  <img src="images/underline.png" >
+                  <div class="cards-won">
+                    <span class="dot orange">1</span>
+                    <span class="dot orange">14</span>
+                    <span class="dot orange">10</span>
+                    <span class="dot yellow">14</span>
+                    <span class="dot yellow">10</span>
+                    <span class="dot yellow">5</span>
+                    <span class="dot green">1</span>
+                    <span class="dot blue">1</span>
+                    <span class="dot blue">14</span>
+                    <span class="dot blue">10</span>
+                    <span class="dot blue">5</span>
+                    <span class="dot dunk">D</span>
+                    <span class="last-trick">Last trick</span>
+
+                  </div>
+                  <p class="tricks-won">Tricks won: 8</p>
+                </div>
+                <div class="team">
+                  <div class="heading">
+                    <p class="names">Patricia + Patricia</p>
+                    <p class="score">55</p>
+                  </div>
+                  <img src="images/underline.png" >
+                  <div class="cards-won">
+                    <span class="dot orange">5</span>
+                    <span class="dot yellow">1</span>
+                    <span class="dot green">14</span>
+                    <span class="dot green">10</span>
+                    <span class="dot green">5</span>
+                  </div>
+                  <p class="tricks-won">Tricks won: 8</p>
+                </div>
+              </div>
+              <div class="quotable">
+                <p>“Winning is in the eye of the beholder.” ~ Cake Boss</p>
+              </div>
+            </div>
+        </div>
+        <div class="right">
+          <button>Next ⮑</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- score update vv -->
+    <section class="row">
+      <div class="cols">
+        <div class="left">
+        </div>
+        <div class="middle">
+          <div class="modal score-update">
+            <div class="score-update-heading" role="tablist" aria-label="Score views">
+              <h2>Score update</h2>
+              <div class="pill tab is-active"
+                   role="tab"
+                   aria-selected="true"
+                   aria-controls="tab-overall"
+                   id="tab-overall-tab"
+                   tabindex="0"
+                   data-target="#tab-overall">Overall</div>
+          
+              <div class="pill tab"
+                   role="tab"
+                   aria-selected="false"
+                   aria-controls="tab-hand"
+                   id="tab-hand-tab"
+                   tabindex="0"
+                   data-target="#tab-hand">Hand-by-hand</div>
+            </div>
+          
+            <div class="tab-panel" id="tab-overall" role="tabpanel" aria-labelledby="tab-overall-tab">
+              <div class="jumbotron">
+                <div class="jumbotron-team">
+                  <div class="scoreboard-team"><p>You + Patricia</p></div>
+                  <div class="scorebox"><p>220</p></div>
+                </div>
+                <div class="jumbotron-team">
+                  <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+                  <div class="scorebox"><p>220</p></div>
+                </div>
+              </div>
+            </div>
+          
+            <div class="tab-panel is-hidden" id="tab-hand" role="tabpanel" aria-labelledby="tab-hand-tab">
+              <div class="hand-by-hand-table">
+                <table>
+                  <thead>
+                    <tr class="table-heading"><th>Bid</th><th>You + Patricia</th><th>Patricia + Patricia</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td><img src="images/x-fail.png"> Kev 150</td><td class="bigger">135</td><td class="bigger">65</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+        <div class="right">
+          <button>Next ⮑</button>
+        </div>
       </div>
     </section>
 
@@ -195,6 +326,8 @@
   <script src="js/gameplay.js"></script>
   <script src="js/setup.js"></script>
   <script src="js/main.js"></script>
+
+  
 </body>
 
 </html>

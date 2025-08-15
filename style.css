@@ -230,6 +230,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
     text-align: right;  
     font-size: 1.3rem;      /* align text to the right edge of itself */
   }
+  
 
 .play-area {
     background: url('images/PLAY-AREA.png') no-repeat center top;
@@ -265,6 +266,192 @@ button.inactive { background-color: #C4C4C4; border: none; }
     padding-top: 15px; padding-bottom: 15px; 
 }
 
+/* =========== Jumbotron =========== */
+
+.jumbotron {
+    width: auto;
+    display: flex; 
+    flex-direction: row;
+    gap: 20px;
+    padding: 25px;
+    margin-left: auto;
+}
+
+.jumbotron-team {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.scorebox {
+    flex: 0;                  /* don't stretch */
+    font-size: 3rem;      /* align text to the right edge of itself */
+  }
+
+
+.scorebox p {
+    font-family: 'Orbitron', sans-serif;
+}
+
+/* =========== End of hand score =========== */
+
+
+.hand-score {
+    display: flex; 
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+
+.hand-score-heading {
+    display: flex; 
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.hand-score-heading h2 {
+    flex: 1;                  /* take up remaining space */
+    text-align: left; 
+    font-size: 2rem;        /* keep text to the left */
+  }
+  
+  .hand-score-heading img {
+    flex: 0;                  /* don't stretch */
+  }
+
+.hand-score-team {
+    padding: 30px;
+    display: flex; 
+    flex-direction: row;
+    justify-content: center;
+    gap: 60px;
+}
+
+.hand-score-team .team {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.heading {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.heading .names {
+    flex: 1;                  /* take up remaining space */
+    text-align: left; 
+    font-size: 1.2rem;        /* keep text to the left */
+  }
+  
+.heading .score {
+    flex: 0; 
+    font-size: 1.5rem;                 /* don't stretch */
+  }
+
+.team img { max-width: 100%; }
+
+
+.cards-won {
+    display: flex; 
+    flex-direction: row;
+    justify-content: left;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.dot {
+    font-size: .8rem;
+    height: 30px;
+    width: 30px;
+    padding:5px;
+    border-radius:50%;
+    display: inline-flex;
+    justify-content: center; 
+    align-items: center;
+}
+
+.last-trick {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #c4c4c4;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    padding: 5px;
+}
+
+.tricks-won { text-align: left; margin-top: 15px;}
+
+/* =========== End of hand score =========== */
+
+
+.score-update-heading {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 20px;
+}
+
+.score-update-heading h2 {
+    font-size: 2rem;
+}
+
+  .pill.tab {
+    background: #f6f6f6;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    cursor: pointer;
+    user-select: none;
+    outline: none;
+  }
+  
+  .pill.tab:focus-visible {
+    box-shadow: 0 0 0 2px #0003, 0 0 0 4px #111;
+  }
+  
+  .pill.tab.is-active {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+  }
+  
+  .tab-panel { margin-top: 14px; }
+  .tab-panel.is-hidden { display: none; }
+
+  .tab-panel .jumbotron { justify-content: center; }
+
+  .hand-by-hand-table {
+    justify-content: center;
+    padding: 25px; 
+    width: 90%;
+  }
+
+  .hand-by-hand-table table {
+    margin-left: auto;
+    margin-right: auto; 
+    border-collapse: collapse;
+    table-layout: fixed; /* ✅ forces consistent column widths */
+  }
+  
+  .hand-by-hand-table th, .hand-by-hand-table td {
+  padding: 8px 10px;    /* same padding for both */
+  text-align: left;
+  border: 1px solid #ddd;
+}
+
+.bigger { font-size: 1.8rem; }
 
 /* =========== Misc. =========== */
 
