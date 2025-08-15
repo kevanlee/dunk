@@ -40,7 +40,7 @@
             <img src="images/squiggle.png" width="300">
         </div>
         <div class="card-layout">
-            <div class="card orange">14</div>
+            <div class="card orange"><p>4 <span class="card-icon"></span></p></div>
             <div class="card orange">4</div>
             <div class="card orange">3</div>
             <div class="card yellow">14</div>
@@ -90,16 +90,93 @@
     <section class="row">
       <div class="cols">
         <div class="left">
-            <div class="score-hand">
-                <span>You + Patricia</span><span class="score">145</span>
+            <div class="modal score-hand">
+                <p class="team-name">You + Patricia</p><p class="score">145</p>
             </div>
+            <div class="modal score-hand">
+              <p class="team-name">Patricia + Patricia</p><p class="score">10</p>
+          </div>
         </div>
         <div class="middle">
             <div class="modal play-area">
-                
+                <div class="played-card one">
+                    <div class="pill">First</div>
+                    <div class="card empty"></div> 
+                    <div class="player-name">Patricia</div>
+                    <div class="team-mate">Teammate</div>
+                </div>
+                <div class="played-card one">
+                  <div class="pill">First</div>
+                  <div class="card empty"></div> 
+                  <div class="player-name">Patricia</div>
+                  <div class="team-mate">Teammate</div>
+                </div>
+                <div class="played-card one">
+                  <div class="pill">First</div>
+                  <div class="card empty"></div> 
+                  <div class="player-name">Patricia</div>
+                  <div class="team-mate">Teammate</div>
+                </div>
+                <div class="played-card one">
+                  <div class="pill">First</div>
+                  <div class="card empty"></div> 
+                  <div class="player-name">Patricia</div>
+                  <div class="team-mate">Teammate</div>
+              </div>
             </div>
         </div>
         <div class="right"></div>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="cols">
+        <div class="left">
+            <div class="modal score-hand">
+                <p class="team-name">You + Patricia</p><p class="score">145</p>
+            </div>
+            <div class="modal score-hand">
+              <p class="team-name">Patricia + Patricia</p><p class="score">10</p>
+          </div>
+        </div>
+        <div class="middle">
+            <div class="modal play-area">
+                <div class="played-card one">
+                    <div class="pill">First</div>
+                    <div class="card orange">14</div> 
+                    <div class="player-name">Patricia</div>
+                    <div class="team-mate">Teammate</div>
+                </div>
+                <div class="played-card one">
+                  <div class="pill">First</div>
+                  <div class="card orange">10</div> 
+                  <div class="player-name">Patricia</div>
+                  <div class="team-mate">Teammate</div>
+                </div>
+                <div class="played-card one">
+                  <div class="pill">First</div>
+                  <div class="card orange">8</div> 
+                  <div class="player-name">Patricia</div>
+                  <div class="team-mate">Teammate</div>
+                </div>
+                <div class="played-card one winner">
+                  <div class="pill">First</div>
+                  <div class="card orange">1</div> 
+                  <div class="player-name">You</div>
+                  <div class="team-mate">Teammate</div>
+              </div>
+            </div>
+        </div>
+        <div class="right">
+          <button>Next ⮑</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="row modal-row">
+      <div class="modal scoreboard">
+        <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+        <div class="score"><p>220</p></div>
       </div>
     </section>
 

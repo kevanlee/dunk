@@ -105,6 +105,21 @@ button.inactive { background-color: #C4C4C4; border: none; }
   gap: 16px;
 }
 
+.left {
+    display: flex;
+    flex-direction: column; 
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+}
+
+.right {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items:flex-start;
+}
 
 /* =========== Cards =========== */
 
@@ -122,6 +137,9 @@ button.inactive { background-color: #C4C4C4; border: none; }
 .blue { background-color: #A0CED9}
 .green { background-color: #ADF7B6}
 .dunk { background-color: black; color: white; }
+.empty { border: 1px dashed black;  }
+
+.card-icon {   display: block;   width: 20px;   height: 20px;   background: rgba(255, 255, 255, 0.3);   border-radius: 50%;   margin: 0.2rem auto 0;   text-align: center; }
 
 /* =========== Get started =========== */
 
@@ -191,11 +209,67 @@ button.inactive { background-color: #C4C4C4; border: none; }
     gap: 5px;
 }
 
+/* =========== Play area =========== */
+
+.score-hand {
+    width: auto;
+    padding: 15px;
+    display: flex;
+    align-items: center;;
+    gap: 5px;
+}
+
+
+.team-name {
+    flex: 1;                  /* take up remaining space */
+    text-align: left;         /* keep text to the left */
+  }
+  
+  .score {
+    flex: 0;                  /* don't stretch */
+    text-align: right;  
+    font-size: 1.3rem;      /* align text to the right edge of itself */
+  }
+
+.play-area {
+    background: url('images/PLAY-AREA.png') no-repeat center top;
+    background-color: white;
+    background-size: cover;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    padding: 60px;
+}
+
+.played-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 100%;
+}
+
+.player-name {
+    font-size: 1.3rem;
+}
+
+.winner {
+    border: 1px solid black;
+    border-radius: 5px; 
+    padding-top: 15px; padding-bottom: 15px; 
+}
+
 
 /* =========== Misc. =========== */
 
 .info {
-    position: absolute; 
+    position: fixed; 
     top: 60px;
     right: 40px;
     cursor: pointer; 
