@@ -59,6 +59,7 @@
       <button class="">Next ⮑</button>
     </section>
 
+    <!-- your hand w cards -->
     <section class="row modal-row your-hand">
       <div class="modal dealing">
         <div class="your-hand-header">
@@ -297,7 +298,7 @@
                     <tr class="table-heading"><th>Bid</th><th>You + Patricia</th><th>Patricia + Patricia</th></tr>
                   </thead>
                   <tbody>
-                    <tr><td><img src="images/x-fail.png"> Kev 150</td><td class="bigger">135</td><td class="bigger">65</td></tr>
+                    <tr><td class="bid-tracker"><img src="images/x-fail.png"> Kev 150</td><td class="bigger">135</td><td class="bigger">65</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -308,6 +309,144 @@
         <div class="right">
           <button>Next ⮑</button>
         </div>
+      </div>
+    </section>
+
+    <!-- bidding vv -->
+    <section class="row">
+      <div class="cols-bidding">
+        <div class="left">
+        </div>
+        <div class="middle">
+            <div class="modal bidding">
+              
+              <h2>Bidding</h2>
+              <img src="images/bidding-underline.png">
+              <div class="bidding-details">
+                <div class="bid">
+                  <p class="player-name">Patrice</p>
+                  <p class="player-bid">105</p>
+                </div>
+                <div class="bid">
+                  <p class="player-name">Patrice</p>
+                  <p class="player-bid">Pass</p>
+                </div>
+                <div class="bid win-bid">
+                  <p class="player-name">Patrice</p>
+                  <p class="player-bid">125</p>
+                </div>
+              </div>
+              <div class="bid-enter">
+                <div class="bid-form">
+                  <form action="/submit" method="post">
+                    <label for="numberInput">Your bid</label>
+                    <div class="inputs">
+                      <input type="number" id="numberInput" name="number" required>
+                      <button type="submit">Bid</button>
+                    </div>                    
+                  </form>
+                  
+                </div>
+              </div>
+
+            </div>
+        </div>
+        <div class="right">
+          <button>Next ⮑</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- computer kitty -->
+    <section class="row">
+      <div class="cols-bidding">
+        <div class="left">
+        </div>
+        <div class="middle">
+            <div class="modal bidding">
+
+              <div class="kitty-computer">
+                <div class="bid win-bid">
+                  <p class="player-name">Patrice</p>
+                  <p class="player-bid">125</p>
+                </div>
+                <div class="item">
+                  <img src="images/check.png"> Look through the kitty
+                </div>
+                <div class="item">
+                  <img src="images/check.png"> Pick a power suit
+                </div>
+                <p class="pick-a-color">Power suit:</p>
+                <div class="power-suit blue">
+                  <span class="card-icon"></span> Bottled water
+                </div>
+              </div>
+            </div>
+        </div>
+        <div class="right">
+          <button>Let's go →</button>
+        </div>
+      </div>
+    </section>
+
+
+
+    <!-- picking the kitty -->
+    <section class="row modal-row your-hand">
+      <div class="modal dealing">
+        <div class="your-hand-header">
+            <h2>Your hand</h2>
+            <div class="pill">Power suit</div>
+            <div class="tbd">TBD</div>
+            <div class="pill">Bid</div>
+            <div class="bid-indicator">TBD</div>
+            <img src="images/squiggle.png" width="300">
+        </div>
+        <div class="card-layout">
+            <div class="card orange">14</div>
+            <div class="card orange">4</div>
+            <div class="card orange">3</div>
+            <div class="card yellow">14</div>
+            <div class="card yellow">10</div>
+            <div class="card yellow">9</div>
+            <div class="card yellow">8</div>
+            <div class="card yellow">2</div>
+            <div class="card blue">14</div>
+            <div class="card dunk">D</div>
+            <div class="card blue">11</div>
+            <div class="card blue">9</div>
+            <div class="card green">14</div>
+        </div>
+        <h2>Kitty</h2>
+        <div class="card-layout">
+          <div class="card orange">14</div>
+          <div class="card orange">4</div>
+          <div class="card orange">3</div>
+          <div class="card yellow">14</div>
+          <div class="card yellow">10</div>
+        </div>
+        <div class="kitty-power">
+          <h2>Power suit</h2>
+          <div class="power-suit orange">
+            <span class="card-icon"></span> Gatorade orange
+          </div>
+          <div class="power-suit yellow">
+            <span class="card-icon"></span> Mellow yellow
+          </div>
+          <div class="power-suit blue">
+            <span class="card-icon"></span> Bottled water
+          </div>
+          <div class="power-suit green">
+            <span class="card-icon"></span> Baja blast green
+          </div>
+          <div class="item">
+            <img src="images/check.png"> Pick 5 cards to put back in the kitty.
+          </div>
+          <div class="item">
+            <img src="images/check.png"> Pick your power suit
+          </div>
+          <button>Let's go →</button>
+      </div>
       </div>
     </section>
 

@@ -105,6 +105,13 @@ button.inactive { background-color: #C4C4C4; border: none; }
   gap: 16px;
 }
 
+.cols-bidding {
+    width: min(1100px, 100%);
+    display: grid;
+    grid-template-columns: 2fr 2fr 2fr; 
+    gap: 16px;
+  }
+
 .left {
     display: flex;
     flex-direction: column; 
@@ -442,16 +449,147 @@ button.inactive { background-color: #C4C4C4; border: none; }
     margin-left: auto;
     margin-right: auto; 
     border-collapse: collapse;
+    border: none; 
     table-layout: fixed; /* ✅ forces consistent column widths */
   }
   
   .hand-by-hand-table th, .hand-by-hand-table td {
-  padding: 8px 10px;    /* same padding for both */
+  padding: 8px 20px;    /* same padding for both */
   text-align: left;
-  border: 1px solid #ddd;
 }
 
+.bid-tracker img {   vertical-align: middle; }
 .bigger { font-size: 1.8rem; }
+.hand-by-hand-table .bigger { text-align: center; }
+.hand-by-hand-table th { font-weight: normal !important; font-size: 1.1rem; }
+
+/* =========== Bidding =========== */
+
+.bidding {
+    width: auto;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.bidding h2 { font-size: 2rem;  }
+.bidding img { width: 200px; }
+
+.bid {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 150px;
+    gap: 20px;
+    margin-bottom: 8px;
+}
+
+.player-name {
+    flex: 1;                  /* take up remaining space */
+    text-align: left;  
+    font-size: 1rem;       /* keep text to the left */
+  }
+  
+  .player-bid {
+    flex: 0;                  /* don't stretch */
+    text-align: right;  
+    font-size: 1.3rem;      /* align text to the right edge of itself */
+  }
+
+.win-bid {
+    background-image: url('images/winning-bid.png');
+    border-radius: 5px;
+    padding: 5px 25px;
+    width: 195px;
+    margin-left: -22px;
+}
+  
+
+  .bidding-details, .bid-enter { margin-top: 15px; }
+
+  .bid-form form {
+    display: flex;
+    align-items: center;
+    gap: 20px; /* space between label and inputs */
+  }
+  
+  .inputs {
+    display: flex;
+    border: 1px solid black;
+    border-radius: 8px;
+    overflow: hidden; /* makes the corners smooth between input and button */
+  }
+  
+  .inputs input[type="number"] {
+    border: none;
+    padding: 8px 12px;
+    font-size: 1rem;
+    background-color: #ddd;
+    outline: none;
+    width: 80px; /* adjust to fit */
+  }
+  
+  .inputs button {
+    border: none;
+    padding: 8px 16px;
+    font-size: 1rem;
+    background-color: black;
+    color: white;
+    cursor: pointer;
+    border-radius: 0 5px 5px 0; /* TL=0, TR=8px, BR=8px, BL=0 */
+  }
+  
+  .inputs button:hover {
+    opacity: 0.85;
+  }
+  
+  /* Chrome, Safari, Edge, Opera */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+
+/* =========== Kitty - Computer =========== */
+
+.kitty-computer {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.kitty-computer > :first-child {
+    align-self: center;        /* override only the first child */
+  }
+
+.kitty-computer img { width: 18px; }
+.item, .pick-a-color { font-size: 1.2rem; }
+.pick-a-color { margin-top: 15px; }
+.item { display: flex; justify-content: center; gap: 10px; }
+
+.power-suit {
+    padding: 5px 10px;
+    border-radius: 5px; 
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    align-items: center;
+}
+
+/* =========== Kitty - PERSON =========== */
+
+.tbd { font-size: 1.2rem; }
+
 
 /* =========== Misc. =========== */
 
@@ -467,7 +605,9 @@ button.inactive { background-color: #C4C4C4; border: none; }
     margin-top: 100px;
 }
 
-
+input {
+    font-family: 'Comic Neue', Tahoma, Geneva, Verdana, sans-serif;
+  }  
 
 .get-started { display: none; }
 /* .bballs { display: none; }
