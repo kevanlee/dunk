@@ -137,6 +137,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
     font-size: 1.3rem;
     text-align: center; 
     padding-top: 10px;
+    cursor:pointer;
 }
 
 .orange { background-color: #FFC09F}
@@ -153,8 +154,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
 .get-started {
     text-align: center;
     width: 365px !important; 
-    position: absolute;
-    top: 250px;
+    margin-top: 250px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -261,6 +261,9 @@ button.inactive { background-color: #C4C4C4; border: none; }
     gap: 10px;
     width: 100%;
     height: 100%;
+    border: 1px solid transparent;
+    padding: 15px 0;
+    box-sizing: border-box; /* if not already global */
 }
 
 .player-name {
@@ -273,6 +276,41 @@ button.inactive { background-color: #C4C4C4; border: none; }
     padding-top: 15px; padding-bottom: 15px; 
 }
 
+/* Make all cards reserve a little space at the top */
+.played-card {
+    position: relative;
+    padding-top: 24px;           /* space for the badge */
+    border: 1px solid transparent;
+    box-sizing: border-box;      /* keep sizes stable */
+  }
+  
+  /* Winner highlight (pick one) */
+  .played-card.winner {
+    border-color: #000;          /* or: box-shadow: inset 0 0 0 1px #000; */
+    border-radius: 5px;
+  }
+  
+  /* Winner badge at the top center, no layout shift */
+  .played-card.winner::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -60%); /* sits slightly above the top edge */
+    width: 22px;
+    height: 22px;
+    background: url('images/w-bid.png') center/contain no-repeat;
+    pointer-events: none;
+  }
+  
+  .empty-state {
+    height: 65px;
+    background-image:url('images/empty-state-smiley.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain; /* or "cover" depending on effect */
+}
+
 /* =========== Jumbotron =========== */
 
 .jumbotron {
@@ -283,6 +321,8 @@ button.inactive { background-color: #C4C4C4; border: none; }
     padding: 25px;
     margin-left: auto;
 }
+
+.jumbotron.top { margin-right: 9%; }
 
 .jumbotron-team {
     display: flex;
@@ -590,6 +630,203 @@ input[type=number] {
 
 .tbd { font-size: 1.2rem; }
 
+.kitty-container {
+    display: flex;
+    flex-direction: row;
+    gap: 50px;
+    margin-top: -35px;
+}
+
+.kitty-power {
+    max-width: 450px; 
+}
+
+.pick-kitty {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.power-suit-container {
+    display: flex; flex-direction: row;
+    align-items: center;
+    margin-top: 20px;
+}
+.power-suit-list {
+    display: flex;
+    flex-wrap: wrap;       /* allow wrapping into rows */
+    gap: 10px;             /* optional spacing between cards */
+  }
+  
+  .power-suit {
+    display: flex;
+    flex-direction: row;
+    justify-content:flex-start;
+    align-items: center;
+    gap: 8px;
+}
+
+.pick-kitty h2 { padding: 0 20px 0 110px; }
+.power-suit-container h2 {
+    flex: 0 0 174px;   /* do not grow, do not shrink, basis = 260px */
+    white-space: nowrap; 
+    margin: 0;
+    padding: 0 20px 0 25px; /* keep your padding */
+  }.power-suit-list .power-suit {
+    font-size: 0.8rem;
+}
+
+.checklist { 
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-end;   /* ✅ right-align all children */
+    gap: 15px;
+}
+
+.checklist .item { font-size: 1.1rem; display: flex; flex-direction: row; align-items: center;}
+
+.checklist button {
+    align-self: flex-end;    /* ✅ ensures the button stays right-aligned */
+    width: auto; 
+  }
+
+/* =========== End game & your stats =========== */
+
+.end-game, .your-stats {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    padding: 50px;
+}
+
+.end-game h2, .your-stats h2 {
+    font-size: 1.8rem;
+}
+
+.end-game.win {
+    background-image:url('images/fireworks.png');
+    background-repeat: no-repeat;   /* don’t tile it */
+    background-size: 100% auto;     /* stretch to full width, keep aspect ratio */
+    background-position: top center;/* stick to top edge, horizontally centered */
+    background-size: contain;
+}
+
+.end-game.lose {
+    background-image:url('images/oh-well.png');
+    background-repeat: no-repeat;   /* don’t tile it */
+    background-size: 100% auto;     /* stretch to full width, keep aspect ratio */
+    background-position: top center;/* stick to top edge, horizontally centered */
+    background-size: contain;
+}
+
+.final-score {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+}
+
+.end-game button { width: 250px; }
+
+.end-game-details {
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+}
+.end-game img, .your-stats img {
+    max-width: 80%; /* ✅ scales image to fit available width */
+    height: auto;    /* keep aspect ratio */
+    flex: 1;  
+    margin-top: 20px;       /* optional: allow image to grow/shrink inside flex */
+  }
+
+.stats-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+
+/* =========== info box =========== */
+
+.info-box {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    padding: 50px;
+    position: relative;
+}
+
+.info-box h2 { font-size: 1.8rem; }
+.info-box h3 {  font-weight: 700; margin-bottom: 15px; }
+.info-box p { margin-bottom: 5px; }
+
+.info-box-details {
+    display: flex;
+    flex-direction: row;
+    gap: 30px;
+}
+
+.point-values { flex: 1; }
+.how-to-play { flex: 2; }
+
+.info-box img {
+    max-width: 80%; /* ✅ scales image to fit available width */
+    height: auto;    /* keep aspect ratio */
+    flex: 1;  
+    margin-top: 20px;       /* optional: allow image to grow/shrink inside flex */
+  }
+
+.info-close {
+    position: absolute; 
+    top: 5px;
+    right: 20px;
+    cursor: pointer; 
+}
+
+/* Info modal hidden by default */
+.info-modal {
+    display: none;
+  }
+  
+  .info-modal.active {
+    display: flex; /* show when active */
+  }
+
+/* =========== Hover and select states =========== */
+
+.card {
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12); /* subtle default depth */
+  }
+  
+  /* hover should feel like it's "lifting" */
+  button:hover, 
+  .card:hover, 
+  .power-suit:hover { 
+    transform: rotate(-2deg);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* selected should feel pressed-in but still match the system */
+  .card.selected, .power-suit.selected {
+    box-shadow: 
+      inset 0 0 0 3px rgba(0, 0, 0, 0.4),  /* inner border */
+      0 2px 6px rgba(0, 0, 0, 0.12);       /* same as default outer */
+  }
+  
+  .card.inactive { 
+    opacity: 0.5; 
+    cursor: not-allowed; 
+    box-shadow: none;  /* optional: flatten it */
+  }
+  
 
 /* =========== Misc. =========== */
 
@@ -600,15 +837,22 @@ input[type=number] {
     cursor: pointer; 
 }
 
+body {
+    cursor: url('images/pixel-cursor.png') 0 0, auto;
+  }
+  
+
 .bballs img { 
     width: 100%;
     margin-top: 100px;
 }
 
+.hidden { display: none; }
+
 input {
     font-family: 'Comic Neue', Tahoma, Geneva, Verdana, sans-serif;
   }  
 
-.get-started { display: none; }
-/* .bballs { display: none; }
+/*.get-started { display: none; }
+ .bballs { display: none; }
 .your-hand { display: none; } */

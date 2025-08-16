@@ -12,6 +12,20 @@
 <body>
   <div id="container"> <!-- NEW -->
 
+    <!-- Jumbotron vv -->
+    <section class="row modal-row">
+      <div class="modal jumbotron top">
+        <div class="jumbotron-team">
+            <div class="scoreboard-team"><p>You + Patricia</p></div>
+            <div class="scorebox"><p>220</p></div>
+          </div>
+          <div class="jumbotron-team">
+            <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+            <div class="scorebox"><p>220</p></div>
+          </div>
+      </div>
+    </section>
+
     <section class="row modal-row">
       <div class="modal get-started">
         <h2>Welcome to Kentucky Rook!</h2>
@@ -71,9 +85,9 @@
             <img src="images/squiggle.png" width="300">
         </div>
         <div class="card-layout">
-            <div class="card orange">14</div>
-            <div class="card orange">4</div>
-            <div class="card orange">3</div>
+            <div class="card orange inactive">14</div>
+            <div class="card orange inactive">4</div>
+            <div class="card orange inactive">3</div>
             <div class="card yellow">14</div>
             <div class="card yellow">10</div>
             <div class="card yellow">9</div>
@@ -88,6 +102,47 @@
       </div>
       <button class="">Next ⮑</button>
     </section>
+
+    <!-- your hand w some cards -->
+    <section class="row modal-row your-hand">
+      <div class="modal dealing">
+        <div class="your-hand-header">
+            <h2>Your hand</h2>
+            <div class="pill">Power suit</div>
+            <div class="power-suit-indicator orange"></div>
+            <div class="pill">Bid</div>
+            <div class="bid-indicator">KEV 150</div>
+            <img src="images/squiggle.png" width="300">
+        </div>
+        <div class="card-layout">
+            <div class="card orange inactive">14</div>
+            <div class="card orange inactive">4</div>
+            <div class="card orange inactive">3</div>
+            <div class="card yellow">14</div>
+            <div class="card yellow">10</div>
+            <div class="card yellow">9</div>
+        </div>
+      </div>
+      <button class="">Next ⮑</button>
+    </section>
+    
+    <!-- your hand w no cards -->
+    <section class="row modal-row your-hand">
+      <div class="modal dealing">
+        <div class="your-hand-header">
+            <h2>Your hand</h2>
+            <div class="pill">Power suit</div>
+            <div class="power-suit-indicator orange"></div>
+            <div class="pill">Bid</div>
+            <div class="bid-indicator">KEV 150</div>
+            <img src="images/squiggle.png" width="300">
+        </div>
+        <div class="card-layout empty-state">
+            
+        </div>
+      </div>
+      <button class="">Next ⮑</button>
+    </section>    
 
     <section class="row">
       <div class="cols">
@@ -175,19 +230,7 @@
       </div>
     </section>
 
-    <!-- Jumbotron vv -->
-    <section class="row modal-row">
-      <div class="modal jumbotron">
-        <div class="jumbotron-team">
-            <div class="scoreboard-team"><p>You + Patricia</p></div>
-            <div class="scorebox"><p>220</p></div>
-          </div>
-          <div class="jumbotron-team">
-            <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
-            <div class="scorebox"><p>220</p></div>
-          </div>
-      </div>
-    </section>
+
 
     <!-- end of hand score vv -->
     <section class="row">
@@ -389,9 +432,7 @@
       </div>
     </section>
 
-
-
-    <!-- picking the kitty -->
+    <!-- picking the kitty (human) -->
     <section class="row modal-row your-hand">
       <div class="modal dealing">
         <div class="your-hand-header">
@@ -417,20 +458,27 @@
             <div class="card blue">9</div>
             <div class="card green">14</div>
         </div>
-        <h2>Kitty</h2>
-        <div class="card-layout">
-          <div class="card orange">14</div>
-          <div class="card orange">4</div>
-          <div class="card orange">3</div>
-          <div class="card yellow">14</div>
-          <div class="card yellow">10</div>
-        </div>
+
+        <div class="kitty-container">
         <div class="kitty-power">
+        <div class="pick-kitty">
+          <h2>Kitty</h2>
+          <div class="card-layout">
+            <div class="card orange selected">14</div>
+            <div class="card orange">4</div>
+            <div class="card orange">3</div>
+            <div class="card yellow selected">14</div>
+            <div class="card yellow">10</div>
+          </div>
+        </div>
+
+        <div class="power-suit-container">
           <h2>Power suit</h2>
+          <div class="power-suit-list">
           <div class="power-suit orange">
             <span class="card-icon"></span> Gatorade orange
           </div>
-          <div class="power-suit yellow">
+          <div class="power-suit yellow selected">
             <span class="card-icon"></span> Mellow yellow
           </div>
           <div class="power-suit blue">
@@ -439,6 +487,12 @@
           <div class="power-suit green">
             <span class="card-icon"></span> Baja blast green
           </div>
+          </div>
+        </div>
+        </div>
+      
+
+          <div class="checklist">
           <div class="item">
             <img src="images/check.png"> Pick 5 cards to put back in the kitty.
           </div>
@@ -446,7 +500,100 @@
             <img src="images/check.png"> Pick your power suit
           </div>
           <button>Let's go →</button>
+        </div>
+        </div>
+      
+
       </div>
+    </section>
+
+    <!-- end game win -->
+    <section class="row modal-row">
+      <div class="modal end-game win">
+        <h2>You + Patricia win!</h2>
+        <div class="final-score">
+          <div class="jumbotron-team">
+          <div class="scoreboard-team"><p>You + Patricia</p></div>
+          <div class="scorebox"><p>220</p></div>
+          </div>
+          <div class="jumbotron-team">
+            <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+            <div class="scorebox"><p>220</p></div>
+          </div>       
+        </div>
+        <button>Play again</button>
+        <div class="end-game-details">
+          <p>See the last hand</p>
+          <p>|</p>
+          <p>See my overall stats</p>
+        </div>
+        <img src="images/curly.png">
+      </div>
+    </section>
+
+    <!-- end game lose -->
+    <section class="row modal-row">
+      <div class="modal end-game lose">
+        <h2>You + Patricia win!</h2>
+        <div class="final-score">
+          <div class="jumbotron-team">
+          <div class="scoreboard-team"><p>You + Patricia</p></div>
+          <div class="scorebox"><p>220</p></div>
+          </div>
+          <div class="jumbotron-team">
+            <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+            <div class="scorebox"><p>220</p></div>
+          </div>       
+        </div>
+        <button>Play again</button>
+        <div class="end-game-details">
+          <p>See the last hand</p>
+          <p>|</p>
+          <p>See my overall stats</p>
+        </div>
+        <img src="images/curly.png">
+      </div>
+    </section>
+
+    <!-- your stats -->
+    <section class="row modal-row">
+      <div class="modal your-stats">
+        <h2>Your stats</h2>
+        <div class="stats-details">
+          <p>Total games played: 144</p>
+          <p>Games won: 82</p>
+          <p>Games lost: 62</p>
+          <p>Win %: 56.9%</p>
+        </div>
+        <button>← Back</button>
+        <img src="images/curly.png">
+      </div>
+    </section>
+
+    <!-- info -->
+    <section class="row modal-row info-modal" id="infoModal">
+      <div class="modal info-box">
+        <h2>Info</h2>
+        <div class="info-box-details">
+          <div class="how-to-play">
+            <h3>How to play</h3>
+            <p>Dunk is a four-person, trick-taking card game inspired by Rook, specifically the variant known as Kentucky Rook. If you've never played Rook before, it's a little like Bridge-meets-Hearts. Dunk is played with a special card deck and involves bidding, power suits, and team play.
+            </p>
+          </div>
+          <div class="point-values">
+            <h3>Point values</h3>
+            <p>1s are worth 15 points each</p>
+            <p>14s are 10 points</p>
+            <p>10s are 10 points</p>
+            <p>5s are 5 points</p>
+            <p>Dunk card is 20 points</p>
+            <p>Winning the final hand is worth 20 points</p>                      
+            <p>... for a total of 200 points.</p>
+          </div>
+        </div>
+        <img src="images/curly.png">
+        <div class="info-close"><img src="images/close.png" height="30px" width="30px"></div>
+
       </div>
     </section>
 

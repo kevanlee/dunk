@@ -40,3 +40,23 @@
       prev.focus();
     }
   });
+
+  const infoBtn = document.querySelector('.info');
+  const infoModal = document.getElementById('infoModal');
+  const infoClose = infoModal.querySelector('.info-close');
+
+  infoBtn.addEventListener('click', () => {
+    infoModal.classList.add('active');
+  });
+
+  infoClose.addEventListener('click', () => {
+    infoModal.classList.remove('active');
+  });
+
+  // Optional: close if clicking outside the modal box
+  infoModal.addEventListener('click', (e) => {
+    if (e.target === infoModal) {
+      infoModal.classList.remove('active');
+    }
+  });
+
