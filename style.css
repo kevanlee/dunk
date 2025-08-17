@@ -154,7 +154,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
 .get-started {
     text-align: center;
     width: 365px !important; 
-    margin-top: 250px;
+    margin-top: 50px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -455,7 +455,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
 
   .pill.tab {
     background: #f6f6f6;
-    border-radius: 16px;
+    border-radius: 5px;
     font-size: 0.9rem;
     padding: 6px 12px;
     border: 1px solid #ddd;
@@ -469,9 +469,9 @@ button.inactive { background-color: #C4C4C4; border: none; }
   }
   
   .pill.tab.is-active {
-    background: #111;
+    background: #000;
     color: #fff;
-    border-color: #111;
+    border-color: #000;
   }
   
   .tab-panel { margin-top: 14px; }
@@ -761,6 +761,7 @@ input[type=number] {
     gap: 30px;
     padding: 50px;
     position: relative;
+    
 }
 
 .info-box h2 { font-size: 1.8rem; }
@@ -793,6 +794,10 @@ input[type=number] {
 /* Info modal hidden by default */
 .info-modal {
     display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* perfectly centers it */
   }
   
   .info-modal.active {
@@ -809,13 +814,16 @@ input[type=number] {
   /* hover should feel like it's "lifting" */
   button:hover, 
   .card:hover, 
-  .power-suit:hover { 
+  .power-suit-list .power-suit:hover { 
     transform: rotate(-2deg);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
   }
+
+  .power-suit-list .power-suit:hover { cursor: pointer; }
+
   
   /* selected should feel pressed-in but still match the system */
-  .card.selected, .power-suit.selected {
+  .card.selected, .power-suit-list .power-suit.selected {
     box-shadow: 
       inset 0 0 0 3px rgba(0, 0, 0, 0.4),  /* inner border */
       0 2px 6px rgba(0, 0, 0, 0.12);       /* same as default outer */
@@ -837,6 +845,8 @@ input[type=number] {
     cursor: pointer; 
 }
 
+.error-message { color: red; margin-top: 20px; text-align: center; }
+
 body {
     cursor: url('images/pixel-cursor.png') 0 0, auto;
   }
@@ -848,6 +858,7 @@ body {
 }
 
 .hidden { display: none; }
+.invisible { visibility: hidden; }
 
 input {
     font-family: 'Comic Neue', Tahoma, Geneva, Verdana, sans-serif;
