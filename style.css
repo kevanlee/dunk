@@ -145,7 +145,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
 .blue { background-color: #A0CED9}
 .green { background-color: #ADF7B6}
 .dunk { background-color: black; color: white; }
-.empty { border: 1px dashed black;  }
+.empty { border: 1px dashed black; background-color: white; }
 
 .card-icon {   display: block;   width: 20px;   height: 20px;   background: rgba(255, 255, 255, 0.3);   border-radius: 50%;   margin: 0.2rem auto 0;   text-align: center; }
 
@@ -240,7 +240,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
   
 
 .play-area {
-    background: url('images/PLAY-AREA.png') no-repeat center top;
+    background: url('images/PLAY-HERE.png') no-repeat center top;
     background-color: white;
     background-size: cover;
     height: 100%;
@@ -314,7 +314,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
 /* =========== Jumbotron =========== */
 
 .jumbotron {
-    width: auto;
+    width: 350px;
     display: flex; 
     flex-direction: row;
     gap: 20px;
@@ -322,9 +322,10 @@ button.inactive { background-color: #C4C4C4; border: none; }
     margin-left: auto;
 }
 
-.jumbotron.top { margin-right: 9%; }
+.jumbotron.top { margin-right: 10%; }
 
 .jumbotron-team {
+    flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;

@@ -34,6 +34,8 @@ let gameState = {
     powerSuit: "orange",
     currentTrick: 0,
     trickLeader: "You", // starts as bid winner
+    currentTurn: "You", // current player's turn
+    turnOrder: ["Patricia", "Alex", "Jordan", "You"], // clockwise order
     playedCards: [], // cards played in current trick
     trickWinners: [], // who won each trick
     trickHistory: [] // history of all tricks in this round
@@ -120,6 +122,8 @@ function resetGame() {
       powerSuit: "orange",
       currentTrick: 0,
       trickLeader: "You",
+      currentTurn: "You",
+      turnOrder: ["Patricia", "Alex", "Jordan", "You"],
       playedCards: [],
       trickWinners: [],
       trickHistory: []
@@ -157,6 +161,8 @@ function initializeGameState() {
       powerSuit: "orange",
       currentTrick: 0,
       trickLeader: "You",
+      currentTurn: "You",
+      turnOrder: ["Patricia", "Alex", "Jordan", "You"],
       playedCards: [],
       trickWinners: [],
       trickHistory: []
@@ -274,6 +280,12 @@ function updateUIForCurrentPhase() {
         if (window.gameplay && window.gameplay.updatePlayerNamesInUI) {
           window.gameplay.updatePlayerNamesInUI();
         }
+        
+        // Log the first trick information
+        logTrickInfo();
+        
+        // Update the "First" pill to show only for the trick leader
+        updateTrickLeaderPill();
       }
       
       // Show the .your-hand section and update its header for gameplay
@@ -284,7 +296,6 @@ function updateUIForCurrentPhase() {
         // Update the .your-hand-header-dealing to show power suit and bid information
         const yourHandHeader = yourHandSectionsGameplay[0].querySelector('.your-hand-header-dealing');
         if (yourHandHeader) {
-          console.log('Updating your-hand-header for gameplay');
           yourHandHeader.innerHTML = `
             <h2>Your hand</h2>
             <div class="pill">Power suit</div>
@@ -295,6 +306,11 @@ function updateUIForCurrentPhase() {
           `;
         } else {
           console.error('Could not find .your-hand-header-dealing element');
+        }
+        
+        // Initialize card playing functionality AFTER the hand is visible
+        if (window.gameplay && window.gameplay.initializeCardPlaying) {
+          window.gameplay.initializeCardPlaying();
         }
       }
       break;
@@ -334,6 +350,9 @@ function handleDealingNextClick() {
  */
 function handleBiddingNextClick() {
   console.log('Bidding Next button clicked - transitioning to gameplay phase');
+  
+  // Log round information
+  logRoundInfo();
   
   // Transition to GAMEPLAY phase
   setCurrentPhase(GAME_PHASES.GAMEPLAY);
@@ -418,13 +437,15 @@ function initializeNewRound() {
     powerSuit: "orange",
     currentTrick: 0,
     trickLeader: "You", // starts as bid winner
+    currentTurn: "You", // bid winner leads first trick
+    turnOrder: ["Patricia", "Alex", "Jordan", "You"], // clockwise order
     playedCards: [],
     trickWinners: [],
     trickHistory: []
   };
   
-  // Set the current player's hand (assuming player is hand[0])
-  gameState.playerHand = newGame.hands[0];
+  // Set the current player's hand (You are PLAYER3, position 3)
+  gameState.playerHand = newGame.hands[3];
   
   console.log(`Round ${gameState.currentHand} initialized:`, {
     deckSize: gameState.deck.length,
@@ -553,6 +574,80 @@ function dealCardsAnimation(playerHand) {
 }
 
 /**
+ * Log round information when transitioning to gameplay
+ */
+function logRoundInfo() {
+  console.log('=== ROUND INFORMATION ===');
+  console.log(`Power Suit: ${gameState.roundState.powerSuit}`);
+  console.log(`Bid: ${gameState.roundState.currentBid}`);
+  console.log(`Bid Winner: ${gameState.roundState.bidWinner}`);
+  console.log('');
+  
+  console.log('=== PLAYER HANDS ===');
+  if (gameState.hands && gameState.hands.length === 4) {
+    const players = window.gameSetup ? window.gameSetup.PLAYERS : ['Player 0', 'Player 1', 'Player 2', 'Player 3'];
+    gameState.hands.forEach((hand, index) => {
+      const playerName = players[`PLAYER${index}`] ? players[`PLAYER${index}`].name : `Player ${index}`;
+      console.log(`${playerName} (${hand.length} cards):`, hand.map(card => `${card.suit} ${card.value}`).join(', '));
+    });
+  }
+  console.log('');
+  
+  console.log('=== KITTY ===');
+  if (gameState.kitty) {
+    console.log(`Kitty (${gameState.kitty.length} cards):`, gameState.kitty.map(card => `${card.suit} ${card.value}`).join(', '));
+  }
+  console.log('');
+}
+
+/**
+ * Log trick information at the start of each trick
+ */
+function logTrickInfo() {
+  const currentTrick = gameState.roundState.currentTrick + 1;
+  const trickLeader = gameState.roundState.trickLeader;
+  
+  console.log(`=== TRICK ${currentTrick}/13 ===`);
+  console.log(`Trick Leader: ${trickLeader}`);
+  console.log('');
+}
+
+/**
+ * Update the "First" pill to show only for the current trick leader
+ */
+function updateTrickLeaderPill() {
+  const trickLeader = gameState.roundState.trickLeader;
+  const players = window.gameSetup ? window.gameSetup.PLAYERS : null;
+  
+  if (!players) {
+    console.error('gameSetup not available for updating trick leader pill');
+    return;
+  }
+  
+  // Find all "First" pills in the play area
+  const pills = document.querySelectorAll('.play-area .pill');
+  
+  pills.forEach((pill, index) => {
+    // Determine which player this pill belongs to based on position
+    let playerName;
+    switch (index) {
+      case 0: playerName = players.PLAYER0.name; break; // Patricia
+      case 1: playerName = players.PLAYER1.name; break; // Alex
+      case 2: playerName = players.PLAYER2.name; break; // Jordan
+      case 3: playerName = players.PLAYER3.name; break; // You
+      default: playerName = 'Unknown';
+    }
+    
+    // Show pill only if this player is the trick leader
+    if (playerName === trickLeader) {
+      pill.classList.remove('invisible');
+    } else {
+      pill.classList.add('invisible');
+    }
+  });
+}
+
+/**
  * Tab functionality for score updates
  */
 function activateTab(container, tabEl) {
@@ -654,5 +749,8 @@ function activateTab(container, tabEl) {
     initializeNewRound,
     renderCard,
     dealCardsAnimation,
+    logRoundInfo,
+    logTrickInfo,
+    updateTrickLeaderPill,
     GAME_PHASES
   };
