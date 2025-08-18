@@ -38,7 +38,12 @@ let gameState = {
     turnOrder: ["Patricia", "Alex", "Jordan", "You"], // clockwise order
     playedCards: [], // cards played in current trick
     trickWinners: [], // who won each trick
-    trickHistory: [] // history of all tricks in this round
+    trickHistory: [], // history of all tricks in this round
+    // Score tracking
+    team1Score: 0,
+    team2Score: 0,
+    trickPoints: { team1: [], team2: [] }, // point cards won by each team
+    pointCardsWon: { player1: [], player2: [], player3: [], player4: [] } // individual player point cards
   },
   // Player data
   playerHand: null, // Current player's hand (hand[0])
@@ -441,7 +446,12 @@ function initializeNewRound() {
     turnOrder: ["Patricia", "Alex", "Jordan", "You"], // clockwise order
     playedCards: [],
     trickWinners: [],
-    trickHistory: []
+    trickHistory: [],
+    // Score tracking - reset to 0 for new round
+    team1Score: 0,
+    team2Score: 0,
+    trickPoints: { team1: [], team2: [] },
+    pointCardsWon: { player1: [], player2: [], player3: [], player4: [] }
   };
   
   // Set the current player's hand (You are PLAYER3, position 3)
@@ -454,6 +464,9 @@ function initializeNewRound() {
     playerHand: gameState.playerHand,
     kitty: gameState.kitty
   });
+  
+  // Update score display to show 0 for new round
+  updateScoreDisplay();
 }
 
 
@@ -534,6 +547,7 @@ function dealCardsAnimation(playerHand) {
   } else {
     cardLayout.innerHTML = ''; // Clear existing cards
     cardLayout.classList.add('hidden'); // Ensure it's hidden initially
+    cardLayout.classList.remove('empty-state'); // Remove empty state when dealing new cards
   }
   
   // Sort the player hand for display: group by color, then by value (1 highest, then 14, 13, etc., D last)
@@ -571,6 +585,17 @@ function dealCardsAnimation(playerHand) {
       }
     }, 150); // 150ms delay between each card
   }, 1000); // 1 second delay before starting to deal cards
+}
+
+/**
+ * Update the score display in the left column
+ */
+function updateScoreDisplay() {
+  const scoreElements = document.querySelectorAll('.score-hand .score');
+  if (scoreElements.length >= 2) {
+    scoreElements[0].textContent = gameState.roundState.team1Score;
+    scoreElements[1].textContent = gameState.roundState.team2Score;
+  }
 }
 
 /**
@@ -749,6 +774,7 @@ function activateTab(container, tabEl) {
     initializeNewRound,
     renderCard,
     dealCardsAnimation,
+    updateScoreDisplay,
     logRoundInfo,
     logTrickInfo,
     updateTrickLeaderPill,

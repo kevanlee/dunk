@@ -37,38 +37,47 @@ function determineTrickWinner(playedCards, powerSuit, ledSuit) {
     const card = cardData.card;
     const player = cardData.player;
     
+    // Handle Dunk card - it automatically becomes the power suit
+    let effectiveSuit = card.suit;
+    let effectiveValue = card.value;
+    
+    if (card.suit === 'dunk') {
+      effectiveSuit = powerSuit;
+      effectiveValue = 10.5; // Dunk card is worth 10.5 in the power suit
+    }
+    
     // Check if this card can win
     if (!winningCard) {
-      winningCard = card;
+      winningCard = { ...card, effectiveSuit, effectiveValue };
       winningPlayer = player;
       return;
     }
     
     // If current winning card is power suit
-    if (winningCard.suit === powerSuit) {
+    if (winningCard.effectiveSuit === powerSuit) {
       // Only power suit cards can beat it
-      if (card.suit === powerSuit) {
-        if (card.value === 1 && winningCard.value !== 1) {
-          winningCard = card;
+      if (effectiveSuit === powerSuit) {
+        if (effectiveValue === 1 && winningCard.effectiveValue !== 1) {
+          winningCard = { ...card, effectiveSuit, effectiveValue };
           winningPlayer = player;
-        } else if (card.value !== 1 && winningCard.value !== 1 && card.value > winningCard.value) {
-          winningCard = card;
+        } else if (effectiveValue !== 1 && winningCard.effectiveValue !== 1 && effectiveValue > winningCard.effectiveValue) {
+          winningCard = { ...card, effectiveSuit, effectiveValue };
           winningPlayer = player;
         }
       }
     } else {
       // Current winning card is not power suit
-      if (card.suit === powerSuit) {
+      if (effectiveSuit === powerSuit) {
         // Power suit beats non-power suit
-        winningCard = card;
+        winningCard = { ...card, effectiveSuit, effectiveValue };
         winningPlayer = player;
-      } else if (card.suit === ledSuit && winningCard.suit === ledSuit) {
+      } else if (effectiveSuit === ledSuit && winningCard.effectiveSuit === ledSuit) {
         // Both cards follow led suit, compare values
-        if (card.value === 1 && winningCard.value !== 1) {
-          winningCard = card;
+        if (effectiveValue === 1 && winningCard.effectiveValue !== 1) {
+          winningCard = { ...card, effectiveSuit, effectiveValue };
           winningPlayer = player;
-        } else if (card.value !== 1 && winningCard.value !== 1 && card.value > winningCard.value) {
-          winningCard = card;
+        } else if (effectiveValue !== 1 && winningCard.effectiveValue !== 1 && effectiveValue > winningCard.effectiveValue) {
+          winningCard = { ...card, effectiveSuit, effectiveValue };
           winningPlayer = player;
         }
       }
@@ -188,12 +197,17 @@ function isCardPlayValid(cardData, gameState) {
   const ledSuit = playedCards[0].card.suit;
   const playerHand = gameState.playerHand;
   
-  // Check if player has cards of the led suit
-  const cardsOfLedSuit = playerHand.filter(card => card.suit === ledSuit);
+  // Check if player has cards of the led suit (including Dunk card if it matches the power suit)
+  const powerSuit = gameState.roundState.powerSuit;
+  const cardsOfLedSuit = playerHand.filter(card => {
+    if (card.suit === ledSuit) return true;
+    if (card.suit === 'dunk' && powerSuit === ledSuit) return true;
+    return false;
+  });
   
   if (cardsOfLedSuit.length > 0) {
-    // Must follow suit
-    return cardData.suit === ledSuit;
+    // Must follow suit (Dunk card only valid if power suit matches led suit)
+    return cardData.suit === ledSuit || (cardData.suit === 'dunk' && powerSuit === ledSuit);
   } else {
     // Can't follow suit - any card is valid
     return true;
@@ -226,8 +240,6 @@ function updateCardAvailability(sortedHand, gameState) {
       cardElement.classList.add('inactive');
     }
   });
-  
-  console.log('Updated card availability based on suit following rules');
 }
 
 /**
@@ -237,13 +249,8 @@ function updateCardAvailability(sortedHand, gameState) {
  * @param {Array} sortedHand - The sorted hand array
  */
 function handleCardClick(cardElement, displayIndex, sortedHand) {
-  console.log(`Card clicked: display index ${displayIndex}`);
-  console.log('Card element:', cardElement);
-  console.log('Sorted hand length:', sortedHand ? sortedHand.length : 'undefined');
-  
   // Get the current game state
   const gameState = window.gameState.getGameState();
-  console.log('Current turn:', gameState.roundState.currentTurn);
   
   // Check if it's the player's turn
   if (gameState.roundState.currentTurn !== "You") {
@@ -258,7 +265,7 @@ function handleCardClick(cardElement, displayIndex, sortedHand) {
   }
   
   const cardData = sortedHand[displayIndex];
-  console.log(`Card clicked: display index ${displayIndex} - ${cardData.suit} ${cardData.value} (${cardData.points} points)`);
+  console.log(`Playing: ${cardData.suit} ${cardData.value}`);
   
   // Validate the card play
   if (!isCardPlayValid(cardData, gameState)) {
@@ -266,13 +273,11 @@ function handleCardClick(cardElement, displayIndex, sortedHand) {
     return;
   }
   
-  console.log('Playing card:', cardData);
-  
   // Play the card to the play area
   playCardToPlayArea(cardData, displayIndex);
   
-  // Remove the card from the player's hand
-  removeCardFromHand(displayIndex);
+  // Remove the card from the player's hand (pass the card element for DOM removal)
+  removeCardFromHand(displayIndex, cardElement);
   
   // Update the game state
   updateGameStateAfterCardPlay(cardData);
@@ -291,11 +296,8 @@ function handleCardClick(cardElement, displayIndex, sortedHand) {
  * @param {number} cardIndex - Index of the card in the player's hand
  */
 function playCardToPlayArea(cardData, cardIndex) {
-  console.log('Attempting to play card to play area...');
-  
   // Find the player's position in the play area (You are position 3)
   const playArea = document.querySelector('.play-area');
-  console.log('Play area found:', playArea);
   
   if (!playArea) {
     console.error('Could not find play area');
@@ -304,7 +306,6 @@ function playCardToPlayArea(cardData, cardIndex) {
   
   const playerPosition = 3; // You are PLAYER3
   const playedCardElement = playArea.children[playerPosition];
-  console.log('Played card element found:', playedCardElement);
   
   if (!playedCardElement) {
     console.error('Could not find player position in play area');
@@ -313,7 +314,6 @@ function playCardToPlayArea(cardData, cardIndex) {
   
   // Find the card container in the played card element
   const cardContainer = playedCardElement.querySelector('.card');
-  console.log('Card container found:', cardContainer);
   
   if (!cardContainer) {
     console.error('Could not find card container in play area');
@@ -323,21 +323,66 @@ function playCardToPlayArea(cardData, cardIndex) {
   // Update the card display
   cardContainer.className = `card ${cardData.suit}`;
   cardContainer.innerHTML = `<p>${cardData.value} <span class="card-icon"></span></p>`;
-  
-  console.log(`Card played to position ${playerPosition}: ${cardData.suit} ${cardData.value}`);
 }
 
 /**
  * Remove a card from the player's hand
  * @param {number} cardIndex - Index of the card to remove
+ * @param {HTMLElement} cardElement - The card element to remove from DOM
  */
-function removeCardFromHand(cardIndex) {
-  const cardLayout = document.querySelector('.your-hand .card-layout');
-  const cards = cardLayout.querySelectorAll('.card');
+function removeCardFromHand(cardIndex, cardElement) {
+  // Remove from DOM using the specific card element
+  if (cardElement && cardElement.parentNode) {
+    cardElement.remove();
+  }
   
-  if (cardIndex < cards.length) {
-    cards[cardIndex].remove();
-    console.log(`Removed card at index ${cardIndex} from hand`);
+  // Check if this was the last card and show empty state
+  const cardLayout = document.querySelector('.your-hand .card-layout');
+  const remainingCards = cardLayout.querySelectorAll('.card');
+  if (remainingCards.length === 0) {
+    cardLayout.classList.add('empty-state');
+  }
+  
+  // Remove from game state using the card data directly
+  const gameState = window.gameState.getGameState();
+  const sortedHand = window.cardLogic.sortHand(gameState.playerHand);
+  const cardToRemove = sortedHand[cardIndex];
+  
+  if (cardToRemove) {
+    // Find the card in the original hand and remove it
+    const originalIndex = gameState.playerHand.findIndex(card => 
+      card.suit === cardToRemove.suit && card.value === cardToRemove.value
+    );
+    
+    if (originalIndex !== -1) {
+      gameState.playerHand.splice(originalIndex, 1);
+      console.log(`Removed ${cardToRemove.suit} ${cardToRemove.value} from hand. Cards remaining: ${gameState.playerHand.length}`);
+    } else {
+      console.error(`Could not find card ${cardToRemove.suit} ${cardToRemove.value} in hand to remove`);
+    }
+  } else {
+    // Fallback: try to find the card by looking at the DOM element
+    if (cardElement) {
+      const cardText = cardElement.textContent.trim();
+      const cardSuit = cardElement.className.includes('dunk') ? 'dunk' : 
+                      cardElement.className.includes('orange') ? 'orange' :
+                      cardElement.className.includes('yellow') ? 'yellow' :
+                      cardElement.className.includes('blue') ? 'blue' : 'green';
+      
+      // Find and remove the card from game state
+      const originalIndex = gameState.playerHand.findIndex(card => 
+        card.suit === cardSuit && card.value.toString() === cardText
+      );
+      
+      if (originalIndex !== -1) {
+        gameState.playerHand.splice(originalIndex, 1);
+        console.log(`Removed ${cardSuit} ${cardText} from hand (fallback). Cards remaining: ${gameState.playerHand.length}`);
+      } else {
+        console.error(`Could not find card ${cardSuit} ${cardText} in hand to remove (fallback)`);
+      }
+    } else {
+      console.error(`No card element provided for removal`);
+    }
   }
 }
 
@@ -354,8 +399,8 @@ function updateGameStateAfterCardPlay(cardData) {
     player: 'You'
   });
   
-  console.log('Updated game state - card added to played cards');
-  console.log('Current played cards:', gameState.roundState.playedCards);
+  // Log hand sizes for debugging
+  logHandSizes();
   
   // Advance to next turn
   advanceToNextTurn();
@@ -372,6 +417,21 @@ function updateGameStateAfterCardPlay(cardData) {
 }
 
 /**
+ * Log the current hand sizes for debugging
+ */
+function logHandSizes() {
+  const gameState = window.gameState.getGameState();
+  const players = window.gameSetup.PLAYERS;
+  
+  console.log('=== HAND SIZES ===');
+  console.log(`${players.PLAYER0.name}: ${gameState.hands[0].length} cards`);
+  console.log(`${players.PLAYER1.name}: ${gameState.hands[1].length} cards`);
+  console.log(`${players.PLAYER2.name}: ${gameState.hands[2].length} cards`);
+  console.log(`${players.PLAYER3.name}: ${gameState.hands[3].length} cards`);
+  console.log('==================');
+}
+
+/**
  * Advance to the next player's turn
  */
 function advanceToNextTurn() {
@@ -382,7 +442,6 @@ function advanceToNextTurn() {
   const nextTurn = turnOrder[nextTurnIndex];
   
   gameState.roundState.currentTurn = nextTurn;
-  console.log(`Turn advanced: ${gameState.roundState.currentTurn} → ${nextTurn}`);
 }
 
 /**
@@ -400,13 +459,18 @@ function completeTrick() {
   const trickWinner = determineTrickWinner(playedCards, powerSuit, ledSuit);
   
   console.log(`Trick complete! Winner: ${trickWinner}`);
-  console.log('Played cards:', playedCards);
   
-  // Mark the winning card in the UI
-  markWinningCard(trickWinner);
+  // Track point cards won in this trick
+  trackTrickPoints(playedCards, trickWinner);
   
-  // Show Next button for next trick
-  showNextTrickButton();
+  // Add a small delay before marking the winner
+  setTimeout(() => {
+    // Mark the winning card in the UI
+    markWinningCard(trickWinner);
+    
+    // Show Next button for next trick
+    showNextTrickButton();
+  }, 1000); // 1 second delay
 }
 
 /**
@@ -431,7 +495,6 @@ function markWinningCard(trickWinner) {
   
   if (winnerPosition >= 0 && playedCards[winnerPosition]) {
     playedCards[winnerPosition].classList.add('winner');
-    console.log(`Marked ${trickWinner}'s card as winner at position ${winnerPosition}`);
   }
 }
 
@@ -442,7 +505,6 @@ function showNextTrickButton() {
   const rightColumn = document.querySelector('.cols .right');
   if (rightColumn) {
     rightColumn.innerHTML = '<button onclick="window.gameplay.proceedToNextTrick()">Next ⮑</button>';
-    console.log('Next trick button shown');
   }
 }
 
@@ -452,8 +514,6 @@ function showNextTrickButton() {
 function startAITurn() {
   const gameState = window.gameState.getGameState();
   const currentTurn = gameState.roundState.currentTurn;
-  
-  console.log(`Starting AI turn for ${currentTurn}`);
   
   // Simple AI: play a random card from the AI's hand
   setTimeout(() => {
@@ -554,7 +614,7 @@ function playAICardToPlayArea(cardData, aiPlayer) {
   cardContainer.className = `card ${cardData.suit}`;
   cardContainer.innerHTML = `<p>${cardData.value} <span class="card-icon"></span></p>`;
   
-  console.log(`AI card played to position ${playerPosition}: ${cardData.suit} ${cardData.value}`);
+  console.log(`${aiPlayer} plays: ${cardData.suit} ${cardData.value}`);
 }
 
 /**
@@ -568,7 +628,6 @@ function removeCardFromAIHand(aiHandIndex, cardIndex) {
   
   if (aiHand && cardIndex < aiHand.length) {
     aiHand.splice(cardIndex, 1);
-    console.log(`Removed card at index ${cardIndex} from AI hand ${aiHandIndex}`);
   }
 }
 
@@ -586,8 +645,8 @@ function updateGameStateAfterAICardPlay(cardData, aiPlayer) {
     player: aiPlayer
   });
   
-  console.log(`Updated game state - ${aiPlayer}'s card added to played cards`);
-  console.log('Current played cards:', gameState.roundState.playedCards);
+  // Log hand sizes for debugging
+  logHandSizes();
   
   // Advance to next turn
   advanceToNextTurn();
@@ -631,6 +690,11 @@ function proceedToNextTrick() {
   // Update "First" pill for new trick leader
   updateTrickLeaderPill();
   
+  // Reset card availability for new trick (since no cards have been played yet)
+  const updatedGameState = window.gameState.getGameState();
+  const updatedSortedHand = window.cardLogic.sortHand(updatedGameState.playerHand);
+  updateCardAvailability(updatedSortedHand, updatedGameState);
+  
   // Hide Next button
   const rightColumn = document.querySelector('.cols .right');
   if (rightColumn) {
@@ -652,6 +716,81 @@ function proceedToNextTrick() {
 }
 
 /**
+ * Track point cards won in a trick and update scores
+ * @param {Array} playedCards - Cards played in the trick
+ * @param {string} trickWinner - Player who won the trick
+ */
+function trackTrickPoints(playedCards, trickWinner) {
+  const gameState = window.gameState.getGameState();
+  const players = window.gameSetup.PLAYERS;
+  const teams = window.gameSetup.TEAMS;
+  
+  // Determine which team the winner belongs to
+  let winningTeam = null;
+  let playerIndex = -1;
+  
+  if (trickWinner === players.PLAYER0.name) {
+    winningTeam = 'team1';
+    playerIndex = 0;
+  } else if (trickWinner === players.PLAYER1.name) {
+    winningTeam = 'team2';
+    playerIndex = 1;
+  } else if (trickWinner === players.PLAYER2.name) {
+    winningTeam = 'team1';
+    playerIndex = 2;
+  } else if (trickWinner === players.PLAYER3.name) {
+    winningTeam = 'team2';
+    playerIndex = 3;
+  }
+  
+  if (!winningTeam) {
+    console.error(`Unknown player: ${trickWinner}`);
+    return;
+  }
+  
+  // Check each played card for points
+  let trickPoints = 0;
+  const pointCards = [];
+  
+  playedCards.forEach(cardData => {
+    const card = cardData.card;
+    if (card.points > 0) {
+      trickPoints += card.points;
+      pointCards.push({
+        suit: card.suit,
+        value: card.value,
+        points: card.points,
+        wonBy: trickWinner
+      });
+    }
+  });
+  
+  // Update team score
+  if (winningTeam === 'team1') {
+    gameState.roundState.team1Score += trickPoints;
+    gameState.roundState.trickPoints.team1.push(...pointCards);
+  } else {
+    gameState.roundState.team2Score += trickPoints;
+    gameState.roundState.trickPoints.team2.push(...pointCards);
+  }
+  
+  // Update individual player point cards
+  if (playerIndex >= 0) {
+    const playerKey = `player${playerIndex + 1}`;
+    gameState.roundState.pointCardsWon[playerKey].push(...pointCards);
+  }
+  
+  // Update score display
+  if (window.gameState && window.gameState.updateScoreDisplay) {
+    window.gameState.updateScoreDisplay();
+  }
+  
+  if (trickPoints > 0) {
+    console.log(`${trickWinner} won ${trickPoints} points in this trick`);
+  }
+}
+
+/**
  * Clear the play area for the next trick
  */
 function clearPlayArea() {
@@ -667,8 +806,6 @@ function clearPlayArea() {
     // Remove winner class
     cardElement.classList.remove('winner');
   });
-  
-  console.log('Play area cleared for next trick');
 }
 
 // Export functions for use in other modules
@@ -686,6 +823,7 @@ window.gameplay = {
   updateCardAvailability,
   advanceToNextTurn,
   completeTrick,
+  trackTrickPoints,
   markWinningCard,
   showNextTrickButton,
   startAITurn,

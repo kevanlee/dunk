@@ -47,10 +47,14 @@ function getValidCards(hand, playedCards, powerSuit) {
   
   // Not leading - must follow suit if possible
   const ledSuit = playedCards[0].card.suit;
-  const cardsOfLedSuit = hand.filter(card => card.suit === ledSuit);
+  const cardsOfLedSuit = hand.filter(card => {
+    if (card.suit === ledSuit) return true;
+    if (card.suit === 'dunk' && powerSuit === ledSuit) return true;
+    return false;
+  });
   
   if (cardsOfLedSuit.length > 0) {
-    // Must follow suit
+    // Must follow suit (Dunk card only valid if power suit matches led suit)
     return cardsOfLedSuit;
   } else {
     // Can't follow suit - can play any card
