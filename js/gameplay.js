@@ -474,6 +474,95 @@ function showNextTrickButton() {
 }
 
 /**
+ * Handle final trick rewards: kitty points + 20-point bonus
+ * @param {string} finalTrickWinner - Player who won the final trick
+ */
+function handleFinalTrickRewards(finalTrickWinner) {
+  const gameState = window.gameState.getGameState();
+  const players = window.gameSetup.PLAYERS;
+  
+  // Determine which team won the final trick
+  let winningTeam = null;
+  let playerIndex = -1;
+  
+  if (finalTrickWinner === players.PLAYER0.name) {
+    winningTeam = 'team2';
+    playerIndex = 0;
+  } else if (finalTrickWinner === players.PLAYER1.name) {
+    winningTeam = 'team1';
+    playerIndex = 1;
+  } else if (finalTrickWinner === players.PLAYER2.name) {
+    winningTeam = 'team2';
+    playerIndex = 2;
+  } else if (finalTrickWinner === players.PLAYER3.name) {
+    winningTeam = 'team1';
+    playerIndex = 3;
+  }
+  
+  if (!winningTeam) {
+    console.error(`Unknown player: ${finalTrickWinner}`);
+    return;
+  }
+  
+  // Calculate kitty points
+  let kittyPoints = 0;
+  const kittyCards = [];
+  if (gameState.kitty && gameState.kitty.length > 0) {
+    gameState.kitty.forEach(card => {
+      if (card.points > 0) {
+        kittyPoints += card.points;
+        kittyCards.push({
+          suit: card.suit,
+          value: card.value,
+          points: card.points,
+          wonBy: finalTrickWinner,
+          source: 'kitty'
+        });
+      }
+    });
+  }
+  
+  // Add 20-point bonus for winning final trick
+  const finalTrickBonus = 20;
+  
+  // Update team score with kitty points + final trick bonus
+  const totalBonusPoints = kittyPoints + finalTrickBonus;
+  
+  if (winningTeam === 'team1') {
+    gameState.roundState.team1Score += totalBonusPoints;
+    gameState.roundState.trickPoints.team1.push(...kittyCards);
+  } else {
+    gameState.roundState.team2Score += totalBonusPoints;
+    gameState.roundState.trickPoints.team2.push(...kittyCards);
+  }
+  
+  // Update individual player point cards
+  if (playerIndex >= 0) {
+    const playerKey = `player${playerIndex + 1}`;
+    gameState.roundState.pointCardsWon[playerKey].push(...kittyCards);
+  }
+  
+  console.log(`${finalTrickWinner} won the final trick and gets:`);
+  console.log(`- Kitty points: ${kittyPoints}`);
+  console.log(`- Final trick bonus: ${finalTrickBonus}`);
+  console.log(`- Total bonus: ${totalBonusPoints}`);
+  
+  // Verify total points = 200
+  const totalPoints = gameState.roundState.team1Score + gameState.roundState.team2Score;
+  console.log(`Total points in round: ${totalPoints} (should be 200)`);
+}
+
+/**
+ * Show the final round button for transitioning to round scoring
+ */
+function showFinalRoundButton() {
+  const rightColumn = document.querySelector('.cols .right');
+  if (rightColumn) {
+    rightColumn.innerHTML = '<button onclick="window.gameplay.transitionToRoundScoring()">See Results →</button>';
+  }
+}
+
+/**
  * Start AI turn - simple random card selection
  */
 function startAITurn() {
@@ -639,9 +728,19 @@ function proceedToNextTrick() {
   const ledSuit = playedCards[0].card.suit;
   const trickWinner = determineTrickWinner(playedCards, powerSuit, ledSuit);
   
+  // Store the trick winner in the trickWinners array
+  gameState.roundState.trickWinners.push(trickWinner);
+  
   // Check if this was the last trick (13/13)
   if (gameState.roundState.currentTrick === 12) { // 0-indexed, so trick 13 is at index 12
+    // Handle final trick special rules: kitty points + 20-point bonus
+    handleFinalTrickRewards(trickWinner);
+    
     logRoundEndSummary(trickWinner);
+    
+    // Show final round button instead of proceeding to next trick
+    showFinalRoundButton();
+    return; // Don't proceed to next trick
   }
   
   // Update trick leader and current turn
@@ -740,14 +839,50 @@ function logRoundEndSummary(lastTrickWinner) {
     team2WonLastTrick = true;
   }
   
+  // Calculate tricks won per team
+  let team1Tricks = 0;
+  let team2Tricks = 0;
+  
+  gameState.roundState.trickWinners.forEach(winner => {
+    if (winner === players.PLAYER1.name || winner === players.PLAYER3.name) {
+      team1Tricks++;
+    } else if (winner === players.PLAYER0.name || winner === players.PLAYER2.name) {
+      team2Tricks++;
+    }
+  });
+  
+  // Calculate kitty points
+  let kittyPoints = 0;
+  let kittyCards = [];
+  if (gameState.kitty && gameState.kitty.length > 0) {
+    gameState.kitty.forEach(card => {
+      if (card.points > 0) {
+        kittyPoints += card.points;
+        kittyCards.push(`${card.suit} ${card.value} (${card.points})`);
+      }
+    });
+  }
+  
   console.log('=== ROUND END SUMMARY ===');
   console.log(`Team 1 (Alex + You): ${gameState.roundState.team1Score} points`);
   console.log(`Team 1 point cards:`, gameState.roundState.trickPoints.team1.map(card => `${card.suit} ${card.value} (${card.points})`).join(', '));
+  console.log(`Team 1 tricks won: ${team1Tricks}/13`);
   console.log(`Team 1 won last trick: ${team1WonLastTrick}`);
   console.log('');
   console.log(`Team 2 (Patricia + Jordan): ${gameState.roundState.team2Score} points`);
   console.log(`Team 2 point cards:`, gameState.roundState.trickPoints.team2.map(card => `${card.suit} ${card.value} (${card.points})`).join(', '));
+  console.log(`Team 2 tricks won: ${team2Tricks}/13`);
   console.log(`Team 2 won last trick: ${team2WonLastTrick}`);
+  console.log('');
+  if (kittyPoints > 0) {
+    console.log(`Kitty points: ${kittyPoints} (${kittyCards.join(', ')})`);
+  } else {
+    console.log(`Kitty points: 0`);
+  }
+  
+  // Verify total points = 200
+  const totalPoints = gameState.roundState.team1Score + gameState.roundState.team2Score;
+  console.log(`Total points in round: ${totalPoints} (should be 200)`);
   console.log('==========================');
 }
 
@@ -844,6 +979,408 @@ function clearPlayArea() {
   });
 }
 
+/**
+ * Transition from gameplay to round scoring phase
+ */
+function transitionToRoundScoring() {
+  console.log('Transitioning to round scoring phase...');
+  
+  // Calculate end-of-round scores and update game totals
+  calculateEndOfRoundScores();
+  
+  // Make player's hand inactive
+  makePlayerHandInactive();
+  
+  // Hide gameplay sections
+  hideGameplaySections();
+  
+  // Show round scoring section
+  showRoundScoringSection();
+  
+  // Populate round scoring data
+  populateRoundScoringData();
+  
+  // Change game phase
+  if (window.gameState && window.gameState.setCurrentPhase) {
+    window.gameState.setCurrentPhase('round_scoring');
+  }
+}
+
+/**
+ * Calculate end-of-round scores according to Kentucky Rook rules
+ * - If bidding team makes their bid: they get their earned points
+ * - If bidding team fails their bid: they get negative points equal to their bid amount
+ * - Non-bidding team always gets their earned points
+ */
+function calculateEndOfRoundScores() {
+  const gameState = window.gameState.getGameState();
+  const players = window.gameSetup.PLAYERS;
+  
+  const bidWinner = gameState.roundState.bidWinner;
+  const currentBid = gameState.roundState.currentBid;
+  const team1EarnedPoints = gameState.roundState.team1Score;
+  const team2EarnedPoints = gameState.roundState.team2Score;
+  
+  // Determine which team was the bidding team
+  let biddingTeam = null;
+  let nonBiddingTeam = null;
+  let biddingTeamEarnedPoints = 0;
+  let nonBiddingTeamEarnedPoints = 0;
+  
+  if (bidWinner === players.PLAYER1.name || bidWinner === players.PLAYER3.name) {
+    // Team 1 (Alex + You) was the bidding team
+    biddingTeam = 'team1';
+    nonBiddingTeam = 'team2';
+    biddingTeamEarnedPoints = team1EarnedPoints;
+    nonBiddingTeamEarnedPoints = team2EarnedPoints;
+  } else {
+    // Team 2 (Patricia + Jordan) was the bidding team
+    biddingTeam = 'team2';
+    nonBiddingTeam = 'team1';
+    biddingTeamEarnedPoints = team2EarnedPoints;
+    nonBiddingTeamEarnedPoints = team1EarnedPoints;
+  }
+  
+  // Calculate final round scores according to rules
+  let biddingTeamFinalScore = 0;
+  let nonBiddingTeamFinalScore = nonBiddingTeamEarnedPoints; // Non-bidding team always gets their earned points
+  
+  if (biddingTeamEarnedPoints >= currentBid) {
+    // Bidding team made their bid - they get their earned points
+    biddingTeamFinalScore = biddingTeamEarnedPoints;
+    console.log(`${biddingTeam} made their bid of ${currentBid} with ${biddingTeamEarnedPoints} points`);
+  } else {
+    // Bidding team failed their bid - they get negative points equal to their bid
+    biddingTeamFinalScore = -currentBid;
+    console.log(`${biddingTeam} failed their bid of ${currentBid} (earned ${biddingTeamEarnedPoints}) - they get -${currentBid} points`);
+  }
+  
+  // Update the round state with final scores
+  if (biddingTeam === 'team1') {
+    gameState.roundState.team1FinalScore = biddingTeamFinalScore;
+    gameState.roundState.team2FinalScore = nonBiddingTeamFinalScore;
+  } else {
+    gameState.roundState.team1FinalScore = nonBiddingTeamFinalScore;
+    gameState.roundState.team2FinalScore = biddingTeamFinalScore;
+  }
+  
+  // Add round scores to game totals
+  gameState.scores.team1 += gameState.roundState.team1FinalScore;
+  gameState.scores.team2 += gameState.roundState.team2FinalScore;
+  
+  // Store round in history
+  const roundRecord = {
+    roundNumber: gameState.currentHand,
+    bidWinner: bidWinner,
+    bidAmount: currentBid,
+    team1Earned: team1EarnedPoints,
+    team2Earned: team2EarnedPoints,
+    team1Final: gameState.roundState.team1FinalScore,
+    team2Final: gameState.roundState.team2FinalScore,
+    team1Total: gameState.scores.team1,
+    team2Total: gameState.scores.team2,
+    bidMade: biddingTeamEarnedPoints >= currentBid
+  };
+  
+  gameState.roundHistory.push(roundRecord);
+  
+  console.log('=== END OF ROUND SCORING ===');
+  console.log(`Round ${gameState.currentHand} Results:`);
+  console.log(`Bid: ${bidWinner} bid ${currentBid}`);
+  console.log(`Team 1 earned: ${team1EarnedPoints}, final: ${gameState.roundState.team1FinalScore}, total: ${gameState.scores.team1}`);
+  console.log(`Team 2 earned: ${team2EarnedPoints}, final: ${gameState.roundState.team2FinalScore}, total: ${gameState.scores.team2}`);
+  console.log(`Bid ${roundRecord.bidMade ? 'MADE' : 'FAILED'}`);
+  console.log('============================');
+  
+  // Check for game end (500 points)
+  checkForGameEnd();
+}
+
+/**
+ * Check if either team has reached 500 points to end the game
+ */
+function checkForGameEnd() {
+  const gameState = window.gameState.getGameState();
+  const winningScore = window.gameSetup.GAME_CONSTANTS.WINNING_SCORE;
+  
+  if (gameState.scores.team1 >= winningScore || gameState.scores.team2 >= winningScore) {
+    console.log('=== GAME END DETECTED ===');
+    console.log(`Team 1: ${gameState.scores.team1} points`);
+    console.log(`Team 2: ${gameState.scores.team2} points`);
+    
+    // Determine winner
+    let winner = null;
+    if (gameState.scores.team1 >= winningScore && gameState.scores.team2 >= winningScore) {
+      // Both teams reached 500 - highest score wins
+      if (gameState.scores.team1 > gameState.scores.team2) {
+        winner = 'team1';
+      } else if (gameState.scores.team2 > gameState.scores.team1) {
+        winner = 'team2';
+      } else {
+        // Tie - winner of most recent round wins
+        const lastRound = gameState.roundHistory[gameState.roundHistory.length - 1];
+        if (lastRound.team1Final > lastRound.team2Final) {
+          winner = 'team1';
+        } else {
+          winner = 'team2';
+        }
+      }
+    } else if (gameState.scores.team1 >= winningScore) {
+      winner = 'team1';
+    } else {
+      winner = 'team2';
+    }
+    
+    console.log(`Winner: ${winner}`);
+    console.log('========================');
+    
+    // TODO: Transition to end game phase
+    // For now, just log the game end
+  }
+}
+
+/**
+ * Make the player's hand inactive
+ */
+function makePlayerHandInactive() {
+  const playerCards = document.querySelectorAll('.your-hand .card');
+  playerCards.forEach(card => {
+    card.classList.add('inactive');
+  });
+}
+
+/**
+ * Hide gameplay sections (play area and hand score)
+ */
+function hideGameplaySections() {
+  // Hide the gameplay section with play area
+  const gameplaySections = document.querySelectorAll('.row:not(.hidden)');
+  gameplaySections.forEach(section => {
+    if (section.querySelector('.play-area') && !section.querySelector('.your-hand')) {
+      section.classList.add('hidden');
+    }
+  });
+}
+
+/**
+ * Show the round scoring section
+ */
+function showRoundScoringSection() {
+  // Find the hand score summary section (the one starting at line 233 in HTML)
+  const handScoreSections = document.querySelectorAll('.row.hidden');
+  handScoreSections.forEach(section => {
+    if (section.querySelector('.hand-score')) {
+      section.classList.remove('hidden');
+    }
+  });
+  
+  // Set up the Next button event listener
+  setTimeout(() => {
+    const handScoreNextButton = document.querySelector('.row:not(.hidden) .right button');
+    if (handScoreNextButton) {
+      console.log('Setting up hand score Next button event listener');
+      handScoreNextButton.onclick = function() {
+        if (window.gameState && window.gameState.handleRoundScoringNextClick) {
+          window.gameState.handleRoundScoringNextClick();
+        } else {
+          console.error('handleRoundScoringNextClick not available');
+        }
+      };
+    } else {
+      console.error('Could not find hand score Next button');
+    }
+  }, 100); // Small delay to ensure DOM is ready
+}
+
+/**
+ * Populate the round scoring section with actual game data
+ */
+function populateRoundScoringData() {
+  const gameState = window.gameState.getGameState();
+  const players = window.gameSetup.PLAYERS;
+  
+  // Determine which team made the bid
+  const bidWinner = gameState.roundState.bidWinner;
+  const currentBid = gameState.roundState.currentBid;
+  let team1MadeBid = false;
+  let team2MadeBid = false;
+  
+  if (bidWinner === players.PLAYER1.name || bidWinner === players.PLAYER3.name) {
+    team1MadeBid = gameState.roundState.team1Score >= currentBid;
+    team2MadeBid = false;
+  } else {
+    team2MadeBid = gameState.roundState.team2Score >= currentBid;
+    team1MadeBid = false;
+  }
+  
+  // Update the heading and image
+  const heading = document.querySelector('.hand-score-heading h2');
+  const headingImage = document.querySelector('.hand-score-heading img');
+  
+  if (heading && headingImage) {
+    if (team1MadeBid) {
+      heading.textContent = 'Alex + You made the bid!';
+      headingImage.src = 'images/boom.png';
+    } else if (team2MadeBid) {
+      heading.textContent = 'Patricia + Jordan made the bid!';
+      headingImage.src = 'images/boom.png';
+    } else {
+      // Determine which team failed
+      if (bidWinner === players.PLAYER1.name || bidWinner === players.PLAYER3.name) {
+        heading.textContent = 'Alex + You failed the bid!';
+        headingImage.src = 'images/eek.png';
+      } else {
+        heading.textContent = 'Patricia + Jordan failed the bid!';
+        headingImage.src = 'images/eek.png';
+      }
+    }
+  }
+  
+  // Update team scores and point cards
+  updateTeamScoreDisplay('team1', gameState.roundState.team1Score, gameState.roundState.trickPoints.team1);
+  updateTeamScoreDisplay('team2', gameState.roundState.team2Score, gameState.roundState.trickPoints.team2);
+  
+  // Update tricks won
+  updateTricksWonDisplay();
+}
+
+/**
+ * Update team score display in the hand score section
+ */
+function updateTeamScoreDisplay(teamKey, score, pointCards) {
+  const teamElements = document.querySelectorAll('.hand-score-team .team');
+  let teamElement;
+  
+  if (teamKey === 'team1') {
+    teamElement = teamElements[0]; // First team (Alex + You)
+  } else {
+    teamElement = teamElements[1]; // Second team (Patricia + Jordan)
+  }
+  
+  if (!teamElement) return;
+  
+  // Update score
+  const scoreElement = teamElement.querySelector('.score');
+  if (scoreElement) {
+    scoreElement.textContent = score;
+  }
+  
+  // Update team names to match the actual team composition
+  const namesElement = teamElement.querySelector('.names');
+  if (namesElement) {
+    if (teamKey === 'team1') {
+      namesElement.textContent = 'Alex + You';
+    } else {
+      namesElement.textContent = 'Patricia + Jordan';
+    }
+  }
+  
+  // Update point cards
+  const cardsWonElement = teamElement.querySelector('.cards-won');
+  if (cardsWonElement) {
+    cardsWonElement.innerHTML = '';
+    
+    // Add point card dots
+    pointCards.forEach(card => {
+      const dotElement = document.createElement('span');
+      
+      // Handle special cards (kitty)
+      if (card.source === 'kitty') {
+        dotElement.className = `dot ${card.suit} kitty`;
+        dotElement.textContent = card.value;
+        dotElement.title = `Kitty: ${card.suit} ${card.value} (${card.points} pts)`;
+      } else {
+        // Regular point cards
+        dotElement.className = `dot ${card.suit}`;
+        dotElement.textContent = card.value;
+      }
+      
+      cardsWonElement.appendChild(dotElement);
+    });
+    
+    // Check if this team won the last trick (worth 20 points)
+    const gameState = window.gameState.getGameState();
+    const players = window.gameSetup.PLAYERS;
+    const lastTrickWinner = gameState.roundState.trickWinners[gameState.roundState.trickWinners.length - 1];
+    
+    let teamWonLastTrick = false;
+    if (teamKey === 'team1') {
+      teamWonLastTrick = (lastTrickWinner === players.PLAYER1.name || lastTrickWinner === players.PLAYER3.name);
+    } else {
+      teamWonLastTrick = (lastTrickWinner === players.PLAYER0.name || lastTrickWinner === players.PLAYER2.name);
+    }
+    
+    if (teamWonLastTrick) {
+      const lastTrickElement = document.createElement('span');
+      lastTrickElement.className = 'last-trick';
+      lastTrickElement.textContent = 'Last trick';
+      cardsWonElement.appendChild(lastTrickElement);
+    }
+  }
+}
+
+/**
+ * Update tricks won display
+ */
+function updateTricksWonDisplay() {
+  const gameState = window.gameState.getGameState();
+  const players = window.gameSetup.PLAYERS;
+  
+  // Count tricks won by each team
+  let team1Tricks = 0;
+  let team2Tricks = 0;
+  
+  gameState.roundState.trickWinners.forEach(winner => {
+    if (winner === players.PLAYER1.name || winner === players.PLAYER3.name) {
+      team1Tricks++;
+    } else if (winner === players.PLAYER0.name || winner === players.PLAYER2.name) {
+      team2Tricks++;
+    }
+  });
+  
+  // Update tricks won display
+  const tricksWonElements = document.querySelectorAll('.tricks-won');
+  if (tricksWonElements[0]) {
+    tricksWonElements[0].textContent = `Tricks won: ${team1Tricks}`;
+  }
+  if (tricksWonElements[1]) {
+    tricksWonElements[1].textContent = `Tricks won: ${team2Tricks}`;
+  }
+}
+
+/**
+ * Get current game scores for the score update UI
+ * @returns {Object} Object containing team scores and names
+ */
+function getCurrentGameScores() {
+  const gameState = window.gameState.getGameState();
+  const teams = window.gameSetup.TEAMS;
+  return {
+    team1Score: gameState.scores.team1,
+    team2Score: gameState.scores.team2,
+    team1Name: `${teams.TEAM1.players[0].name} + ${teams.TEAM1.players[1].name}`,
+    team2Name: `${teams.TEAM2.players[0].name} + ${teams.TEAM2.players[1].name}`
+  };
+}
+
+/**
+ * Get round history for the hand-by-hand table
+ * @returns {Array} Array of round records
+ */
+function getRoundHistory() {
+  const gameState = window.gameState.getGameState();
+  return gameState.roundHistory;
+}
+
+/**
+ * Get the current round number
+ * @returns {number} Current round number
+ */
+function getCurrentRoundNumber() {
+  const gameState = window.gameState.getGameState();
+  return gameState.currentHand;
+}
+
 // Export functions for use in other modules
 window.gameplay = {
   getNextPlayer,
@@ -864,6 +1401,20 @@ window.gameplay = {
   logRoundEndSummary,
   markWinningCard,
   showNextTrickButton,
+  showFinalRoundButton,
+  handleFinalTrickRewards,
+  transitionToRoundScoring,
+  makePlayerHandInactive,
+  hideGameplaySections,
+  showRoundScoringSection,
+  populateRoundScoringData,
+  updateTeamScoreDisplay,
+  updateTricksWonDisplay,
+  calculateEndOfRoundScores,
+  checkForGameEnd,
+  getCurrentGameScores,
+  getRoundHistory,
+  getCurrentRoundNumber,
   startAITurn,
   playAICard,
   playAICardToPlayArea,

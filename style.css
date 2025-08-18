@@ -188,6 +188,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
     flex-direction: column;
     gap: 55px;
     padding-bottom: 55px; 
+    min-height: 152px;
 }
 
 .your-hand-header-dealing, .your-hand-header {
@@ -425,6 +426,11 @@ button.inactive { background-color: #C4C4C4; border: none; }
     display: inline-flex;
     justify-content: center; 
     align-items: center;
+}
+
+.dot.kitty {
+    border: 2px dashed #666;
+    background-color: #f0f0f0;
 }
 
 .last-trick {

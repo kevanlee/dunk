@@ -53,7 +53,9 @@ let gameState = {
   scores: {
     team1: 0,
     team2: 0
-  }
+  },
+  // Round history for hand-by-hand tracking
+  roundHistory: []
 };
 
 /**
@@ -141,7 +143,9 @@ function resetGame() {
     scores: {
       team1: 0,
       team2: 0
-    }
+    },
+    // Round history for hand-by-hand tracking
+    roundHistory: []
   };
   console.log('Game reset complete');
 }
@@ -180,7 +184,9 @@ function initializeGameState() {
     scores: {
       team1: 0,
       team2: 0
-    }
+    },
+    // Round history for hand-by-hand tracking
+    roundHistory: []
   };
   console.log('Game state initialized. Current phase:', gameState.currentPhase);
   
@@ -320,7 +326,8 @@ function updateUIForCurrentPhase() {
       }
       break;
     case GAME_PHASES.ROUND_SCORING:
-      // TODO: Show round scoring section
+      // Round scoring section is already shown by the transition function
+      // Button event listener is set up in showRoundScoringSection()
       break;
     case GAME_PHASES.END:
       // TODO: Show end section
@@ -362,6 +369,161 @@ function handleBiddingNextClick() {
   // Transition to GAMEPLAY phase
   setCurrentPhase(GAME_PHASES.GAMEPLAY);
   updateUIForCurrentPhase();
+}
+
+/**
+ * Handle Next button click during round scoring phase - transition to score update phase
+ */
+function handleRoundScoringNextClick() {
+  console.log('Round scoring Next button clicked - transitioning to score update phase');
+  
+  // Hide the round scoring section
+  const roundScoringSection = document.querySelector('.row:not(.hidden)');
+  if (roundScoringSection && roundScoringSection.querySelector('.hand-score')) {
+    roundScoringSection.classList.add('hidden');
+  }
+  
+  // Show the score update section
+  const scoreUpdateSections = document.querySelectorAll('.row.hidden');
+  scoreUpdateSections.forEach(section => {
+    if (section.querySelector('.score-update')) {
+      section.classList.remove('hidden');
+    }
+  });
+  
+  // Populate the score update section with real data
+  populateScoreUpdateData();
+  
+  // Set up the Next button in the score update section
+  const scoreUpdateNextButton = document.querySelector('.score-update + .right button');
+  if (scoreUpdateNextButton) {
+    scoreUpdateNextButton.onclick = handleScoreUpdateNextClick;
+  }
+}
+
+/**
+ * Populate the score update section with actual game data
+ */
+function populateScoreUpdateData() {
+  if (!window.gameplay || !window.gameplay.getCurrentGameScores) {
+    console.error('Gameplay functions not available');
+    return;
+  }
+  
+  const scores = window.gameplay.getCurrentGameScores();
+  const roundHistory = window.gameplay.getRoundHistory();
+  
+  // Update overall scores in the score update jumbotron
+  const scoreUpdateJumbotronScores = document.querySelectorAll('.score-update .jumbotron .scorebox p');
+  if (scoreUpdateJumbotronScores.length >= 2) {
+    scoreUpdateJumbotronScores[0].textContent = scores.team1Score;
+    scoreUpdateJumbotronScores[1].textContent = scores.team2Score;
+  }
+  
+  // Update team names in the score update jumbotron
+  const scoreUpdateJumbotronTeams = document.querySelectorAll('.score-update .jumbotron .scoreboard-team p');
+  if (scoreUpdateJumbotronTeams.length >= 2) {
+    scoreUpdateJumbotronTeams[0].textContent = scores.team1Name;
+    scoreUpdateJumbotronTeams[1].textContent = scores.team2Name;
+  }
+  
+  // Update the top jumbotron with current game scores
+  const topJumbotronScores = document.querySelectorAll('.jumbotron.top .scorebox p');
+  if (topJumbotronScores.length >= 2) {
+    topJumbotronScores[0].textContent = scores.team1Score;
+    topJumbotronScores[1].textContent = scores.team2Score;
+  }
+  
+  // Update team names in the top jumbotron
+  const topJumbotronTeams = document.querySelectorAll('.jumbotron.top .scoreboard-team p');
+  if (topJumbotronTeams.length >= 2) {
+    topJumbotronTeams[0].textContent = scores.team1Name;
+    topJumbotronTeams[1].textContent = scores.team2Name;
+  }
+  
+  // Update hand-by-hand table
+  populateHandByHandTable(roundHistory);
+}
+
+/**
+ * Handle Next button click during score update phase - transition to next round or end game
+ */
+function handleScoreUpdateNextClick() {
+  console.log('Score update Next button clicked');
+  
+  // Check if game should end (either team has 500+ points)
+  if (!window.gameplay || !window.gameplay.checkForGameEnd) {
+    console.error('Gameplay functions not available');
+    return;
+  }
+  
+  const gameState = window.gameState.getGameState();
+  const winningScore = window.gameSetup.GAME_CONSTANTS.WINNING_SCORE;
+  
+  if (gameState.scores.team1 >= winningScore || gameState.scores.team2 >= winningScore) {
+    // Game should end - transition to end game phase
+    console.log('Game end detected - transitioning to end game phase');
+    // TODO: Implement end game phase
+    // For now, just log the game end
+  } else {
+    // Start next round - transition to NEW_ROUND phase
+    console.log('Starting next round');
+    setCurrentPhase(GAME_PHASES.NEW_ROUND);
+    initializeNewRound();
+    setCurrentPhase(GAME_PHASES.DEALING);
+    updateUIForCurrentPhase();
+  }
+}
+
+/**
+ * Populate the hand-by-hand table with round history
+ */
+function populateHandByHandTable(roundHistory) {
+  const tableBody = document.querySelector('.hand-by-hand-table tbody');
+  if (!tableBody) {
+    console.error('Could not find hand-by-hand table body');
+    return;
+  }
+  
+  // Clear existing rows
+  tableBody.innerHTML = '';
+  
+  // Add rows for each round
+  roundHistory.forEach(round => {
+    const row = document.createElement('tr');
+    
+    // Bid column
+    const bidCell = document.createElement('td');
+    bidCell.className = 'bid-tracker';
+    
+    const bidIcon = document.createElement('img');
+    bidIcon.src = round.bidMade ? 'images/check.png' : 'images/x-fail.png';
+    bidIcon.alt = round.bidMade ? 'Success' : 'Fail';
+    
+    // Format bid text: first 3 letters of bidder name + bid amount
+    const bidderShortName = round.bidWinner.substring(0, 3);
+    const bidText = document.createTextNode(` ${bidderShortName} ${round.bidAmount}`);
+    bidCell.appendChild(bidIcon);
+    bidCell.appendChild(bidText);
+    
+    // Team 1 score column
+    const team1Cell = document.createElement('td');
+    team1Cell.className = 'bigger';
+    team1Cell.textContent = round.team1Final;
+    
+    // Team 2 score column
+    const team2Cell = document.createElement('td');
+    team2Cell.className = 'bigger';
+    team2Cell.textContent = round.team2Final;
+    
+    // Add cells to row
+    row.appendChild(bidCell);
+    row.appendChild(team1Cell);
+    row.appendChild(team2Cell);
+    
+    // Add row to table
+    tableBody.appendChild(row);
+  });
 }
 
 /**
@@ -774,9 +936,13 @@ function activateTab(container, tabEl) {
     initializeNewRound,
     renderCard,
     dealCardsAnimation,
-    updateScoreDisplay,
-    logRoundInfo,
-    logTrickInfo,
-    updateTrickLeaderPill,
-    GAME_PHASES
+      updateScoreDisplay,
+  logRoundInfo,
+  logTrickInfo,
+  updateTrickLeaderPill,
+  populateScoreUpdateData,
+  populateHandByHandTable,
+  handleRoundScoringNextClick,
+  handleScoreUpdateNextClick,
+  GAME_PHASES
   };
