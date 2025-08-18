@@ -8,13 +8,15 @@
 const GAME_PHASES = {
   WELCOME: 'welcome',
   NEW_GAME: 'new_game',
-  NEW_HAND: 'new_hand',
+  NEW_ROUND: 'new_round',
   DEALING: 'dealing', 
   BIDDING: 'bidding',
   GAMEPLAY: 'gameplay',
-  SCORING: 'scoring',
+  ROUND_SCORING: 'round_scoring',
   END: 'end'
 };
+
+
 
 // Current game state
 let gameState = {
@@ -25,18 +27,25 @@ let gameState = {
   kitty: null,
   remainingDeck: null,
   numPlayers: 4,
-  powerSuit: null,
-  currentBid: 0,
-  winningBidder: null,
+  // Round state (static for now)
+  roundState: {
+    currentBid: 150,
+    bidWinner: "You",
+    powerSuit: "orange",
+    currentTrick: 0,
+    trickLeader: "You", // starts as bid winner
+    playedCards: [], // cards played in current trick
+    trickWinners: [], // who won each trick
+    trickHistory: [] // history of all tricks in this round
+  },
   // Player data
   playerHand: null, // Current player's hand (hand[0])
   // Game progression
   currentHand: 0,
-  currentTrick: 0,
   // Scores
   scores: {
-    team1: 0, // You + Patricia
-    team2: 0  // Patricia + Patricia
+    team1: 0,
+    team2: 0
   }
 };
 
@@ -104,14 +113,21 @@ function resetGame() {
     kitty: null,
     remainingDeck: null,
     numPlayers: 4,
-    powerSuit: null,
-    currentBid: 0,
-    winningBidder: null,
+    // Round state
+    roundState: {
+      currentBid: 150,
+      bidWinner: "You",
+      powerSuit: "orange",
+      currentTrick: 0,
+      trickLeader: "You",
+      playedCards: [],
+      trickWinners: [],
+      trickHistory: []
+    },
     // Player data
     playerHand: null,
     // Game progression
     currentHand: 0,
-    currentTrick: 0,
     // Scores
     scores: {
       team1: 0,
@@ -134,14 +150,21 @@ function initializeGameState() {
     kitty: null,
     remainingDeck: null,
     numPlayers: 4,
-    powerSuit: null,
-    currentBid: 0,
-    winningBidder: null,
+    // Round state
+    roundState: {
+      currentBid: 150,
+      bidWinner: "You",
+      powerSuit: "orange",
+      currentTrick: 0,
+      trickLeader: "You",
+      playedCards: [],
+      trickWinners: [],
+      trickHistory: []
+    },
     // Player data
     playerHand: null,
     // Game progression
     currentHand: 0,
-    currentTrick: 0,
     // Scores
     scores: {
       team1: 0,
@@ -179,19 +202,18 @@ function updateUIForCurrentPhase() {
     case GAME_PHASES.NEW_GAME:
       // NEW_GAME is handled in background, no UI change needed
       break;
-    case GAME_PHASES.NEW_HAND:
-      // NEW_HAND is handled in background, no UI change needed
+    case GAME_PHASES.NEW_ROUND:
+      // NEW_ROUND is handled in background, no UI change needed
       break;
     case GAME_PHASES.DEALING:
       // Show jumbotron section (but keep jumbotron invisible)
       const jumbotronSection = document.querySelector('.jumbotron.top').closest('.modal-row');
       jumbotronSection.classList.remove('hidden');
       
-      // Show the dealing sections - we need both the first (with "DEALING..." text) and second (with card-layout)
+      // Show only the first dealing section initially
       const dealingSections = document.querySelectorAll('.your-hand');
-      if (dealingSections.length > 1) {
+      if (dealingSections.length > 0) {
         dealingSections[0].classList.remove('hidden'); // First section with "DEALING..." text
-        dealingSections[1].classList.remove('hidden'); // Second section with card-layout
         
         // Start the card dealing animation if we have a player hand
         if (gameState.playerHand && gameState.playerHand.length > 0) {
@@ -203,13 +225,81 @@ function updateUIForCurrentPhase() {
       }
       break;
     case GAME_PHASES.BIDDING:
-      // TODO: Show bidding section
+      // Show jumbotron section (but keep jumbotron invisible)
+      const jumbotronSectionBidding = document.querySelector('.jumbotron.top').closest('.modal-row');
+      jumbotronSectionBidding.classList.remove('hidden');
+      
+      // Show bidding section
+      const biddingSection = document.querySelector('.cols-bidding').closest('.row');
+      if (biddingSection) {
+        biddingSection.classList.remove('hidden');
+        
+        // Add event listener to Next button in bidding section
+        const nextButton = biddingSection.querySelector('.right button');
+        if (nextButton) {
+          console.log('Found bidding Next button, adding event listener');
+          nextButton.addEventListener('click', handleBiddingNextClick, { once: true });
+        } else {
+          console.error('Could not find Next button in bidding section');
+        }
+      }
+      
+      // Show the .your-hand section (the one that was visible during dealing)
+      const yourHandSections = document.querySelectorAll('.your-hand');
+      if (yourHandSections.length > 0) {
+        yourHandSections[0].classList.remove('hidden'); // Show the first .your-hand section
+      }
       break;
     case GAME_PHASES.GAMEPLAY:
-      // TODO: Show gameplay section
+      // Show jumbotron section and remove invisible class
+      const jumbotronSectionGameplay = document.querySelector('.jumbotron.top').closest('.modal-row');
+      jumbotronSectionGameplay.classList.remove('hidden');
+      const jumbotron = document.querySelector('.jumbotron.top');
+      if (jumbotron) {
+        jumbotron.classList.remove('invisible');
+      }
+      
+      // Hide bidding section
+      const biddingSectionToHide = document.querySelector('.cols-bidding').closest('.row');
+      if (biddingSectionToHide) {
+        biddingSectionToHide.classList.add('hidden');
+      }
+      
+      // Show gameplay section (the three-column layout)
+      const gameplaySection = document.querySelector('.cols').closest('.row');
+      if (gameplaySection) {
+        gameplaySection.classList.remove('hidden');
+        
+        // Update player names in the UI
+        if (window.gameplay && window.gameplay.updatePlayerNamesInUI) {
+          window.gameplay.updatePlayerNamesInUI();
+        }
+      }
+      
+      // Show the .your-hand section and update its header for gameplay
+      const yourHandSectionsGameplay = document.querySelectorAll('.your-hand');
+      if (yourHandSectionsGameplay.length > 0) {
+        yourHandSectionsGameplay[0].classList.remove('hidden'); // Show the first .your-hand section
+        
+        // Update the .your-hand-header-dealing to show power suit and bid information
+        const yourHandHeader = yourHandSectionsGameplay[0].querySelector('.your-hand-header-dealing');
+        if (yourHandHeader) {
+          console.log('Updating your-hand-header for gameplay');
+          yourHandHeader.innerHTML = `
+            <h2>Your hand</h2>
+            <div class="pill">Power suit</div>
+            <div class="power-suit-indicator ${gameState.roundState.powerSuit}"></div>
+            <div class="pill">Bid</div>
+            <div class="bid-indicator">${gameState.roundState.bidWinner} ${gameState.roundState.currentBid}</div>
+            <img src="images/squiggle.png" width="300">
+          `;
+        } else {
+          console.error('Could not find .your-hand-header-dealing element');
+        }
+      }
       break;
-    case GAME_PHASES.SCORING:
-      // TODO: Show scoring section
+    case GAME_PHASES.ROUND_SCORING:
+      // TODO: Show round scoring section
       break;
     case GAME_PHASES.END:
       // TODO: Show end section
@@ -217,6 +307,37 @@ function updateUIForCurrentPhase() {
     default:
       console.warn('Unknown phase:', currentPhase);
   }
+}
+
+/**
+ * Handle Next button click during dealing phase - transition to bidding phase
+ */
+function handleDealingNextClick() {
+  console.log('Dealing Next button clicked - transitioning to bidding phase');
+  
+  // Hide the Next button in the dealing section
+  const dealingSection = document.querySelector('.your-hand:not(.hidden)');
+  if (dealingSection) {
+    const nextButton = dealingSection.querySelector('button');
+    if (nextButton) {
+      nextButton.style.display = 'none';
+    }
+  }
+  
+  // Transition to BIDDING phase
+  setCurrentPhase(GAME_PHASES.BIDDING);
+  updateUIForCurrentPhase();
+}
+
+/**
+ * Handle Next button click during bidding phase - transition to gameplay phase
+ */
+function handleBiddingNextClick() {
+  console.log('Bidding Next button clicked - transitioning to gameplay phase');
+  
+  // Transition to GAMEPLAY phase
+  setCurrentPhase(GAME_PHASES.GAMEPLAY);
+  updateUIForCurrentPhase();
 }
 
 /**
@@ -229,9 +350,9 @@ function handleStartButtonClick() {
   setCurrentPhase(GAME_PHASES.NEW_GAME);
   initializeNewGame();
   
-  // Complete NEW_HAND phase (initialize hand state)
-  setCurrentPhase(GAME_PHASES.NEW_HAND);
-  initializeNewHand();
+  // Complete NEW_ROUND phase (initialize round state)
+  setCurrentPhase(GAME_PHASES.NEW_ROUND);
+  initializeNewRound();
   
   // Transition to DEALING phase (show UI)
   setCurrentPhase(GAME_PHASES.DEALING);
@@ -244,20 +365,32 @@ function handleStartButtonClick() {
 function initializeNewGame() {
   console.log('Initializing new game...');
   
+  // Check if gameSetup is available
+  if (!window.gameSetup) {
+    console.error('gameSetup is not available. Check if setup.js is loaded properly.');
+    return;
+  }
+  
+  // Log player and team setup
+  console.log('Setting up players and teams:');
+  console.log('Players:', window.gameSetup.PLAYERS);
+  console.log('Teams:', window.gameSetup.TEAMS);
+  console.log('Game constants:', window.gameSetup.GAME_CONSTANTS);
+  
   // Reset game-level state
   gameState.scores.team1 = 0;
   gameState.scores.team2 = 0;
   gameState.currentHand = 0;
-  gameState.currentTrick = 0;
   
   console.log('New game initialized with scores reset');
+  console.log('Player setup complete - ready for gameplay');
 }
 
 /**
- * Initialize a new hand
+ * Initialize a new round
  */
-function initializeNewHand() {
-  console.log('Initializing new hand...');
+function initializeNewRound() {
+  console.log('Initializing new round...');
   
   // Check if cardLogic is available
   if (!window.cardLogic) {
@@ -266,32 +399,73 @@ function initializeNewHand() {
     return;
   }
   
-  // Increment hand counter
+  // Increment round counter
   gameState.currentHand++;
-  gameState.currentTrick = 0;
   
-  // Initialize the game with shuffled deck and dealt hands
+  // Initialize the round with shuffled deck and dealt hands
   const newGame = window.cardLogic.createNewGame();
   
-  // Update game state with the new hand data
+  // Update game state with the new round data
   gameState.deck = newGame.deck;
   gameState.hands = newGame.hands;
   gameState.kitty = newGame.kitty;
   gameState.remainingDeck = newGame.remainingDeck;
-  gameState.powerSuit = newGame.powerSuit;
-  gameState.currentBid = newGame.currentBid;
-  gameState.winningBidder = newGame.winningBidder;
+  
+  // Initialize round state (using static values for now)
+  gameState.roundState = {
+    currentBid: 150,
+    bidWinner: "You",
+    powerSuit: "orange",
+    currentTrick: 0,
+    trickLeader: "You", // starts as bid winner
+    playedCards: [],
+    trickWinners: [],
+    trickHistory: []
+  };
   
   // Set the current player's hand (assuming player is hand[0])
   gameState.playerHand = newGame.hands[0];
   
-  console.log(`Hand ${gameState.currentHand} initialized:`, {
+  console.log(`Round ${gameState.currentHand} initialized:`, {
     deckSize: gameState.deck.length,
     playerHandSize: gameState.playerHand.length,
     kittySize: gameState.kitty.length,
     playerHand: gameState.playerHand,
     kitty: gameState.kitty
   });
+}
+
+
+
+/**
+ * Sort a hand of cards for display: group by color, then by value (1 highest, then 14, 13, etc., D last)
+ * @param {Array} hand - Array of card objects
+ * @returns {Array} Sorted hand for display
+ */
+function sortHandForDisplay(hand) {
+  const sorted = [...hand];
+  
+  // Sort by suit first, then by value
+  sorted.sort((a, b) => {
+    // Sort by suit order (orange, yellow, blue, green, dunk)
+    const suitOrder = ['orange', 'yellow', 'blue', 'green', 'dunk'];
+    const aSuitIndex = suitOrder.indexOf(a.suit);
+    const bSuitIndex = suitOrder.indexOf(b.suit);
+    
+    if (aSuitIndex !== bSuitIndex) {
+      return aSuitIndex - bSuitIndex;
+    }
+    
+    // Then by value (1 is highest, then 14, 13, 12, etc., D last)
+    if (a.value === 1) return -1;
+    if (b.value === 1) return 1;
+    if (a.value === 'D') return 1;
+    if (b.value === 'D') return -1;
+    
+    return b.value - a.value; // Higher numbers first
+  });
+  
+  return sorted;
 }
 
 /**
@@ -313,56 +487,69 @@ function renderCard(card) {
 function dealCardsAnimation(playerHand) {
   console.log('Starting card dealing animation...');
   
-  // Find the dealing sections
-  const dealingSections = document.querySelectorAll('.your-hand');
-  if (dealingSections.length === 0) {
-    console.error('No dealing sections found');
+  // Find the dealing section (only the first one should be visible)
+  const dealingSection = document.querySelector('.your-hand:not(.hidden)');
+  if (!dealingSection) {
+    console.error('No visible dealing section found');
     return;
   }
   
-  // We need to work with the second dealing section (index 1) which has the card-layout
-  const dealingSection = dealingSections[1]; // Second dealing section with card-layout
-  const cardLayout = dealingSection.querySelector('.card-layout');
-  const dealingText = dealingSections[0].querySelector('h2:last-of-type'); // "DEALING..." text from first section
-  
-  if (!cardLayout) {
-    console.error('Card layout not found in dealing section');
-    return;
-  }
+  const modal = dealingSection.querySelector('.modal');
+  const dealingText = dealingSection.querySelector('.dealing-text'); // Find h2 with dealing-text class
   
   if (!dealingText) {
     console.error('Dealing text not found');
     return;
   }
   
-  console.log('Found elements:', { cardLayout: !!cardLayout, dealingText: !!dealingText });
+  console.log('Found dealing section:', dealingSection);
   
-  // Clear the card layout and dealing text
-  cardLayout.innerHTML = '';
-  dealingText.textContent = '';
+  // Create a card layout container if it doesn't exist
+  let cardLayout = dealingSection.querySelector('.card-layout');
+  if (!cardLayout) {
+    cardLayout = document.createElement('div');
+    cardLayout.className = 'card-layout hidden'; // Start hidden
+    modal.appendChild(cardLayout);
+  } else {
+    cardLayout.innerHTML = ''; // Clear existing cards
+    cardLayout.classList.add('hidden'); // Ensure it's hidden initially
+  }
   
-  // Deal cards one by one
-  let cardIndex = 0;
-  const dealInterval = setInterval(() => {
-    if (cardIndex < playerHand.length) {
-      const card = playerHand[cardIndex];
-      const cardHTML = renderCard(card);
-      cardLayout.insertAdjacentHTML('beforeend', cardHTML);
-      cardIndex++;
-      console.log(`Dealt card ${cardIndex}: ${card.suit} ${card.value}`);
-    } else {
-      // All cards dealt
-      clearInterval(dealInterval);
-      console.log('All cards dealt!');
-      
-      // Enable the Next button
-      const nextButton = dealingSection.querySelector('button');
-      if (nextButton) {
-        nextButton.classList.remove('inactive');
-        nextButton.textContent = 'Next ⮑';
+  // Sort the player hand for display: group by color, then by value (1 highest, then 14, 13, etc., D last)
+  const sortedHand = sortHandForDisplay(playerHand);
+  
+  // Wait 1 second before starting to deal cards, keeping "DEALING..." text visible
+  setTimeout(() => {
+    // Swap visibility: hide dealing text and show card layout
+    dealingText.classList.add('hidden');
+    cardLayout.classList.remove('hidden');
+    
+    // Deal cards one by one in sorted order
+    let cardIndex = 0;
+    const dealInterval = setInterval(() => {
+      if (cardIndex < sortedHand.length) {
+        const card = sortedHand[cardIndex];
+        const cardHTML = renderCard(card);
+        cardLayout.insertAdjacentHTML('beforeend', cardHTML);
+        cardIndex++;
+        console.log(`Dealt card ${cardIndex}: ${card.suit} ${card.value}`);
+      } else {
+        // All cards dealt
+        clearInterval(dealInterval);
+        console.log('All cards dealt!');
+        
+        // Enable the Next button
+        const nextButton = dealingSection.querySelector('button');
+        if (nextButton) {
+          nextButton.classList.remove('inactive');
+          nextButton.textContent = 'Next ⮑';
+          
+          // Add event listener for Next button click
+          nextButton.addEventListener('click', handleDealingNextClick, { once: true });
+        }
       }
-    }
-  }, 150); // 150ms delay between each card
+    }, 150); // 150ms delay between each card
+  }, 1000); // 1 second delay before starting to deal cards
 }
 
 /**
@@ -461,8 +648,10 @@ function activateTab(container, tabEl) {
     initializeGameState,
     updateUIForCurrentPhase,
     handleStartButtonClick,
+    handleDealingNextClick,
+    handleBiddingNextClick,
     initializeNewGame,
-    initializeNewHand,
+    initializeNewRound,
     renderCard,
     dealCardsAnimation,
     GAME_PHASES

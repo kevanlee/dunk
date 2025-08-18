@@ -107,6 +107,16 @@ rook/
     └── setup.js        # Initialization and configuration
 ```
 
+### Game Phases
+- **WELCOME**: Start screen with game introduction
+- **NEW_GAME**: Initialize game state, reset scores (background)
+- **NEW_ROUND**: Shuffle deck, deal 13 cards to each player + 5 to kitty (background)
+- **DEALING**: Visual animation - sort and display player's cards one by one
+- **BIDDING**: Players bid on points they think they can win
+- **GAMEPLAY**: 13 tricks are played (one for each card)
+- **ROUND_SCORING**: Calculate points for the round, update running scores
+- **END**: Game over screen, winner determination (when someone reaches 500 points)
+
 ### Technologies Used
 - **HTML5**: Structure and canvas element
 - **CSS3**: Styling, animations, and responsive design
