@@ -14,7 +14,7 @@
 
     <!-- Jumbotron vv -->
     <section class="row modal-row">
-      <div class="modal jumbotron top">
+      <div class="modal jumbotron top invisible">
         <div class="jumbotron-team">
             <div class="scoreboard-team"><p>You + Patricia</p></div>
             <div class="scorebox"><p>220</p></div>
@@ -35,7 +35,7 @@
     </section>
 
     <!-- your hand dealing -->
-    <section class="row modal-row your-hand">
+    <section class="row modal-row hidden your-hand">
       <div class="modal dealing">
         <div class="your-hand-header-dealing">
             <img src="images/squiggle.png" width="300">
@@ -47,7 +47,7 @@
       <button class="inactive">Next ⮑</button>
     </section>
 
-    <section class="row modal-row your-hand">
+    <section class="row modal-row hidden your-hand">
       <div class="modal dealing">
         <div class="your-hand-header-dealing">
             <img src="images/squiggle.png" width="300">
@@ -74,7 +74,7 @@
     </section>
 
     <!-- your hand w cards -->
-    <section class="row modal-row your-hand">
+    <section class="row modal-row hidden hidden your-hand">
       <div class="modal dealing">
         <div class="your-hand-header">
             <h2>Your hand</h2>
@@ -104,7 +104,7 @@
     </section>
 
     <!-- your hand w some cards -->
-    <section class="row modal-row your-hand">
+    <section class="row modal-row hidden your-hand">
       <div class="modal dealing">
         <div class="your-hand-header">
             <h2>Your hand</h2>
@@ -127,7 +127,7 @@
     </section>
     
     <!-- your hand w no cards -->
-    <section class="row modal-row your-hand">
+    <section class="row modal-row hidden your-hand">
       <div class="modal dealing">
         <div class="your-hand-header">
             <h2>Your hand</h2>
@@ -144,7 +144,7 @@
       <button class="">Next ⮑</button>
     </section>    
 
-    <section class="row">
+    <section class="row hidden">
       <div class="cols">
         <div class="left">
             <div class="modal score-hand">
@@ -186,7 +186,7 @@
       </div>
     </section>
 
-    <section class="row">
+    <section class="row hidden">
       <div class="cols">
         <div class="left">
             <div class="modal score-hand">
@@ -230,10 +230,8 @@
       </div>
     </section>
 
-
-
     <!-- end of hand score vv -->
-    <section class="row">
+    <section class="row hidden">
       <div class="cols">
         <div class="left">
         </div>
@@ -296,7 +294,7 @@
     </section>
 
     <!-- score update vv -->
-    <section class="row">
+    <section class="row hidden">
       <div class="cols">
         <div class="left">
         </div>
@@ -356,7 +354,7 @@
     </section>
 
     <!-- bidding vv -->
-    <section class="row">
+    <section class="row hidden">
       <div class="cols-bidding">
         <div class="left">
         </div>
@@ -402,7 +400,7 @@
     </section>
 
     <!-- computer kitty -->
-    <section class="row">
+    <section class="row hidden">
       <div class="cols-bidding">
         <div class="left">
         </div>
@@ -434,7 +432,7 @@
     </section>
 
     <!-- picking the kitty (human) -->
-    <section class="row modal-row your-hand">
+    <section class="row modal-row your-hand hidden">
       <div class="modal dealing">
         <div class="your-hand-header">
             <h2>Your hand</h2>
@@ -509,7 +507,7 @@
     </section>
 
     <!-- end game win -->
-    <section class="row modal-row">
+    <section class="row modal-row hidden">
       <div class="modal end-game win">
         <h2>You + Patricia win!</h2>
         <div class="final-score">
@@ -533,9 +531,9 @@
     </section>
 
     <!-- end game lose -->
-    <section class="row modal-row">
+    <section class="row modal-row hidden">
       <div class="modal end-game lose">
-        <h2>You + Patricia win!</h2>
+        <h2>You + Patricia lose.</h2>
         <div class="final-score">
           <div class="jumbotron-team">
           <div class="scoreboard-team"><p>You + Patricia</p></div>
@@ -557,7 +555,7 @@
     </section>
 
     <!-- your stats -->
-    <section class="row modal-row">
+    <section class="row modal-row hidden">
       <div class="modal your-stats">
         <h2>Your stats</h2>
         <div class="stats-details">

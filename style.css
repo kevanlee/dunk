@@ -48,7 +48,7 @@ button {
     font-size: 1.3rem;
     color: white;
     text-decoration: none;
-    cursor:pointer;
+    cursor: url('images/hand.png') 0 0, auto;
     font-family: 'Comic Neue', Tahoma, Geneva, Verdana, sans-serif;
 
 }
@@ -137,7 +137,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
     font-size: 1.3rem;
     text-align: center; 
     padding-top: 10px;
-    cursor:pointer;
+    cursor: url('images/hand.png') 0 0, auto;
 }
 
 .orange { background-color: #FFC09F}
@@ -459,7 +459,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
     font-size: 0.9rem;
     padding: 6px 12px;
     border: 1px solid #ddd;
-    cursor: pointer;
+    cursor: url('images/hand.png') 0 0, auto;
     user-select: none;
     outline: none;
   }
@@ -578,7 +578,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
     font-size: 1rem;
     background-color: black;
     color: white;
-    cursor: pointer;
+    cursor: url('images/hand.png') 0 0, auto;
     border-radius: 0 5px 5px 0; /* TL=0, TR=8px, BR=8px, BL=0 */
   }
   
@@ -788,7 +788,7 @@ input[type=number] {
     position: absolute; 
     top: 5px;
     right: 20px;
-    cursor: pointer; 
+    cursor: url('images/hand.png') 0 0, auto;
 }
 
 /* Info modal hidden by default */
@@ -819,7 +819,8 @@ input[type=number] {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
   }
 
-  .power-suit-list .power-suit:hover { cursor: pointer; }
+  .power-suit-list .power-suit:hover { cursor: url('images/hand.png') 0 0, auto;
+  }
 
   
   /* selected should feel pressed-in but still match the system */
@@ -842,13 +843,13 @@ input[type=number] {
     position: fixed; 
     top: 60px;
     right: 40px;
-    cursor: pointer; 
+    cursor: url('images/hand.png') 0 0, auto;
 }
 
 .error-message { color: red; margin-top: 20px; text-align: center; }
 
 body {
-    cursor: url('images/pixel-cursor.png') 0 0, auto;
+    cursor: url('images/cursor.png') 0 0, auto;
   }
   
 
