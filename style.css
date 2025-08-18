@@ -154,7 +154,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
 .get-started {
     text-align: center;
     width: 365px !important; 
-    margin-top: 50px;
+    margin-top: 150px;
     display: flex;
     flex-direction: column;
     align-items: center;

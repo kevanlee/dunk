@@ -165,15 +165,11 @@ function initializeCardPlaying() {
   console.log('Number of player cards found:', playerCards.length);
   
   playerCards.forEach((cardElement, displayIndex) => {
-    console.log(`Adding click listener to card ${displayIndex}:`, cardElement);
     cardElement.addEventListener('click', () => {
-      console.log(`Click event triggered for card ${displayIndex}`);
       // Use the sorted hand index to get the correct card data
       handleCardClick(cardElement, displayIndex, sortedHand);
     });
   });
-  
-  console.log(`Added click listeners to ${playerCards.length} cards (using sorted order)`);
   
   // Update card availability based on current game state
   updateCardAvailability(sortedHand, gameState);
@@ -277,7 +273,7 @@ function handleCardClick(cardElement, displayIndex, sortedHand) {
   playCardToPlayArea(cardData, displayIndex);
   
   // Remove the card from the player's hand (pass the card element for DOM removal)
-  removeCardFromHand(displayIndex, cardElement);
+  removeCardFromHand(displayIndex, cardElement, cardData);
   
   // Update the game state
   updateGameStateAfterCardPlay(cardData);
@@ -329,8 +325,9 @@ function playCardToPlayArea(cardData, cardIndex) {
  * Remove a card from the player's hand
  * @param {number} cardIndex - Index of the card to remove
  * @param {HTMLElement} cardElement - The card element to remove from DOM
+ * @param {Object} cardData - The actual card data that was played
  */
-function removeCardFromHand(cardIndex, cardElement) {
+function removeCardFromHand(cardIndex, cardElement, cardData) {
   // Remove from DOM using the specific card element
   if (cardElement && cardElement.parentNode) {
     cardElement.remove();
@@ -343,46 +340,19 @@ function removeCardFromHand(cardIndex, cardElement) {
     cardLayout.classList.add('empty-state');
   }
   
-  // Remove from game state using the card data directly
+  // Remove from game state using the actual card data that was played
   const gameState = window.gameState.getGameState();
-  const sortedHand = window.cardLogic.sortHand(gameState.playerHand);
-  const cardToRemove = sortedHand[cardIndex];
   
-  if (cardToRemove) {
-    // Find the card in the original hand and remove it
-    const originalIndex = gameState.playerHand.findIndex(card => 
-      card.suit === cardToRemove.suit && card.value === cardToRemove.value
-    );
-    
-    if (originalIndex !== -1) {
-      gameState.playerHand.splice(originalIndex, 1);
-      console.log(`Removed ${cardToRemove.suit} ${cardToRemove.value} from hand. Cards remaining: ${gameState.playerHand.length}`);
-    } else {
-      console.error(`Could not find card ${cardToRemove.suit} ${cardToRemove.value} in hand to remove`);
-    }
+  // Find the exact card in the original hand and remove it
+  const originalIndex = gameState.playerHand.findIndex(card => 
+    card.suit === cardData.suit && card.value === cardData.value
+  );
+  
+  if (originalIndex !== -1) {
+    gameState.playerHand.splice(originalIndex, 1);
+    console.log(`Removed ${cardData.suit} ${cardData.value} from hand. Cards remaining: ${gameState.playerHand.length}`);
   } else {
-    // Fallback: try to find the card by looking at the DOM element
-    if (cardElement) {
-      const cardText = cardElement.textContent.trim();
-      const cardSuit = cardElement.className.includes('dunk') ? 'dunk' : 
-                      cardElement.className.includes('orange') ? 'orange' :
-                      cardElement.className.includes('yellow') ? 'yellow' :
-                      cardElement.className.includes('blue') ? 'blue' : 'green';
-      
-      // Find and remove the card from game state
-      const originalIndex = gameState.playerHand.findIndex(card => 
-        card.suit === cardSuit && card.value.toString() === cardText
-      );
-      
-      if (originalIndex !== -1) {
-        gameState.playerHand.splice(originalIndex, 1);
-        console.log(`Removed ${cardSuit} ${cardText} from hand (fallback). Cards remaining: ${gameState.playerHand.length}`);
-      } else {
-        console.error(`Could not find card ${cardSuit} ${cardText} in hand to remove (fallback)`);
-      }
-    } else {
-      console.error(`No card element provided for removal`);
-    }
+    console.error(`Could not find card ${cardData.suit} ${cardData.value} in hand to remove`);
   }
 }
 
@@ -420,15 +390,7 @@ function updateGameStateAfterCardPlay(cardData) {
  * Log the current hand sizes for debugging
  */
 function logHandSizes() {
-  const gameState = window.gameState.getGameState();
-  const players = window.gameSetup.PLAYERS;
-  
-  console.log('=== HAND SIZES ===');
-  console.log(`${players.PLAYER0.name}: ${gameState.hands[0].length} cards`);
-  console.log(`${players.PLAYER1.name}: ${gameState.hands[1].length} cards`);
-  console.log(`${players.PLAYER2.name}: ${gameState.hands[2].length} cards`);
-  console.log(`${players.PLAYER3.name}: ${gameState.hands[3].length} cards`);
-  console.log('==================');
+  // Removed hand size logging to clean up console output
 }
 
 /**
@@ -462,6 +424,9 @@ function completeTrick() {
   
   // Track point cards won in this trick
   trackTrickPoints(playedCards, trickWinner);
+  
+  // Log remaining cards in player's hand
+  logPlayerHandRemaining();
   
   // Add a small delay before marking the winner
   setTimeout(() => {
@@ -674,6 +639,11 @@ function proceedToNextTrick() {
   const ledSuit = playedCards[0].card.suit;
   const trickWinner = determineTrickWinner(playedCards, powerSuit, ledSuit);
   
+  // Check if this was the last trick (13/13)
+  if (gameState.roundState.currentTrick === 12) { // 0-indexed, so trick 13 is at index 12
+    logRoundEndSummary(trickWinner);
+  }
+  
   // Update trick leader and current turn
   gameState.roundState.trickLeader = trickWinner;
   gameState.roundState.currentTurn = trickWinner;
@@ -716,6 +686,72 @@ function proceedToNextTrick() {
 }
 
 /**
+ * Log the remaining cards in the player's hand
+ */
+function logPlayerHandRemaining() {
+  const gameState = window.gameState.getGameState();
+  const playerHand = gameState.playerHand;
+  
+  // Also check what's actually in the DOM
+  const cardLayout = document.querySelector('.your-hand .card-layout');
+  const domCards = cardLayout ? cardLayout.querySelectorAll('.card') : [];
+  
+  console.log(`=== HAND COMPARISON ===`);
+  console.log(`Game state hand: ${playerHand ? playerHand.length : 0} cards`);
+  console.log(`DOM cards: ${domCards.length} cards`);
+  
+  if (playerHand && playerHand.length > 0) {
+    const sortedHand = window.cardLogic.sortHand(playerHand);
+    const cardList = sortedHand.map(card => `${card.suit} ${card.value}`).join(', ');
+    console.log(`Your remaining cards (${playerHand.length}): ${cardList}`);
+  } else {
+    console.log('Your hand is empty');
+  }
+  
+  if (domCards.length > 0) {
+    const domCardList = Array.from(domCards).map(card => {
+      const cardText = card.textContent.trim();
+      const cardSuit = card.className.includes('dunk') ? 'dunk' : 
+                      card.className.includes('orange') ? 'orange' :
+                      card.className.includes('yellow') ? 'yellow' :
+                      card.className.includes('blue') ? 'blue' : 'green';
+      return `${cardSuit} ${cardText}`;
+    }).join(', ');
+    console.log(`DOM cards (${domCards.length}): ${domCardList}`);
+  }
+  console.log(`=======================`);
+}
+
+/**
+ * Log round end summary with team scores and point cards
+ * @param {string} lastTrickWinner - Player who won the final trick (13/13)
+ */
+function logRoundEndSummary(lastTrickWinner) {
+  const gameState = window.gameState.getGameState();
+  const players = window.gameSetup.PLAYERS;
+  
+  // Determine which team won the last trick
+  let team1WonLastTrick = false;
+  let team2WonLastTrick = false;
+  
+  if (lastTrickWinner === players.PLAYER1.name || lastTrickWinner === players.PLAYER3.name) {
+    team1WonLastTrick = true;
+  } else if (lastTrickWinner === players.PLAYER0.name || lastTrickWinner === players.PLAYER2.name) {
+    team2WonLastTrick = true;
+  }
+  
+  console.log('=== ROUND END SUMMARY ===');
+  console.log(`Team 1 (Alex + You): ${gameState.roundState.team1Score} points`);
+  console.log(`Team 1 point cards:`, gameState.roundState.trickPoints.team1.map(card => `${card.suit} ${card.value} (${card.points})`).join(', '));
+  console.log(`Team 1 won last trick: ${team1WonLastTrick}`);
+  console.log('');
+  console.log(`Team 2 (Patricia + Jordan): ${gameState.roundState.team2Score} points`);
+  console.log(`Team 2 point cards:`, gameState.roundState.trickPoints.team2.map(card => `${card.suit} ${card.value} (${card.points})`).join(', '));
+  console.log(`Team 2 won last trick: ${team2WonLastTrick}`);
+  console.log('==========================');
+}
+
+/**
  * Track point cards won in a trick and update scores
  * @param {Array} playedCards - Cards played in the trick
  * @param {string} trickWinner - Player who won the trick
@@ -730,16 +766,16 @@ function trackTrickPoints(playedCards, trickWinner) {
   let playerIndex = -1;
   
   if (trickWinner === players.PLAYER0.name) {
-    winningTeam = 'team1';
+    winningTeam = 'team2';
     playerIndex = 0;
   } else if (trickWinner === players.PLAYER1.name) {
-    winningTeam = 'team2';
+    winningTeam = 'team1';
     playerIndex = 1;
   } else if (trickWinner === players.PLAYER2.name) {
-    winningTeam = 'team1';
+    winningTeam = 'team2';
     playerIndex = 2;
   } else if (trickWinner === players.PLAYER3.name) {
-    winningTeam = 'team2';
+    winningTeam = 'team1';
     playerIndex = 3;
   }
   
@@ -824,6 +860,8 @@ window.gameplay = {
   advanceToNextTurn,
   completeTrick,
   trackTrickPoints,
+  logPlayerHandRemaining,
+  logRoundEndSummary,
   markWinningCard,
   showNextTrickButton,
   startAITurn,
