@@ -5,13 +5,14 @@ python3 -m http.server 2500
 Fixes and polish: 
 
 * Fix the disabled cards logic or else add error state
-* Fix: Keep the Jumbotron visible after Round 1
-* NEW: Add a logo to the top left
-* NEW: Add funny commentary
+* FIx: The jumpy css when bid is won by anyone
 * ADD: shooting the moon
 * UPDATE: Error state styling for the bid form
 * UPDATE: the style of the bid so that it scrolls up rather than just gets super long
-* FIx: The jumpy css when bid is won by anyone
+* Nice-to-have: More sayings at the end of scoring
+* Nice-to-have: New players
+* Nice-to-have: Add funny commentary
+* Nice-to-have: Mobile app version
 
 Implement bidding validation (minimum bids, valid increments)
 Add AI bidding logic (hand evaluation, bid strategy)
