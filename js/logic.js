@@ -424,6 +424,74 @@ function getBiddingResult(biddingState) {
   };
 }
 
+/**
+ * Shuffle an array using Fisher-Yates algorithm
+ * @param {Array} array - Array to shuffle
+ * @returns {Array} Shuffled array
+ */
+function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+/**
+ * Choose power suit based on most cards, alphabetical tiebreaker
+ * @param {Array} hand - Array of card objects
+ * @returns {string} Chosen power suit
+ */
+function choosePowerSuit(hand) {
+  const suitCounts = { orange: 0, yellow: 0, blue: 0, green: 0 };
+  
+  // Count cards in each suit (excluding dunk card)
+  hand.forEach(card => {
+    if (card.suit !== 'dunk') {
+      suitCounts[card.suit]++;
+    }
+  });
+  
+  // Find suit with most cards
+  const maxCount = Math.max(...Object.values(suitCounts));
+  const candidates = Object.entries(suitCounts)
+    .filter(([suit, count]) => count === maxCount)
+    .map(([suit]) => suit);
+  
+  // Return first alphabetical if tie
+  return candidates.sort()[0];
+}
+
+/**
+ * Handle computer kitty management
+ * @param {string} computerPlayer - Name of the computer player
+ * @param {Array} computerHand - Computer's current hand
+ * @param {Array} kitty - Current kitty cards
+ * @returns {Object} Result with new hand, new kitty, and power suit
+ */
+function handleComputerKitty(computerPlayer, computerHand, kitty) {
+  console.log(`${computerPlayer} managing kitty...`);
+  
+  // 1. Add kitty cards to hand (13 + 5 = 18 cards)
+  const combinedHand = [...computerHand, ...kitty];
+  console.log(`${computerPlayer} combined hand (18 cards):`, combinedHand.map(card => `${card.suit} ${card.value}`).join(', '));
+  
+  // 2. Randomly select 13 cards to keep, 5 to return
+  const shuffled = shuffleArray(combinedHand);
+  const newHand = shuffled.slice(0, 13);
+  const newKitty = shuffled.slice(13, 18);
+  
+  console.log(`${computerPlayer} new hand (13 cards):`, newHand.map(card => `${card.suit} ${card.value}`).join(', '));
+  console.log(`${computerPlayer} new kitty (5 cards):`, newKitty.map(card => `${card.suit} ${card.value}`).join(', '));
+  
+  // 3. Choose power suit (most cards, alphabetical tiebreaker)
+  const powerSuit = choosePowerSuit(newHand);
+  console.log(`${computerPlayer} chose power suit: ${powerSuit}`);
+  
+  return { newHand, newKitty, powerSuit };
+}
+
 // Export functions for use in other modules
 window.cardLogic = {
   SUITS,
@@ -446,7 +514,11 @@ window.cardLogic = {
   makeAIBidDecision,
   getCurrentBidder,
   isBiddingComplete,
-  getBiddingResult
+  getBiddingResult,
+  // Computer kitty functions
+  handleComputerKitty,
+  choosePowerSuit,
+  shuffleArray
 };
 
 console.log('cardLogic exported:', Object.keys(window.cardLogic));

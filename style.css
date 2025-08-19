@@ -144,6 +144,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
 .yellow { background-color: #FFEE93}
 .blue { background-color: #A0CED9}
 .green { background-color: #ADF7B6}
+.gray { background-color: #C4C4C4}
 .dunk { background-color: black; color: white; }
 .empty { border: 1px dashed black; background-color: white; }
 

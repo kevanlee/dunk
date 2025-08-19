@@ -9,6 +9,8 @@ Fixes and polish:
 * NEW: Add a log to the top left
 * NEW: Add funny commentary
 * ADD: shooting the moon
+* UPDATE: Error state styling for the bid form
+* UPDATE: Show jumbotron always after first round of scoring begins
 
 
 Implement bidding validation (minimum bids, valid increments)

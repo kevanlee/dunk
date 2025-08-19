@@ -359,6 +359,23 @@ function updateUIForCurrentPhase() {
         if (computerKittySection) {
           computerKittySection.classList.remove('hidden');
           console.log('Computer kitty section shown');
+          
+          // Handle computer kitty logic
+          const computerPlayer = gameState.roundState.bidWinner;
+          const computerHandIndex = getPlayerHandIndex(computerPlayer);
+          const computerHand = gameState.hands[computerHandIndex];
+          const kitty = gameState.kitty;
+          
+          // Process computer kitty management
+          const kittyResult = window.cardLogic.handleComputerKitty(computerPlayer, computerHand, kitty);
+          
+          // Update game state
+          gameState.hands[computerHandIndex] = kittyResult.newHand;
+          gameState.kitty = kittyResult.newKitty;
+          gameState.roundState.powerSuit = kittyResult.powerSuit;
+          
+          // Start computer kitty animation
+          animateComputerKitty(computerPlayer, gameState.roundState.currentBid, kittyResult.powerSuit);
         } else {
           console.log('Computer kitty section not found');
         }
@@ -377,11 +394,11 @@ function updateUIForCurrentPhase() {
           }
         } else {
           // Set up computer kitty button listener - look specifically in the visible computer kitty section
-          const computerKittySection = document.querySelector('.row:has(.kitty-computer)');
-          const computerKittyButton = computerKittySection ? computerKittySection.querySelector('.right button') : null;
+          const computerKittyButton = document.querySelector('.computer-kitty-button');
           console.log('Setting up computer kitty button listener:', computerKittyButton);
           
           if (computerKittyButton) {
+            computerKittyButton.style.display = 'none'; // Hide initially
             computerKittyButton.addEventListener('click', handleKittyNextClick, { once: true });
             console.log('Added click listener to computer kitty button');
           }
@@ -502,12 +519,119 @@ function handleBiddingNextClick() {
 function handleKittyNextClick() {
   console.log('Kitty "Let\'s go" button clicked - transitioning to gameplay phase');
   
+  // Set the trick leader to the bid winner
+  gameState.roundState.trickLeader = gameState.roundState.bidWinner;
+  gameState.roundState.currentTurn = gameState.roundState.bidWinner;
+  
+  console.log(`Trick leader set to: ${gameState.roundState.trickLeader}`);
+  
   // Log round information
   logRoundInfo();
   
   // Transition to GAMEPLAY phase
   setCurrentPhase(GAME_PHASES.GAMEPLAY);
   updateUIForCurrentPhase();
+}
+
+/**
+ * Update computer kitty header with player name and bid
+ * @param {string} playerName - Name of the computer player
+ * @param {number} bidAmount - Winning bid amount
+ */
+function updateComputerKittyHeader(playerName, bidAmount) {
+  const playerNameElement = document.querySelector('.kitty-computer .player-name');
+  const playerBidElement = document.querySelector('.kitty-computer .player-bid');
+  
+  if (playerNameElement) {
+    playerNameElement.textContent = playerName;
+  }
+  
+  if (playerBidElement) {
+    playerBidElement.textContent = bidAmount;
+  }
+}
+
+/**
+ * Show first step in computer kitty animation
+ */
+function showFirstStep() {
+  const firstStep = document.querySelector('.kitty-computer .step-1 img');
+  if (firstStep) {
+    firstStep.classList.remove('invisible');
+    console.log('Computer kitty step 1: Look through the kitty');
+  }
+}
+
+/**
+ * Show second step in computer kitty animation
+ */
+function showSecondStep() {
+  const secondStep = document.querySelector('.kitty-computer .step-2 img');
+  if (secondStep) {
+    secondStep.classList.remove('invisible');
+    console.log('Computer kitty step 2: Pick a power suit');
+  }
+}
+
+/**
+ * Show power suit selection in computer kitty animation
+ * @param {string} powerSuit - Chosen power suit
+ */
+function showPowerSuit(powerSuit) {
+  const powerSuitDisplay = document.querySelector('.kitty-computer .power-suit-display');
+  const powerSuitText = document.querySelector('.kitty-computer .power-suit-text');
+  
+  if (powerSuitDisplay && powerSuitText) {
+    // Update color class
+    powerSuitDisplay.className = `power-suit ${powerSuit} power-suit-display`;
+    
+    // Update text based on suit
+    const suitNames = {
+      orange: 'Gatorade orange',
+      yellow: 'Mellow yellow', 
+      blue: 'Bottled water',
+      green: 'Baja blast green'
+    };
+    
+    powerSuitText.textContent = suitNames[powerSuit] || powerSuit;
+    console.log(`Computer kitty power suit: ${powerSuit} (${suitNames[powerSuit]})`);
+  }
+}
+
+/**
+ * Show "Let's go" button after computer kitty animations complete
+ */
+function showComputerKittyButton() {
+  const computerKittyButton = document.querySelector('.computer-kitty-button');
+  console.log('Looking for computer kitty button:', computerKittyButton);
+  
+  if (computerKittyButton) {
+    computerKittyButton.style.display = 'block';
+    computerKittyButton.style.visibility = 'visible';
+    computerKittyButton.style.opacity = '1';
+    console.log('Computer kitty "Let\'s go" button shown');
+  } else {
+    console.error('Computer kitty button not found!');
+  }
+}
+
+/**
+ * Animate computer kitty phase
+ * @param {string} computerPlayer - Name of the computer player
+ * @param {number} winningBid - Winning bid amount
+ * @param {string} powerSuit - Chosen power suit
+ */
+function animateComputerKitty(computerPlayer, winningBid, powerSuit) {
+  console.log(`Starting computer kitty animation for ${computerPlayer}`);
+  
+  // Update header immediately
+  updateComputerKittyHeader(computerPlayer, winningBid);
+  
+  // Sequential animations
+  setTimeout(() => showFirstStep(), 500);
+  setTimeout(() => showSecondStep(), 1000);
+  setTimeout(() => showPowerSuit(powerSuit), 1500);
+  setTimeout(() => showComputerKittyButton(), 2000); // Show button after all animations
 }
 
 /**
@@ -1488,5 +1612,11 @@ function activateTab(container, tabEl) {
     hideBidError,
     // Kitty functions
     handleKittyNextClick,
+    animateComputerKitty,
+    updateComputerKittyHeader,
+    showFirstStep,
+    showSecondStep,
+    showPowerSuit,
+    showComputerKittyButton,
     GAME_PHASES
   };

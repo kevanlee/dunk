@@ -173,6 +173,12 @@ function initializeCardPlaying() {
   
   // Update card availability based on current game state
   updateCardAvailability(sortedHand, gameState);
+  
+  // Check if it's an AI's turn to start
+  if (gameState.roundState.currentTurn !== "You") {
+    console.log(`Starting AI turn for: ${gameState.roundState.currentTurn}`);
+    startAITurn();
+  }
 }
 
 /**
