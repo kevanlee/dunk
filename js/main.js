@@ -227,10 +227,44 @@ function updateUIForCurrentPhase() {
       const jumbotronSection = document.querySelector('.jumbotron.top').closest('.modal-row');
       jumbotronSection.classList.remove('hidden');
       
-      // Show only the first dealing section initially
-      const dealingSections = document.querySelectorAll('.your-hand');
-      if (dealingSections.length > 0) {
-        dealingSections[0].classList.remove('hidden'); // First section with "DEALING..." text
+      // Hide all dealing sections first to ensure clean state
+      const allDealingSections = document.querySelectorAll('.your-hand');
+      allDealingSections.forEach(section => {
+        section.classList.add('hidden');
+      });
+      
+      // Show only the first dealing section initially (the one with "DEALING..." text)
+      if (allDealingSections.length > 0) {
+        const firstDealingSection = allDealingSections[0];
+        firstDealingSection.classList.remove('hidden');
+        
+        // Reset the dealing section to initial state
+        const dealingText = firstDealingSection.querySelector('.dealing-text');
+        const cardLayout = firstDealingSection.querySelector('.card-layout');
+        const nextButton = firstDealingSection.querySelector('button');
+        
+        if (dealingText) {
+          dealingText.classList.remove('hidden'); // Show "DEALING..." text
+        }
+        if (cardLayout) {
+          cardLayout.classList.add('hidden'); // Hide any existing cards
+          cardLayout.innerHTML = ''; // Clear existing cards
+        }
+        if (nextButton) {
+          nextButton.classList.add('inactive'); // Reset button to inactive state
+          nextButton.textContent = 'Next ⮑';
+          nextButton.style.display = ''; // Reset display style
+        }
+        
+        // Update the header to show simple dealing header without bid/power suit info
+        const yourHandHeader = firstDealingSection.querySelector('.your-hand-header-dealing');
+        if (yourHandHeader) {
+          yourHandHeader.innerHTML = `
+            <img src="images/squiggle.png" width="300">
+            <h2>Your hand</h2>
+            <img src="images/squiggle.png" width="300">
+          `;
+        }
         
         // Start the card dealing animation if we have a player hand
         if (gameState.playerHand && gameState.playerHand.length > 0) {
@@ -377,14 +411,16 @@ function handleBiddingNextClick() {
 function handleRoundScoringNextClick() {
   console.log('Round scoring Next button clicked - transitioning to score update phase');
   
-  // Hide the round scoring section
-  const roundScoringSection = document.querySelector('.row:not(.hidden)');
-  if (roundScoringSection && roundScoringSection.querySelector('.hand-score')) {
-    roundScoringSection.classList.add('hidden');
-  }
+  // Hide the round scoring section (hand-score)
+  const handScoreSections = document.querySelectorAll('.row');
+  handScoreSections.forEach(section => {
+    if (section.querySelector('.hand-score')) {
+      section.classList.add('hidden');
+    }
+  });
   
   // Show the score update section
-  const scoreUpdateSections = document.querySelectorAll('.row.hidden');
+  const scoreUpdateSections = document.querySelectorAll('.row');
   scoreUpdateSections.forEach(section => {
     if (section.querySelector('.score-update')) {
       section.classList.remove('hidden');
@@ -395,7 +431,7 @@ function handleRoundScoringNextClick() {
   populateScoreUpdateData();
   
   // Set up the Next button in the score update section
-  const scoreUpdateNextButton = document.querySelector('.score-update + .right button');
+  const scoreUpdateNextButton = document.querySelector('.score-update').closest('.row').querySelector('.right button');
   if (scoreUpdateNextButton) {
     scoreUpdateNextButton.onclick = handleScoreUpdateNextClick;
   }
@@ -468,8 +504,20 @@ function handleScoreUpdateNextClick() {
   } else {
     // Start next round - transition to NEW_ROUND phase
     console.log('Starting next round');
+    
+    // Hide the score update section
+    const scoreUpdateSections = document.querySelectorAll('.row');
+    scoreUpdateSections.forEach(section => {
+      if (section.querySelector('.score-update')) {
+        section.classList.add('hidden');
+      }
+    });
+    
+    // Initialize new round (this increments the round number and preserves scores)
     setCurrentPhase(GAME_PHASES.NEW_ROUND);
     initializeNewRound();
+    
+    // Transition to DEALING phase and update UI
     setCurrentPhase(GAME_PHASES.DEALING);
     updateUIForCurrentPhase();
   }
@@ -483,6 +531,18 @@ function populateHandByHandTable(roundHistory) {
   if (!tableBody) {
     console.error('Could not find hand-by-hand table body');
     return;
+  }
+  
+  // Update table header with dynamic team names
+  const tableHeader = document.querySelector('.hand-by-hand-table thead tr.table-heading');
+  if (tableHeader) {
+    const scores = window.gameplay.getCurrentGameScores();
+    const headerCells = tableHeader.querySelectorAll('th');
+    if (headerCells.length >= 3) {
+      // Keep "Bid" as first column
+      headerCells[1].textContent = scores.team1Name; // Team 1 column
+      headerCells[2].textContent = scores.team2Name; // Team 2 column
+    }
   }
   
   // Clear existing rows
@@ -629,6 +689,20 @@ function initializeNewRound() {
   
   // Update score display to show 0 for new round
   updateScoreDisplay();
+  
+  // Clear the play area from the previous round
+  if (window.gameplay && window.gameplay.clearPlayArea) {
+    window.gameplay.clearPlayArea();
+  }
+  
+  // Hide any "See Results" button that might be visible from the previous round
+  const gameplaySection = document.querySelector('.cols');
+  if (gameplaySection) {
+    const rightColumn = gameplaySection.querySelector('.right');
+    if (rightColumn) {
+      rightColumn.innerHTML = ''; // Clear any buttons
+    }
+  }
 }
 
 

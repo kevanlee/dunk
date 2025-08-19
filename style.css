@@ -484,7 +484,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
   .tab-panel { margin-top: 14px; }
   .tab-panel.is-hidden { display: none; }
 
-  .tab-panel .jumbotron { justify-content: center; }
+  .tab-panel .jumbotron { justify-content: center; margin: 0 auto;}
 
   .hand-by-hand-table {
     justify-content: center;
