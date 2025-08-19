@@ -5,8 +5,17 @@ python3 -m http.server 2500
 Fixes and polish: 
 
 * Fix the disabled cards logic or else add error state
+* Fix: Keep the Jumbotron visible after Round 1
 * NEW: Add a log to the top left
 * NEW: Add funny commentary
+* ADD: shooting the moon
+
+
+Implement bidding validation (minimum bids, valid increments)
+Add AI bidding logic (hand evaluation, bid strategy)
+Create bidding flow (turn management, pass handling)
+Connect the bidding form to game logic
+Implement kitty management (card exchange, power suit selection)
 
 ## Game Overview
 

@@ -212,6 +212,218 @@ function createNewGame(numPlayers = 4) {
   };
 }
 
+/**
+ * Bidding Logic
+ * Handles bidding rounds, validation, and AI bidding decisions
+ */
+
+/**
+ * Start a new bidding round
+ * @param {number} roundNumber - Current round number (1-based)
+ * @returns {Object} Bidding round state
+ */
+function startBiddingRound(roundNumber) {
+  // Determine who bids first based on round number
+  // Round 1: PLAYER3 (You), Round 2: PLAYER0 (Patricia), etc.
+  const firstBidderIndex = (roundNumber - 1) % 4;
+  const playerOrder = [
+    window.gameSetup.PLAYERS.PLAYER0.name, // Patricia
+    window.gameSetup.PLAYERS.PLAYER1.name, // Alex  
+    window.gameSetup.PLAYERS.PLAYER2.name, // Jordan
+    window.gameSetup.PLAYERS.PLAYER3.name  // You
+  ];
+  
+  return {
+    currentBid: 0,
+    currentPlayerIndex: firstBidderIndex,
+    playerOrder: playerOrder,
+    bids: [],
+    passes: [],
+    highestBidder: null,
+    highestBid: 0,
+    isComplete: false,
+    winner: null,
+    winningBid: 0
+  };
+}
+
+/**
+ * Get the next player to bid (skip those who have passed)
+ * @param {Object} biddingState - Current bidding state
+ * @returns {string} Next player name, or null if bidding is complete
+ */
+function getNextBidder(biddingState) {
+  if (biddingState.isComplete) {
+    return null;
+  }
+  
+  // Find next player who hasn't passed
+  let nextIndex = biddingState.currentPlayerIndex;
+  let attempts = 0;
+  
+  while (attempts < 4) {
+    nextIndex = (nextIndex + 1) % 4;
+    const nextPlayer = biddingState.playerOrder[nextIndex];
+    
+    if (!biddingState.passes.includes(nextPlayer)) {
+      return nextPlayer;
+    }
+    
+    attempts++;
+  }
+  
+  return null; // All players have passed
+}
+
+/**
+ * Check if a bid is valid
+ * @param {number} newBid - The bid amount to validate
+ * @param {number} currentHighestBid - Current highest bid
+ * @returns {boolean} True if bid is valid
+ */
+function isValidBid(newBid, currentHighestBid) {
+  // Must be at least 5 points higher than current highest bid
+  if (newBid <= currentHighestBid) {
+    return false;
+  }
+  
+  // Must be divisible by 5
+  if (newBid % 5 !== 0) {
+    return false;
+  }
+  
+  // Must be within valid range (70-200)
+  if (newBid < 70 || newBid > 200) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Make a bid for a player
+ * @param {Object} biddingState - Current bidding state
+ * @param {string} playerName - Name of the player making the bid
+ * @param {number} bidAmount - Amount to bid
+ * @returns {Object} Updated bidding state
+ */
+function makeBid(biddingState, playerName, bidAmount) {
+  const updatedState = { ...biddingState };
+  
+  // Validate the bid
+  if (!isValidBid(bidAmount, updatedState.highestBid)) {
+    throw new Error(`Invalid bid: ${bidAmount}. Must be at least 5 points higher than ${updatedState.highestBid} and divisible by 5.`);
+  }
+  
+  // Record the bid
+  updatedState.bids.push({
+    player: playerName,
+    amount: bidAmount
+  });
+  
+  // Update highest bid
+  updatedState.highestBid = bidAmount;
+  updatedState.highestBidder = playerName;
+  
+  // Check if bidding should end (someone bid 200)
+  if (bidAmount === 200) {
+    updatedState.isComplete = true;
+    updatedState.winner = playerName;
+    updatedState.winningBid = bidAmount;
+  }
+  
+  // Move to next player
+  updatedState.currentPlayerIndex = (updatedState.currentPlayerIndex + 1) % 4;
+  
+  return updatedState;
+}
+
+/**
+ * Pass on bidding for a player
+ * @param {Object} biddingState - Current bidding state
+ * @param {string} playerName - Name of the player passing
+ * @returns {Object} Updated bidding state
+ */
+function passBid(biddingState, playerName) {
+  const updatedState = { ...biddingState };
+  
+  // Record the pass
+  updatedState.passes.push(playerName);
+  
+  // Check if bidding should end (3 players have passed)
+  if (updatedState.passes.length >= 3) {
+    updatedState.isComplete = true;
+    updatedState.winner = updatedState.highestBidder;
+    updatedState.winningBid = updatedState.highestBid;
+  }
+  
+  // Move to next player
+  updatedState.currentPlayerIndex = (updatedState.currentPlayerIndex + 1) % 4;
+  
+  return updatedState;
+}
+
+/**
+ * Simple AI bidding decision
+ * @param {string} aiPlayerName - Name of the AI player
+ * @param {Array} aiHand - The AI's hand
+ * @param {Object} biddingState - Current bidding state
+ * @returns {Object} AI decision { action: 'bid'|'pass', amount?: number }
+ */
+function makeAIBidDecision(aiPlayerName, aiHand, biddingState) {
+  // Simple AI: bid 75 or pass
+  const currentHighestBid = biddingState.highestBid;
+  
+  // If no one has bid yet, bid 75
+  if (currentHighestBid === 0) {
+    return { action: 'bid', amount: 75 };
+  }
+  
+  // If current bid is 75, pass (AI doesn't bid higher than 75)
+  if (currentHighestBid >= 75) {
+    return { action: 'pass' };
+  }
+  
+  // Otherwise, bid 75
+  return { action: 'bid', amount: 75 };
+}
+
+/**
+ * Get the current player whose turn it is to bid
+ * @param {Object} biddingState - Current bidding state
+ * @returns {string} Current player name
+ */
+function getCurrentBidder(biddingState) {
+  return biddingState.playerOrder[biddingState.currentPlayerIndex];
+}
+
+/**
+ * Check if bidding is complete
+ * @param {Object} biddingState - Current bidding state
+ * @returns {boolean} True if bidding is complete
+ */
+function isBiddingComplete(biddingState) {
+  return biddingState.isComplete;
+}
+
+/**
+ * Get bidding result
+ * @param {Object} biddingState - Current bidding state
+ * @returns {Object} Bidding result { winner, winningBid, bids, passes }
+ */
+function getBiddingResult(biddingState) {
+  if (!biddingState.isComplete) {
+    return null;
+  }
+  
+  return {
+    winner: biddingState.winner,
+    winningBid: biddingState.winningBid,
+    bids: biddingState.bids,
+    passes: biddingState.passes
+  };
+}
+
 // Export functions for use in other modules
 window.cardLogic = {
   SUITS,
@@ -224,7 +436,17 @@ window.cardLogic = {
   getHandPoints,
   hasSuit,
   getCardsOfSuit,
-  createNewGame
+  createNewGame,
+  // Bidding functions
+  startBiddingRound,
+  getNextBidder,
+  isValidBid,
+  makeBid,
+  passBid,
+  makeAIBidDecision,
+  getCurrentBidder,
+  isBiddingComplete,
+  getBiddingResult
 };
 
 console.log('cardLogic exported:', Object.keys(window.cardLogic));

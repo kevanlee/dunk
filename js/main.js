@@ -11,6 +11,7 @@ const GAME_PHASES = {
   NEW_ROUND: 'new_round',
   DEALING: 'dealing', 
   BIDDING: 'bidding',
+  KITTY: 'kitty',
   GAMEPLAY: 'gameplay',
   ROUND_SCORING: 'round_scoring',
   END: 'end'
@@ -55,7 +56,9 @@ let gameState = {
     team2: 0
   },
   // Round history for hand-by-hand tracking
-  roundHistory: []
+  roundHistory: [],
+  // Bidding state
+  biddingState: null
 };
 
 /**
@@ -145,7 +148,9 @@ function resetGame() {
       team2: 0
     },
     // Round history for hand-by-hand tracking
-    roundHistory: []
+    roundHistory: [],
+    // Bidding state
+    biddingState: null
   };
   console.log('Game reset complete');
 }
@@ -186,7 +191,9 @@ function initializeGameState() {
       team2: 0
     },
     // Round history for hand-by-hand tracking
-    roundHistory: []
+    roundHistory: [],
+    // Bidding state
+    biddingState: null
   };
   console.log('Game state initialized. Current phase:', gameState.currentPhase);
   
@@ -285,13 +292,10 @@ function updateUIForCurrentPhase() {
       if (biddingSection) {
         biddingSection.classList.remove('hidden');
         
-        // Add event listener to Next button in bidding section
+        // Hide the Next button initially (will be shown when bidding completes)
         const nextButton = biddingSection.querySelector('.right button');
         if (nextButton) {
-          console.log('Found bidding Next button, adding event listener');
-          nextButton.addEventListener('click', handleBiddingNextClick, { once: true });
-        } else {
-          console.error('Could not find Next button in bidding section');
+          nextButton.style.display = 'none';
         }
       }
       
@@ -300,6 +304,89 @@ function updateUIForCurrentPhase() {
       if (yourHandSections.length > 0) {
         yourHandSections[0].classList.remove('hidden'); // Show the first .your-hand section
       }
+      
+      // Initialize bidding phase
+      initializeBiddingPhase();
+      break;
+    case GAME_PHASES.KITTY:
+      // Show jumbotron section (but keep jumbotron invisible)
+      const jumbotronSectionKitty = document.querySelector('.jumbotron.top').closest('.modal-row');
+      jumbotronSectionKitty.classList.remove('hidden');
+      
+      // Hide bidding section
+      const biddingSectionToHideKitty = document.querySelector('.cols-bidding').closest('.row');
+      if (biddingSectionToHideKitty) {
+        biddingSectionToHideKitty.classList.add('hidden');
+      }
+      
+      // Show the .your-hand section and update its header for kitty phase
+      const yourHandSectionsKitty = document.querySelectorAll('.your-hand');
+      if (yourHandSectionsKitty.length > 0) {
+        yourHandSectionsKitty[0].classList.remove('hidden');
+        
+        // Update the header to show bid and power suit information
+        const yourHandHeader = yourHandSectionsKitty[0].querySelector('.your-hand-header-dealing');
+        if (yourHandHeader) {
+          yourHandHeader.innerHTML = `
+            <h2>Your hand</h2>
+            <div class="pill">Power suit</div>
+            <div class="power-suit-indicator tbd">TBD</div>
+            <div class="pill">Bid</div>
+            <div class="bid-indicator">${gameState.roundState.bidWinner} ${gameState.roundState.currentBid}</div>
+            <img src="images/squiggle.png" width="300">
+          `;
+        }
+      }
+      
+      // Show appropriate kitty section based on who won the bid
+      const bidWinner = gameState.roundState.bidWinner;
+      const isHumanWinner = bidWinner === window.gameSetup.PLAYERS.PLAYER3.name;
+      
+      if (isHumanWinner) {
+        // Show human kitty section - look for the section with kitty-power-selection
+        const humanKittySection = document.querySelector('.row.modal-row.your-hand:has(.kitty-power-selection)');
+        console.log('Human kitty section found:', humanKittySection);
+        if (humanKittySection) {
+          humanKittySection.classList.remove('hidden');
+          console.log('Human kitty section shown');
+        } else {
+          console.log('Human kitty section not found');
+        }
+      } else {
+        // Show computer kitty section
+        const computerKittySection = document.querySelector('.row:has(.kitty-computer)');
+        console.log('Computer kitty section found:', computerKittySection);
+        if (computerKittySection) {
+          computerKittySection.classList.remove('hidden');
+          console.log('Computer kitty section shown');
+        } else {
+          console.log('Computer kitty section not found');
+        }
+      }
+      
+      // Set up event listeners for kitty "Let's go" buttons
+      setTimeout(() => {
+        if (isHumanWinner) {
+          // Set up human kitty button listener
+          const humanKittyButton = document.querySelector('.kitty-container .checklist button');
+          console.log('Setting up human kitty button listener:', humanKittyButton);
+          
+          if (humanKittyButton) {
+            humanKittyButton.addEventListener('click', handleKittyNextClick, { once: true });
+            console.log('Added click listener to human kitty button');
+          }
+        } else {
+          // Set up computer kitty button listener - look specifically in the visible computer kitty section
+          const computerKittySection = document.querySelector('.row:has(.kitty-computer)');
+          const computerKittyButton = computerKittySection ? computerKittySection.querySelector('.right button') : null;
+          console.log('Setting up computer kitty button listener:', computerKittyButton);
+          
+          if (computerKittyButton) {
+            computerKittyButton.addEventListener('click', handleKittyNextClick, { once: true });
+            console.log('Added click listener to computer kitty button');
+          }
+        }
+      }, 100); // Small delay to ensure DOM is updated
       break;
     case GAME_PHASES.GAMEPLAY:
       // Show jumbotron section and remove invisible class
@@ -314,6 +401,12 @@ function updateUIForCurrentPhase() {
       const biddingSectionToHide = document.querySelector('.cols-bidding').closest('.row');
       if (biddingSectionToHide) {
         biddingSectionToHide.classList.add('hidden');
+      }
+      
+      // Hide computer kitty section
+      const computerKittySection = document.querySelector('.row:has(.kitty-computer)');
+      if (computerKittySection) {
+        computerKittySection.classList.add('hidden');
       }
       
       // Show gameplay section (the three-column layout)
@@ -393,10 +486,21 @@ function handleDealingNextClick() {
 }
 
 /**
- * Handle Next button click during bidding phase - transition to gameplay phase
+ * Handle Next button click during bidding phase - transition to kitty phase
  */
 function handleBiddingNextClick() {
-  console.log('Bidding Next button clicked - transitioning to gameplay phase');
+  console.log('Bidding Next button clicked - transitioning to kitty phase');
+  
+  // Transition to KITTY phase
+  setCurrentPhase(GAME_PHASES.KITTY);
+  updateUIForCurrentPhase();
+}
+
+/**
+ * Handle "Let's go" button click during kitty phase - transition to gameplay phase
+ */
+function handleKittyNextClick() {
+  console.log('Kitty "Let\'s go" button clicked - transitioning to gameplay phase');
   
   // Log round information
   logRoundInfo();
@@ -404,6 +508,315 @@ function handleBiddingNextClick() {
   // Transition to GAMEPLAY phase
   setCurrentPhase(GAME_PHASES.GAMEPLAY);
   updateUIForCurrentPhase();
+}
+
+/**
+ * Initialize bidding phase with dynamic UI
+ */
+function initializeBiddingPhase() {
+  console.log('Initializing bidding phase...');
+  
+  // Start a new bidding round
+  const roundNumber = gameState.currentHand;
+  const biddingState = window.cardLogic.startBiddingRound(roundNumber);
+  
+  // Store bidding state in game state
+  gameState.biddingState = biddingState;
+  
+  // Clear any existing bid display
+  clearBiddingDisplay();
+  
+  // Start the bidding process
+  processNextBid();
+}
+
+/**
+ * Clear the bidding display
+ */
+function clearBiddingDisplay() {
+  const biddingDetails = document.getElementById('biddingDetails');
+  if (biddingDetails) {
+    biddingDetails.innerHTML = '';
+  }
+  
+  // Hide error message
+  hideBidError();
+}
+
+/**
+ * Process the next bid in the bidding round
+ */
+function processNextBid() {
+  if (!gameState.biddingState || window.cardLogic.isBiddingComplete(gameState.biddingState)) {
+    // Bidding is complete, transition to kitty management
+    handleBiddingComplete();
+    return;
+  }
+  
+  const currentPlayer = window.cardLogic.getCurrentBidder(gameState.biddingState);
+  const isHumanTurn = currentPlayer === window.gameSetup.PLAYERS.PLAYER3.name;
+  
+  if (isHumanTurn) {
+    // Show human bidding form
+    showHumanBidForm();
+  } else {
+    // AI turn - make decision after a thinking delay
+    processAIBid(currentPlayer);
+  }
+}
+
+/**
+ * Process AI bid with thinking delay
+ */
+function processAIBid(aiPlayerName) {
+  console.log(`${aiPlayerName} is thinking...`);
+  
+  // Get AI player's hand
+  const aiHandIndex = getPlayerHandIndex(aiPlayerName);
+  const aiHand = gameState.hands[aiHandIndex];
+  
+  // AI thinking delay (0.5-1 seconds)
+  const thinkingDelay = 500 + Math.random() * 500;
+  
+  setTimeout(() => {
+    // Make AI decision
+    const aiDecision = window.cardLogic.makeAIBidDecision(aiPlayerName, aiHand, gameState.biddingState);
+    
+    if (aiDecision.action === 'bid') {
+      // AI makes a bid
+      gameState.biddingState = window.cardLogic.makeBid(gameState.biddingState, aiPlayerName, aiDecision.amount);
+      addBidToDisplay(aiPlayerName, aiDecision.amount);
+    } else {
+      // AI passes
+      gameState.biddingState = window.cardLogic.passBid(gameState.biddingState, aiPlayerName);
+      addPassToDisplay(aiPlayerName);
+    }
+    
+    // Process next bid
+    setTimeout(() => {
+      processNextBid();
+    }, 500); // Small delay before next player
+    
+  }, thinkingDelay);
+}
+
+/**
+ * Get player hand index by player name
+ */
+function getPlayerHandIndex(playerName) {
+  const players = window.gameSetup.PLAYERS;
+  if (playerName === players.PLAYER0.name) return 0; // Patricia
+  if (playerName === players.PLAYER1.name) return 1; // Alex
+  if (playerName === players.PLAYER2.name) return 2; // Jordan
+  if (playerName === players.PLAYER3.name) return 3; // You
+  return -1;
+}
+
+/**
+ * Show human bidding form
+ */
+function showHumanBidForm() {
+  const humanBidForm = document.getElementById('humanBidForm');
+  const bidInput = document.getElementById('bidInput');
+  const bidButton = document.getElementById('bidButton');
+  const passButton = document.getElementById('passButton');
+  
+  if (humanBidForm && bidInput) {
+    humanBidForm.style.display = 'block';
+    bidInput.focus();
+    
+    // Set minimum bid value
+    const currentHighestBid = gameState.biddingState.highestBid;
+    const minBid = currentHighestBid === 0 ? 70 : currentHighestBid + 5;
+    bidInput.min = minBid;
+    bidInput.placeholder = `Min: ${minBid}`;
+    
+    // Enable buttons
+    if (bidButton) bidButton.classList.remove('inactive');
+    if (passButton) passButton.classList.remove('inactive');
+  }
+}
+
+/**
+ * Hide human bidding form
+ */
+function hideHumanBidForm() {
+  const humanBidForm = document.getElementById('humanBidForm');
+  const bidButton = document.getElementById('bidButton');
+  const passButton = document.getElementById('passButton');
+  
+  if (humanBidForm) {
+    humanBidForm.style.display = 'none';
+  }
+  
+  // Disable buttons
+  if (bidButton) bidButton.classList.add('inactive');
+  if (passButton) passButton.classList.add('inactive');
+}
+
+/**
+ * Add a bid to the display
+ */
+function addBidToDisplay(playerName, amount) {
+  const biddingDetails = document.getElementById('biddingDetails');
+  if (!biddingDetails) return;
+  
+  const bidElement = document.createElement('div');
+  bidElement.className = 'bid';
+  bidElement.innerHTML = `
+    <p class="player-name">${playerName}</p>
+    <p class="player-bid">${amount}</p>
+  `;
+  
+  biddingDetails.appendChild(bidElement);
+  
+  // Scroll to bottom to show latest bid
+  biddingDetails.scrollTop = biddingDetails.scrollHeight;
+}
+
+/**
+ * Add a pass to the display
+ */
+function addPassToDisplay(playerName) {
+  const biddingDetails = document.getElementById('biddingDetails');
+  if (!biddingDetails) return;
+  
+  const passElement = document.createElement('div');
+  passElement.className = 'bid pass';
+  passElement.innerHTML = `
+    <p class="player-name">${playerName}</p>
+    <p class="player-bid">Pass</p>
+  `;
+  
+  biddingDetails.appendChild(passElement);
+  
+  // Scroll to bottom to show latest pass
+  biddingDetails.scrollTop = biddingDetails.scrollHeight;
+}
+
+/**
+ * Handle human bid submission
+ */
+function handleBidSubmit(event) {
+  event.preventDefault();
+  
+  const bidInput = document.getElementById('bidInput');
+  const bidAmount = parseInt(bidInput.value);
+  
+  try {
+    // Make the bid
+    gameState.biddingState = window.cardLogic.makeBid(gameState.biddingState, window.gameSetup.PLAYERS.PLAYER3.name, bidAmount);
+    
+    // Add bid to display
+    addBidToDisplay(window.gameSetup.PLAYERS.PLAYER3.name, bidAmount);
+    
+    // Hide form and clear input
+    hideHumanBidForm();
+    bidInput.value = '';
+    hideBidError();
+    
+    // Process next bid
+    setTimeout(() => {
+      processNextBid();
+    }, 500);
+    
+  } catch (error) {
+    // Show validation error
+    showBidError(error.message);
+  }
+}
+
+/**
+ * Handle human pass
+ */
+function handlePassClick() {
+  // Make the pass
+  gameState.biddingState = window.cardLogic.passBid(gameState.biddingState, window.gameSetup.PLAYERS.PLAYER3.name);
+  
+  // Add pass to display
+  addPassToDisplay(window.gameSetup.PLAYERS.PLAYER3.name);
+  
+  // Hide form
+  hideHumanBidForm();
+  hideBidError();
+  
+  // Process next bid
+  setTimeout(() => {
+    processNextBid();
+  }, 500);
+}
+
+/**
+ * Show bid error message
+ */
+function showBidError(message) {
+  const errorElement = document.getElementById('bidError');
+  if (errorElement) {
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+  }
+}
+
+/**
+ * Hide bid error message
+ */
+function hideBidError() {
+  const errorElement = document.getElementById('bidError');
+  if (errorElement) {
+    errorElement.style.display = 'none';
+  }
+}
+
+/**
+ * Handle bidding completion
+ */
+function handleBiddingComplete() {
+  console.log('Bidding complete!');
+  
+  const result = window.cardLogic.getBiddingResult(gameState.biddingState);
+  console.log('Bidding result:', result);
+  
+  // Update game state with bidding results
+  gameState.roundState.currentBid = result.winningBid;
+  gameState.roundState.bidWinner = result.winner;
+  
+  // Hide human bidding form
+  hideHumanBidForm();
+  
+  // Mark the winning bid in the display with a small delay
+  setTimeout(() => {
+    markWinningBid(result.winner, result.winningBid);
+    
+    // Show "Next" button after winner announcement
+    setTimeout(() => {
+      const nextButton = document.querySelector('.cols-bidding .right button');
+      if (nextButton) {
+        nextButton.style.display = 'block';
+        nextButton.addEventListener('click', handleBiddingNextClick, { once: true });
+      }
+    }, 500); // Additional 500ms delay after winner announcement
+  }, 500);
+}
+
+/**
+ * Mark the winning bid in the display
+ */
+function markWinningBid(winner, winningBid) {
+  const biddingDetails = document.getElementById('biddingDetails');
+  if (!biddingDetails) return;
+  
+  // Add a new announcement line for the winner
+  const winnerElement = document.createElement('div');
+  winnerElement.className = 'bid win-bid';
+  winnerElement.innerHTML = `
+    <p class="player-name">${winner}</p>
+    <p class="player-bid">${winningBid}</p>
+  `;
+  
+  biddingDetails.appendChild(winnerElement);
+  
+  // Scroll to bottom to show the winner announcement
+  biddingDetails.scrollTop = biddingDetails.scrollHeight;
 }
 
 /**
@@ -1019,6 +1432,25 @@ function activateTab(container, tabEl) {
     if (startButton) {
       startButton.addEventListener('click', handleStartButtonClick);
     }
+    
+    // Add event listeners for bidding form
+    const bidForm = document.getElementById('bidForm');
+    const passButton = document.getElementById('passButton');
+    const bidButton = document.getElementById('bidButton');
+    
+    if (bidForm) {
+      bidForm.addEventListener('submit', handleBidSubmit);
+    }
+    
+    if (passButton) {
+      passButton.addEventListener('click', handlePassClick);
+    }
+    
+    // Start with buttons inactive
+    if (bidButton) bidButton.classList.add('inactive');
+    if (passButton) passButton.classList.add('inactive');
+    
+    // Kitty button event listeners will be set up when the KITTY phase starts
   });
 
   // Export functions for testing and external use
@@ -1038,13 +1470,23 @@ function activateTab(container, tabEl) {
     initializeNewRound,
     renderCard,
     dealCardsAnimation,
-      updateScoreDisplay,
-  logRoundInfo,
-  logTrickInfo,
-  updateTrickLeaderPill,
-  populateScoreUpdateData,
-  populateHandByHandTable,
-  handleRoundScoringNextClick,
-  handleScoreUpdateNextClick,
-  GAME_PHASES
+    updateScoreDisplay,
+    logRoundInfo,
+    logTrickInfo,
+    updateTrickLeaderPill,
+    populateScoreUpdateData,
+    populateHandByHandTable,
+    handleRoundScoringNextClick,
+    handleScoreUpdateNextClick,
+    // Bidding functions
+    initializeBiddingPhase,
+    processNextBid,
+    processAIBid,
+    handleBidSubmit,
+    handlePassClick,
+    showBidError,
+    hideBidError,
+    // Kitty functions
+    handleKittyNextClick,
+    GAME_PHASES
   };

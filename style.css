@@ -557,17 +557,26 @@ button.inactive { background-color: #C4C4C4; border: none; }
 
   .bidding-details, .bid-enter { margin-top: 15px; }
 
-  .bid-form form {
+  .inputs-top {
     display: flex;
     align-items: center;
+    flex-direction: column;
     gap: 20px; /* space between label and inputs */
   }
+
   
-  .inputs {
+  .label-container {
     display: flex;
-    border: 1px solid black;
     border-radius: 8px;
     overflow: hidden; /* makes the corners smooth between input and button */
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .label-container .inputs {
+    border: 1px solid #c4c4c4;
+    border-radius: 5px;
   }
   
   .inputs input[type="number"] {
@@ -577,6 +586,9 @@ button.inactive { background-color: #C4C4C4; border: none; }
     background-color: #ddd;
     outline: none;
     width: 80px; /* adjust to fit */
+    margin-right:-6px;
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
   }
   
   .inputs button {
@@ -589,10 +601,34 @@ button.inactive { background-color: #C4C4C4; border: none; }
     border-radius: 0 5px 5px 0; /* TL=0, TR=8px, BR=8px, BL=0 */
   }
   
-  .inputs button:hover {
+  .inputs button:hover, #passButton:hover {
     opacity: 0.85;
+    transform: rotate(-0deg);
+    box-shadow: none;
   }
   
+  .inputs button.inactive {
+    background-color: #C4C4C4;
+    border: none;
+  }
+
+  .inputs-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #passButton {
+    border: none;
+    padding: 8px 16px;
+    font-size: 1rem;
+    background-color: white;
+    color: black;
+    cursor: url(images/hand.png) 0 0, auto;
+  }
+  #passButton.inactive { color: #c4c4c4; }
+
   /* Chrome, Safari, Edge, Opera */
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button {
@@ -636,6 +672,9 @@ input[type=number] {
 /* =========== Kitty - PERSON =========== */
 
 .tbd { font-size: 1.2rem; }
+
+.kitty-addon { margin-top: -50px;}
+.kitty-addon .modal { border-top: none;}
 
 .kitty-container {
     display: flex;
@@ -856,8 +895,8 @@ input[type=number] {
   /* selected should feel pressed-in but still match the system */
   .card.selected, .power-suit-list .power-suit.selected {
     box-shadow: 
-      inset 0 0 0 3px rgba(0, 0, 0, 0.4),  /* inner border */
-      0 2px 6px rgba(0, 0, 0, 0.12);       /* same as default outer */
+      inset 0 0 0 3px rgba(0, 0, 0, 1.1),  /* inner border */
+      0 2px 6px rgba(0, 0, 0, 0.32);       /* same as default outer */
   }
   
   .card.inactive { 
