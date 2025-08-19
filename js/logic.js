@@ -492,6 +492,48 @@ function handleComputerKitty(computerPlayer, computerHand, kitty) {
   return { newHand, newKitty, powerSuit };
 }
 
+/**
+ * Handle human kitty management
+ * @param {Array} playerHand - Player's current hand (13 cards)
+ * @param {Array} kitty - Current kitty cards (5 cards)
+ * @param {Array} selectedCards - Cards selected by player to return to kitty
+ * @param {string} chosenPowerSuit - Power suit chosen by player
+ * @returns {Object} Result with new hand, new kitty, and power suit
+ */
+function handleHumanKitty(playerHand, kitty, selectedCards, chosenPowerSuit) {
+  // Validate that exactly 5 cards were selected
+  if (selectedCards.length !== 5) {
+    throw new Error(`Must select exactly 5 cards. Selected: ${selectedCards.length}`);
+  }
+  
+  // 1. Combine player hand and kitty (13 + 5 = 18 cards)
+  const combinedCards = [...playerHand, ...kitty];
+  
+  // 2. Create new hand by removing selected cards from combined set
+  const newHand = combinedCards.filter(card => 
+    !selectedCards.some(selected => 
+      selected.suit === card.suit && selected.value === card.value
+    )
+  );
+  
+  // 3. Create new kitty from selected cards
+  const newKitty = [...selectedCards];
+  
+  console.log('Kitty management complete:', newHand.length, 'cards in hand,', newKitty.length, 'cards in kitty');
+  
+  return { newHand, newKitty, powerSuit: chosenPowerSuit };
+}
+
+/**
+ * Get all available cards for human kitty selection (player hand + kitty)
+ * @param {Array} playerHand - Player's current hand
+ * @param {Array} kitty - Current kitty cards
+ * @returns {Array} Combined array of all available cards
+ */
+function getAvailableCardsForSelection(playerHand, kitty) {
+  return [...playerHand, ...kitty];
+}
+
 // Export functions for use in other modules
 window.cardLogic = {
   SUITS,
@@ -517,6 +559,8 @@ window.cardLogic = {
   getBiddingResult,
   // Computer kitty functions
   handleComputerKitty,
+  handleHumanKitty,
+  getAvailableCardsForSelection,
   choosePowerSuit,
   shuffleArray
 };

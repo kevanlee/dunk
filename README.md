@@ -6,12 +6,12 @@ Fixes and polish:
 
 * Fix the disabled cards logic or else add error state
 * Fix: Keep the Jumbotron visible after Round 1
-* NEW: Add a log to the top left
+* NEW: Add a logo to the top left
 * NEW: Add funny commentary
 * ADD: shooting the moon
 * UPDATE: Error state styling for the bid form
-* UPDATE: Show jumbotron always after first round of scoring begins
-
+* UPDATE: the style of the bid so that it scrolls up rather than just gets super long
+* FIx: The jumpy css when bid is won by anyone
 
 Implement bidding validation (minimum bids, valid increments)
 Add AI bidding logic (hand evaluation, bid strategy)

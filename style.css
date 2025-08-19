@@ -68,6 +68,8 @@ button.inactive { background-color: #C4C4C4; border: none; }
     padding: 3px 10px;
 }
 
+.logo { position: fixed; top: 60px; left: 40px; height: 40px; }
+
 /* =========== Layout =========== */
 /* your container */
 #container {
@@ -719,7 +721,8 @@ input[type=number] {
     white-space: nowrap; 
     margin: 0;
     padding: 0 20px 0 25px; /* keep your padding */
-  }.power-suit-list .power-suit {
+  }
+  .power-suit-list .power-suit {
     font-size: 0.8rem;
 }
 
@@ -737,6 +740,8 @@ input[type=number] {
     align-self: flex-end;    /* ✅ ensures the button stays right-aligned */
     width: auto; 
   }
+
+.checklist button.inactive { border: 2px solid white;}
 
 /* =========== End game & your stats =========== */
 

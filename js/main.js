@@ -58,7 +58,9 @@ let gameState = {
   // Round history for hand-by-hand tracking
   roundHistory: [],
   // Bidding state
-  biddingState: null
+  biddingState: null,
+  // Human kitty selection state
+  humanKittySelection: null
 };
 
 /**
@@ -150,7 +152,9 @@ function resetGame() {
     // Round history for hand-by-hand tracking
     roundHistory: [],
     // Bidding state
-    biddingState: null
+    biddingState: null,
+    // Human kitty selection state
+    humanKittySelection: null
   };
   console.log('Game reset complete');
 }
@@ -193,7 +197,9 @@ function initializeGameState() {
     // Round history for hand-by-hand tracking
     roundHistory: [],
     // Bidding state
-    biddingState: null
+    biddingState: null,
+    // Human kitty selection state
+    humanKittySelection: null
   };
   console.log('Game state initialized. Current phase:', gameState.currentPhase);
   
@@ -349,6 +355,9 @@ function updateUIForCurrentPhase() {
         if (humanKittySection) {
           humanKittySection.classList.remove('hidden');
           console.log('Human kitty section shown');
+          
+          // Initialize human kitty management
+          initializeHumanKitty();
         } else {
           console.log('Human kitty section not found');
         }
@@ -519,11 +528,47 @@ function handleBiddingNextClick() {
 function handleKittyNextClick() {
   console.log('Kitty "Let\'s go" button clicked - transitioning to gameplay phase');
   
+  // Check if this is human kitty management
+  if (gameState.humanKittySelection) {
+    // Process human kitty selections
+    const selectedCards = getSelectedCards();
+    const powerSuit = gameState.humanKittySelection.powerSuit;
+    
+    if (selectedCards.length !== 5 || !powerSuit) {
+      console.error('Invalid human kitty selection');
+      return;
+    }
+    
+    // Process human kitty management
+    const kittyResult = window.cardLogic.handleHumanKitty(
+      gameState.playerHand, 
+      gameState.kitty, 
+      selectedCards, 
+      powerSuit
+    );
+    
+    // Update game state
+    gameState.playerHand = kittyResult.newHand;
+    gameState.kitty = kittyResult.newKitty;
+    gameState.roundState.powerSuit = kittyResult.powerSuit;
+    
+    // Keep gameState.hands in sync for consistency
+    gameState.hands[3] = kittyResult.newHand;
+    
+    // Update the UI to reflect the new hand
+    updatePlayerHandDisplay();
+    
+    console.log('Human kitty management completed');
+  }
+  
   // Set the trick leader to the bid winner
   gameState.roundState.trickLeader = gameState.roundState.bidWinner;
   gameState.roundState.currentTurn = gameState.roundState.bidWinner;
   
   console.log(`Trick leader set to: ${gameState.roundState.trickLeader}`);
+  
+  // Clean up kitty phase selections
+  cleanupKittyPhase();
   
   // Log round information
   logRoundInfo();
@@ -632,6 +677,322 @@ function animateComputerKitty(computerPlayer, winningBid, powerSuit) {
   setTimeout(() => showSecondStep(), 1000);
   setTimeout(() => showPowerSuit(powerSuit), 1500);
   setTimeout(() => showComputerKittyButton(), 2000); // Show button after all animations
+}
+
+/**
+ * Initialize human kitty management
+ */
+function initializeHumanKitty() {
+  console.log('Initializing human kitty management...');
+  
+  // Get current game state
+  const playerHand = gameState.playerHand;
+  const kitty = gameState.kitty;
+  
+  // Populate kitty display
+  populateKittyDisplay(kitty);
+  
+  // Set up card selection interface
+  setupCardSelection();
+  
+  // Set up power suit selection
+  setupPowerSuitSelection();
+  
+  // Initialize checklist
+  updateHumanKittyChecklist();
+}
+
+/**
+ * Populate the kitty display with actual kitty cards
+ * @param {Array} kitty - Kitty cards to display
+ */
+function populateKittyDisplay(kitty) {
+  const kittyLayout = document.querySelector('.pick-kitty .card-layout');
+  if (!kittyLayout) return;
+  
+  // Clear existing cards
+  kittyLayout.innerHTML = '';
+  
+  // Add kitty cards
+  kitty.forEach(card => {
+    const cardElement = document.createElement('div');
+    cardElement.className = `card ${card.suit} kitty-card`;
+    cardElement.dataset.suit = card.suit;
+    cardElement.dataset.value = card.value;
+    cardElement.innerHTML = `<p>${card.value} <span class="card-icon"></span></p>`;
+    
+    // Create a named function for the event handler
+    const clickHandler = (event) => {
+      event.stopPropagation(); // Prevent event bubbling
+      toggleCardSelection(cardElement, card);
+    };
+    
+    // Store the handler reference for potential removal later
+    cardElement._kittySelectionHandler = clickHandler;
+    
+    // Add click handler for selection
+    cardElement.addEventListener('click', clickHandler);
+    
+    kittyLayout.appendChild(cardElement);
+  });
+  
+  // Kitty display populated
+}
+
+/**
+ * Set up card selection interface
+ */
+function setupCardSelection() {
+  // Add click handlers to player's hand cards
+  const playerCards = document.querySelectorAll('.your-hand .card-layout .card');
+  playerCards.forEach(cardElement => {
+    // Remove any existing kitty selection event listeners
+    cardElement.removeEventListener('click', cardElement._kittySelectionHandler);
+    
+    const card = {
+      suit: cardElement.classList.contains('orange') ? 'orange' : 
+            cardElement.classList.contains('yellow') ? 'yellow' : 
+            cardElement.classList.contains('blue') ? 'blue' : 
+            cardElement.classList.contains('green') ? 'green' : 'dunk',
+      value: cardElement.textContent.trim().split(' ')[0]
+    };
+    
+    // Create a named function for the event handler
+    const clickHandler = (event) => {
+      event.stopPropagation(); // Prevent event bubbling
+      toggleCardSelection(cardElement, card);
+    };
+    
+    // Store the handler reference for potential removal later
+    cardElement._kittySelectionHandler = clickHandler;
+    
+    cardElement.addEventListener('click', clickHandler);
+  });
+}
+
+/**
+ * Toggle card selection
+ * @param {HTMLElement} cardElement - The card element
+ * @param {Object} card - The card data
+ */
+function toggleCardSelection(cardElement, card) {
+  console.log('toggleCardSelection called for:', card.suit, card.value);
+  
+  const isSelected = cardElement.classList.contains('selected');
+  console.log('Card is currently selected:', isSelected);
+  
+  if (isSelected) {
+    // Deselect card
+    console.log('Deselecting card:', card.suit, card.value);
+    cardElement.classList.remove('selected');
+    removeCardFromSelection(card);
+  } else {
+    // Check if we can select more cards (max 5)
+    const selectedCards = getSelectedCards();
+    console.log('Currently selected cards:', selectedCards.length);
+    if (selectedCards.length >= 5) {
+      console.log('Maximum 5 cards can be selected');
+      return;
+    }
+    
+    // Select card
+    console.log('Selecting card:', card.suit, card.value);
+    cardElement.classList.add('selected');
+    addCardToSelection(card);
+  }
+  
+  // Update checklist
+  updateHumanKittyChecklist();
+}
+
+/**
+ * Get currently selected cards
+ * @returns {Array} Array of selected card objects
+ */
+function getSelectedCards() {
+  const selectedElements = document.querySelectorAll('.card.selected');
+  const selectedCards = [];
+  
+  selectedElements.forEach(element => {
+    const card = {
+      suit: element.dataset.suit || 
+            (element.classList.contains('orange') ? 'orange' : 
+             element.classList.contains('yellow') ? 'yellow' : 
+             element.classList.contains('blue') ? 'blue' : 
+             element.classList.contains('green') ? 'green' : 'dunk'),
+      value: element.dataset.value || element.textContent.trim().split(' ')[0]
+    };
+    
+    // Convert value to number if it's a number
+    if (!isNaN(card.value)) {
+      card.value = parseInt(card.value);
+    }
+    
+    selectedCards.push(card);
+  });
+  
+  return selectedCards;
+}
+
+/**
+ * Add card to selection tracking
+ * @param {Object} card - Card to add
+ */
+function addCardToSelection(card) {
+  if (!gameState.humanKittySelection) {
+    gameState.humanKittySelection = { selectedCards: [], powerSuit: null };
+  }
+  
+  // Check if card is already selected
+  const isAlreadySelected = gameState.humanKittySelection.selectedCards.some(
+    selected => selected.suit === card.suit && selected.value === card.value
+  );
+  
+  if (!isAlreadySelected) {
+    gameState.humanKittySelection.selectedCards.push(card);
+    console.log('Card added to selection:', card.suit, card.value);
+  }
+}
+
+/**
+ * Remove card from selection tracking
+ * @param {Object} card - Card to remove
+ */
+function removeCardFromSelection(card) {
+  if (!gameState.humanKittySelection) return;
+  
+  gameState.humanKittySelection.selectedCards = gameState.humanKittySelection.selectedCards.filter(
+    selected => !(selected.suit === card.suit && selected.value === card.value)
+  );
+  
+  console.log('Card removed from selection:', card.suit, card.value);
+}
+
+/**
+ * Set up power suit selection
+ */
+function setupPowerSuitSelection() {
+  const powerSuitOptions = document.querySelectorAll('.power-suit-list .power-suit');
+  
+  powerSuitOptions.forEach(option => {
+    option.addEventListener('click', () => {
+      // Remove selection from all options
+      powerSuitOptions.forEach(opt => opt.classList.remove('selected'));
+      
+      // Add selection to clicked option
+      option.classList.add('selected');
+      
+      // Get the power suit from the class name
+      const powerSuit = option.classList.contains('orange') ? 'orange' :
+                       option.classList.contains('yellow') ? 'yellow' :
+                       option.classList.contains('blue') ? 'blue' :
+                       option.classList.contains('green') ? 'green' : null;
+      
+      if (powerSuit) {
+        if (!gameState.humanKittySelection) {
+          gameState.humanKittySelection = { selectedCards: [], powerSuit: null };
+        }
+        gameState.humanKittySelection.powerSuit = powerSuit;
+        console.log('Power suit selected:', powerSuit);
+        
+        // Update checklist
+        updateHumanKittyChecklist();
+      }
+    });
+  });
+}
+
+/**
+ * Update the human kitty checklist
+ */
+function updateHumanKittyChecklist() {
+  const checklistItems = document.querySelectorAll('.checklist .item');
+  const letsGoButton = document.querySelector('.checklist button');
+  
+  if (!checklistItems.length) return;
+  
+  const selectedCards = getSelectedCards();
+  const powerSuit = gameState.humanKittySelection?.powerSuit;
+  
+  // Update first checklist item (card selection)
+  const cardSelectionItem = checklistItems[0];
+  const cardSelectionImg = cardSelectionItem.querySelector('img');
+  
+  if (selectedCards.length === 5) {
+    cardSelectionImg.src = 'images/check.png';
+    cardSelectionItem.classList.add('completed');
+  } else {
+    cardSelectionImg.src = 'images/dot.png';
+    cardSelectionItem.classList.remove('completed');
+  }
+  
+  // Update second checklist item (power suit selection)
+  const powerSuitItem = checklistItems[1];
+  const powerSuitImg = powerSuitItem.querySelector('img');
+  
+  if (powerSuit) {
+    powerSuitImg.src = 'images/check.png';
+    powerSuitItem.classList.add('completed');
+  } else {
+    powerSuitImg.src = 'images/dot.png';
+    powerSuitItem.classList.remove('completed');
+  }
+  
+  // Enable/disable "Let's go" button
+  if (selectedCards.length === 5 && powerSuit) {
+    letsGoButton.disabled = false;
+    letsGoButton.classList.remove('inactive');
+  } else {
+    letsGoButton.disabled = true;
+    letsGoButton.classList.add('inactive');
+  }
+}
+
+/**
+ * Update the player's hand display in the UI
+ */
+function updatePlayerHandDisplay() {
+  const playerHandLayout = document.querySelector('.your-hand .card-layout');
+  if (!playerHandLayout || !gameState.playerHand) return;
+  
+  // Clear existing cards
+  playerHandLayout.innerHTML = '';
+  
+  // Sort the hand using the existing sorting logic
+  const sortedHand = window.cardLogic.sortHand(gameState.playerHand);
+  
+  // Add sorted cards from game state
+  sortedHand.forEach(card => {
+    const cardElement = document.createElement('div');
+    cardElement.className = `card ${card.suit}`;
+    cardElement.dataset.suit = card.suit;
+    cardElement.dataset.value = card.value;
+    cardElement.innerHTML = `<p>${card.value} <span class="card-icon"></span></p>`;
+    
+    playerHandLayout.appendChild(cardElement);
+  });
+  
+  // Player hand display updated
+}
+
+/**
+ * Clean up kitty phase selections
+ */
+function cleanupKittyPhase() {
+  // Remove selected class from all cards
+  const selectedCards = document.querySelectorAll('.card.selected');
+  selectedCards.forEach(card => {
+    card.classList.remove('selected');
+  });
+  
+  // Remove selected class from power suit options
+  const selectedPowerSuits = document.querySelectorAll('.power-suit.selected');
+  selectedPowerSuits.forEach(powerSuit => {
+    powerSuit.classList.remove('selected');
+  });
+  
+  // Clear human kitty selection state
+  gameState.humanKittySelection = null;
 }
 
 /**
@@ -1414,7 +1775,11 @@ function logRoundInfo() {
     const players = window.gameSetup ? window.gameSetup.PLAYERS : ['Player 0', 'Player 1', 'Player 2', 'Player 3'];
     gameState.hands.forEach((hand, index) => {
       const playerName = players[`PLAYER${index}`] ? players[`PLAYER${index}`].name : `Player ${index}`;
-      console.log(`${playerName} (${hand.length} cards):`, hand.map(card => `${card.suit} ${card.value}`).join(', '));
+      
+      // Use updated player hand if this is the human player (index 3)
+      const handToLog = (index === 3 && gameState.playerHand) ? gameState.playerHand : hand;
+      
+      console.log(`${playerName} (${handToLog.length} cards):`, handToLog.map(card => `${card.suit} ${card.value}`).join(', '));
     });
   }
   console.log('');
@@ -1618,5 +1983,16 @@ function activateTab(container, tabEl) {
     showSecondStep,
     showPowerSuit,
     showComputerKittyButton,
+    initializeHumanKitty,
+    populateKittyDisplay,
+    setupCardSelection,
+    toggleCardSelection,
+    getSelectedCards,
+    addCardToSelection,
+    removeCardFromSelection,
+          setupPowerSuitSelection,
+      updateHumanKittyChecklist,
+      updatePlayerHandDisplay, // Added updatePlayerHandDisplay to the export
+      cleanupKittyPhase, // Added cleanupKittyPhase to the export
     GAME_PHASES
   };
