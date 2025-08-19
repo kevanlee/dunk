@@ -2,6 +2,12 @@
 
 python3 -m http.server 2500
 
+Fixes and polish: 
+
+* Fix the disabled cards logic or else add error state
+* NEW: Add a log to the top left
+* NEW: Add funny commentary
+
 ## Game Overview
 
 Dunk is a four-person, trick-taking card game inspired by Rook, specifically the variant known as Kentucky Rook. If you've never played Rook before, it's a little like Bridge-meets-Hearts. Dunk is played with a special card deck and involves bidding, power suits, and team play.

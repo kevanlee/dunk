@@ -512,48 +512,123 @@
     <!-- end game win -->
     <section class="row modal-row hidden">
       <div class="modal end-game win">
-        <h2>You + Patricia win!</h2>
-        <div class="final-score">
-          <div class="jumbotron-team">
-          <div class="scoreboard-team"><p>You + Patricia</p></div>
-          <div class="scorebox"><p>220</p></div>
-          </div>
-          <div class="jumbotron-team">
-            <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+        <!-- Main end game content -->
+        <div class="end-game-main">
+          <h2>You + Patricia win!</h2>
+          <div class="final-score">
+            <div class="jumbotron-team">
+            <div class="scoreboard-team"><p>You + Patricia</p></div>
             <div class="scorebox"><p>220</p></div>
-          </div>       
+            </div>
+            <div class="jumbotron-team">
+              <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+              <div class="scorebox"><p>220</p></div>
+            </div>       
+          </div>
+          <button>Play again</button>
+          <div class="end-game-details">
+            <p>See the last hand</p>
+            <p>|</p>
+            <p>See my overall stats</p>
+          </div>
+          <img src="images/curly.png">
         </div>
-        <button>Play again</button>
-        <div class="end-game-details">
-          <p>See the last hand</p>
-          <p>|</p>
-          <p>See my overall stats</p>
+        
+        <!-- Hidden round scoring content -->
+        <div class="end-game-round-scoring hidden">
+          <div class="hand-score-heading">
+            <h2>Final Round Results</h2>
+            <img src="images/boom.png" width="56" height="44">
+          </div>
+          <div class="hand-score-team">
+            <div class="team">
+              <div class="heading">
+                <p class="names">You + Patricia</p>
+                <p class="score">145</p>
+              </div>
+              <img src="images/underline.png" >
+              <div class="cards-won">
+                <!-- Cards will be populated dynamically -->
+              </div>
+              <p class="tricks-won">Tricks won: 8</p>
+            </div>
+            <div class="team">
+              <div class="heading">
+                <p class="names">Patricia + Patricia</p>
+                <p class="score">55</p>
+              </div>
+              <img src="images/underline.png" >
+              <div class="cards-won">
+                <!-- Cards will be populated dynamically -->
+              </div>
+              <p class="tricks-won">Tricks won: 8</p>
+            </div>
+          </div>
+          <button class="back-to-end-game">← Back</button>
         </div>
-        <img src="images/curly.png">
       </div>
     </section>
 
     <!-- end game lose -->
     <section class="row modal-row hidden">
       <div class="modal end-game lose">
-        <h2>You + Patricia lose.</h2>
-        <div class="final-score">
-          <div class="jumbotron-team">
-          <div class="scoreboard-team"><p>You + Patricia</p></div>
-          <div class="scorebox"><p>220</p></div>
-          </div>
-          <div class="jumbotron-team">
-            <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+        <!-- Main end game content -->
+        <div class="end-game-main">
+          <h2>You + Patricia lose.</h2>
+          <div class="final-score">
+            <div class="jumbotron-team">
+            <div class="scoreboard-team"><p>You + Patricia</p></div>
             <div class="scorebox"><p>220</p></div>
-          </div>       
+            </div>
+            <div class="jumbotron-team">
+              <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+              <div class="scorebox"><p>220</p></div>
+            </div>       
+          </div>
+          <button>Play again</button>
+          <div class="end-game-details">
+            <p>See the last hand</p>
+            <p>|</p>
+            <p>See my overall stats</p>
+          </div>
+          <img src="images/curly.png">
         </div>
-        <button>Play again</button>
-        <div class="end-game-details">
-          <p>See the last hand</p>
-          <p>|</p>
-          <p>See my overall stats</p>
+        
+        <!-- Hidden round scoring content -->
+        <div class="end-game-round-scoring hidden">
+          <div class="hand-score-heading">
+            <h2>Final Round Results</h2>
+            <img src="images/boom.png" width="56" height="44">
+          </div>
+          <div class="hand-score-team">
+            <div class="team">
+              <div class="heading">
+                <p class="names">You + Patricia</p>
+                <p class="score">145</p>
+              </div>
+              <img src="images/underline.png" >
+              <div class="cards-won">
+                <!-- Cards will be populated dynamically -->
+              </div>
+              <p class="tricks-won">Tricks won: 8</p>
+            </div>
+            <div class="team">
+              <div class="heading">
+                <p class="names">Patricia + Patricia</p>
+                <p class="score">55</p>
+              </div>
+              <img src="images/underline.png" >
+              <div class="cards-won">
+                <!-- Cards will be populated dynamically -->
+              </div>
+              <p class="tricks-won">Tricks won: 8</p>
+            </div>
+          </div>
+          <div class="quotable">
+            <p>"Winning is in the eye of the beholder." ~ Cake Boss</p>
+          </div>
+          <button class="back-to-end-game">← Back to end game</button>
         </div>
-        <img src="images/curly.png">
       </div>
     </section>
 

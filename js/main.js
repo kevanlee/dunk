@@ -364,7 +364,8 @@ function updateUIForCurrentPhase() {
       // Button event listener is set up in showRoundScoringSection()
       break;
     case GAME_PHASES.END:
-      // TODO: Show end section
+      // End game modal is shown by showEndGameModal() function
+      // No additional UI updates needed here
       break;
     default:
       console.warn('Unknown phase:', currentPhase);
@@ -499,8 +500,35 @@ function handleScoreUpdateNextClick() {
   if (gameState.scores.team1 >= winningScore || gameState.scores.team2 >= winningScore) {
     // Game should end - transition to end game phase
     console.log('Game end detected - transitioning to end game phase');
-    // TODO: Implement end game phase
-    // For now, just log the game end
+    
+    // Determine winner
+    let winner = null;
+    if (gameState.scores.team1 >= winningScore && gameState.scores.team2 >= winningScore) {
+      // Both teams reached 500 - highest score wins
+      if (gameState.scores.team1 > gameState.scores.team2) {
+        winner = 'team1';
+      } else if (gameState.scores.team2 > gameState.scores.team1) {
+        winner = 'team2';
+      } else {
+        // Tie - winner of most recent round wins
+        const lastRound = gameState.roundHistory[gameState.roundHistory.length - 1];
+        if (lastRound.team1Final > lastRound.team2Final) {
+          winner = 'team1';
+        } else {
+          winner = 'team2';
+        }
+      }
+    } else if (gameState.scores.team1 >= winningScore) {
+      winner = 'team1';
+    } else {
+      winner = 'team2';
+    }
+    
+    // Transition to end game phase
+    setCurrentPhase(GAME_PHASES.END);
+    if (window.gameplay && window.gameplay.showEndGameModal) {
+      window.gameplay.showEndGameModal(winner);
+    }
   } else {
     // Start next round - transition to NEW_ROUND phase
     console.log('Starting next round');

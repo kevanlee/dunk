@@ -700,7 +700,7 @@ input[type=number] {
 
 /* =========== End game & your stats =========== */
 
-.end-game, .your-stats {
+.end-game, .your-stats, .end-game-main, .end-game-round-scoring {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -714,6 +714,7 @@ input[type=number] {
 }
 
 .end-game.win {
+    margin-top: 100px;
     background-image:url('images/fireworks.png');
     background-repeat: no-repeat;   /* don’t tile it */
     background-size: 100% auto;     /* stretch to full width, keep aspect ratio */
@@ -722,6 +723,7 @@ input[type=number] {
 }
 
 .end-game.lose {
+    margin-top: 100px;
     background-image:url('images/oh-well.png');
     background-repeat: no-repeat;   /* don’t tile it */
     background-size: 100% auto;     /* stretch to full width, keep aspect ratio */
@@ -748,6 +750,27 @@ input[type=number] {
     flex: 1;  
     margin-top: 20px;       /* optional: allow image to grow/shrink inside flex */
   }
+
+.end-game-round-scoring {
+  padding: 50px 0px;
+  background-color:white;
+}
+
+.end-game-round-scoring .hand-score-heading {
+  width: 100%;
+  padding:0 30px;
+}
+
+.end-game-round-scoring .hand-score-heading h2 {
+  flex: 1;                 /* take up remaining space */
+  text-align: left;        /* keep content left-aligned */
+}
+
+.end-game-round-scoring .hand-score-heading img {
+  flex: 0 auto;            /* shrink-wrap to content width */
+  text-align: right;  
+  margin-top: 0px;     /* text inside aligns right */
+}
 
 .stats-details {
     display: flex;

@@ -1134,9 +1134,290 @@ function checkForGameEnd() {
     console.log(`Winner: ${winner}`);
     console.log('========================');
     
-    // TODO: Transition to end game phase
-    // For now, just log the game end
+    // Transition to end game phase
+    if (window.gameState && window.gameState.setCurrentPhase) {
+      window.gameState.setCurrentPhase('end');
+      showEndGameModal(winner);
+    }
   }
+}
+
+/**
+ * Show the appropriate end game modal (win or lose)
+ * @param {string} winner - 'team1' or 'team2'
+ */
+function showEndGameModal(winner) {
+  const gameState = window.gameState.getGameState();
+  const teams = window.gameSetup.TEAMS;
+  
+  // Determine if the current player (hand[3]) is on the winning team
+  const currentPlayer = teams.TEAM1.players.find(p => p.name === "You") || teams.TEAM2.players.find(p => p.name === "You");
+  const playerTeam = currentPlayer ? (currentPlayer.team === 1 ? 'team1' : 'team2') : 'team1'; // Default to team1 if not found
+  const playerWon = winner === playerTeam;
+  
+  // Hide all modal sections first
+  const allModalSections = document.querySelectorAll('.modal-row');
+  allModalSections.forEach(section => {
+    if (!section.querySelector('.bballs')) {
+      section.classList.add('hidden');
+    }
+  });
+  
+  // Show the appropriate end game modal
+  const endGameModal = document.querySelector(`.end-game.${playerWon ? 'win' : 'lose'}`).closest('.modal-row');
+  if (endGameModal) {
+    endGameModal.classList.remove('hidden');
+  } else {
+    console.error('Could not find end game modal');
+    return;
+  }
+  
+  // Populate the final scores in the correct order (player's team first)
+  const finalScoreElements = endGameModal.querySelectorAll('.end-game-main .scorebox p');
+  if (finalScoreElements.length >= 2) {
+    if (playerTeam === 'team1') {
+      finalScoreElements[0].textContent = gameState.scores.team1;
+      finalScoreElements[1].textContent = gameState.scores.team2;
+    } else {
+      finalScoreElements[0].textContent = gameState.scores.team2;
+      finalScoreElements[1].textContent = gameState.scores.team1;
+    }
+  }
+  
+  // Populate team names in the correct order (player's team first)
+  const teamNameElements = endGameModal.querySelectorAll('.end-game-main .scoreboard-team p');
+  if (teamNameElements.length >= 2) {
+    if (playerTeam === 'team1') {
+      teamNameElements[0].textContent = `${teams.TEAM1.players[0].name} + ${teams.TEAM1.players[1].name}`;
+      teamNameElements[1].textContent = `${teams.TEAM2.players[0].name} + ${teams.TEAM2.players[1].name}`;
+    } else {
+      teamNameElements[0].textContent = `${teams.TEAM2.players[0].name} + ${teams.TEAM2.players[1].name}`;
+      teamNameElements[1].textContent = `${teams.TEAM1.players[0].name} + ${teams.TEAM1.players[1].name}`;
+    }
+  }
+  
+  // Update modal title
+  const modalTitle = endGameModal.querySelector('.end-game-main h2');
+  if (modalTitle) {
+    const playerTeamName = playerTeam === 'team1' 
+      ? `${teams.TEAM1.players[0].name} + ${teams.TEAM1.players[1].name}`
+      : `${teams.TEAM2.players[0].name} + ${teams.TEAM2.players[1].name}`;
+    
+    if (playerWon) {
+      modalTitle.textContent = `${playerTeamName} win!`;
+    } else {
+      modalTitle.textContent = `${playerTeamName} lose.`;
+    }
+  }
+  
+  // Set up event listeners for the end game modal buttons
+  setupEndGameModalEventListeners();
+}
+
+/**
+ * Set up event listeners for the end game modal buttons
+ */
+function setupEndGameModalEventListeners() {
+  // Play Again button
+  const playAgainButton = document.querySelector('.end-game-main button');
+  if (playAgainButton) {
+    playAgainButton.onclick = handlePlayAgainClick;
+  }
+  
+  // See Last Hand link
+  const seeLastHandLink = document.querySelector('.end-game-details p:first-child');
+  if (seeLastHandLink) {
+    seeLastHandLink.onclick = handleSeeLastHandClick;
+    seeLastHandLink.style.cursor = 'pointer';
+  }
+  
+  // Your Stats link
+  const yourStatsLink = document.querySelector('.end-game-details p:last-child');
+  if (yourStatsLink) {
+    yourStatsLink.onclick = handleYourStatsClick;
+    yourStatsLink.style.cursor = 'pointer';
+  }
+  
+  // Back to end game button (in round scoring section)
+  const backToEndGameButton = document.querySelector('.back-to-end-game');
+  if (backToEndGameButton) {
+    backToEndGameButton.onclick = handleBackToEndGameClick;
+  }
+}
+
+/**
+ * Handle Play Again button click - reset game and start new game
+ */
+function handlePlayAgainClick() {
+  console.log('Play Again clicked - starting new game');
+  
+  // Reset game state
+  if (window.gameState && window.gameState.resetGame) {
+    window.gameState.resetGame();
+  }
+  
+  // Transition to NEW_GAME phase
+  if (window.gameState && window.gameState.setCurrentPhase) {
+    window.gameState.setCurrentPhase('new_game');
+    window.gameState.initializeNewGame();
+  }
+  
+  // Transition to NEW_ROUND phase
+  if (window.gameState && window.gameState.setCurrentPhase) {
+    window.gameState.setCurrentPhase('new_round');
+    window.gameState.initializeNewRound();
+  }
+  
+  // Transition to DEALING phase and update UI
+  if (window.gameState && window.gameState.setCurrentPhase) {
+    window.gameState.setCurrentPhase('dealing');
+    window.gameState.updateUIForCurrentPhase();
+  }
+}
+
+/**
+ * Handle See Last Hand link click - show final round scoring within the modal
+ */
+function handleSeeLastHandClick() {
+  console.log('See Last Hand clicked - showing final round scoring within modal');
+  
+  // Hide main end game content
+  const mainContent = document.querySelector('.end-game-main');
+  if (mainContent) {
+    mainContent.classList.add('hidden');
+  }
+  
+  // Show round scoring content
+  const roundScoringContent = document.querySelector('.end-game-round-scoring');
+  if (roundScoringContent) {
+    roundScoringContent.classList.remove('hidden');
+    
+    // Populate the round scoring data
+    populateEndGameRoundScoringData();
+  }
+}
+
+/**
+ * Handle Back to End Game button click - return to main end game content
+ */
+function handleBackToEndGameClick() {
+  console.log('Back to End Game clicked - returning to main end game content');
+  
+  // Hide round scoring content
+  const roundScoringContent = document.querySelector('.end-game-round-scoring');
+  if (roundScoringContent) {
+    roundScoringContent.classList.add('hidden');
+  }
+  
+  // Show main end game content
+  const mainContent = document.querySelector('.end-game-main');
+  if (mainContent) {
+    mainContent.classList.remove('hidden');
+  }
+}
+
+/**
+ * Populate the round scoring data within the end game modal
+ */
+function populateEndGameRoundScoringData() {
+  const gameState = window.gameState.getGameState();
+  const teams = window.gameSetup.TEAMS;
+  
+  // Get the last round data
+  const lastRound = gameState.roundHistory[gameState.roundHistory.length - 1];
+  if (!lastRound) {
+    console.error('No round history found');
+    return;
+  }
+  
+  // Update the heading
+  const heading = document.querySelector('.end-game-round-scoring .hand-score-heading h2');
+  if (heading) {
+    const bidWinner = lastRound.bidWinner;
+    const bidAmount = lastRound.bidAmount;
+    heading.textContent = `${bidWinner} made the bid!`;
+  }
+  
+  // Update team names and scores
+  const teamElements = document.querySelectorAll('.end-game-round-scoring .team');
+  if (teamElements.length >= 2) {
+    // Team 1 (Alex + You)
+    const team1Element = teamElements[0];
+    const team1NameElement = team1Element.querySelector('.names');
+    const team1ScoreElement = team1Element.querySelector('.score');
+    if (team1NameElement && team1ScoreElement) {
+      team1NameElement.textContent = `${teams.TEAM1.players[0].name} + ${teams.TEAM1.players[1].name}`;
+      team1ScoreElement.textContent = lastRound.team1Final;
+    }
+    
+    // Team 2 (Patricia + Jordan)
+    const team2Element = teamElements[1];
+    const team2NameElement = team2Element.querySelector('.names');
+    const team2ScoreElement = team2Element.querySelector('.score');
+    if (team2NameElement && team2ScoreElement) {
+      team2NameElement.textContent = `${teams.TEAM2.players[0].name} + ${teams.TEAM2.players[1].name}`;
+      team2ScoreElement.textContent = lastRound.team2Final;
+    }
+  }
+  
+  // Update tricks won
+  const tricksWonElements = document.querySelectorAll('.end-game-round-scoring .tricks-won');
+  if (tricksWonElements.length >= 2) {
+    // Count tricks won by each team
+    let team1Tricks = 0;
+    let team2Tricks = 0;
+    
+    gameState.roundState.trickWinners.forEach(winner => {
+      if (winner === teams.TEAM1.players[0].name || winner === teams.TEAM1.players[1].name) {
+        team1Tricks++;
+      } else if (winner === teams.TEAM2.players[0].name || winner === teams.TEAM2.players[1].name) {
+        team2Tricks++;
+      }
+    });
+    
+    tricksWonElements[0].textContent = `Tricks won: ${team1Tricks}`;
+    tricksWonElements[1].textContent = `Tricks won: ${team2Tricks}`;
+  }
+  
+  // Update cards won (this would need to be populated with actual card data)
+  // For now, we'll leave the cards-won sections as placeholders
+  // TODO: Populate with actual cards won by each team
+}
+
+/**
+ * Handle Your Stats link click - show stats modal
+ */
+function handleYourStatsClick() {
+  console.log('Your Stats clicked - showing stats modal');
+  
+  // Hide end game modal
+  const endGameModal = document.querySelector('.end-game').closest('.modal-row');
+  endGameModal.classList.add('hidden');
+  
+  // Show stats modal
+  const statsModal = document.querySelector('.your-stats').closest('.modal-row');
+  statsModal.classList.remove('hidden');
+  
+  // Set up back button
+  const statsBackButton = document.querySelector('.your-stats button');
+  if (statsBackButton) {
+    statsBackButton.onclick = handleStatsBackClick;
+  }
+}
+
+/**
+ * Handle Stats Back button click - return to end game modal
+ */
+function handleStatsBackClick() {
+  console.log('Stats Back clicked - returning to end game modal');
+  
+  // Hide stats modal
+  const statsModal = document.querySelector('.your-stats').closest('.modal-row');
+  statsModal.classList.add('hidden');
+  
+  // Show end game modal again
+  const endGameModal = document.querySelector('.end-game').closest('.modal-row');
+  endGameModal.classList.remove('hidden');
 }
 
 /**
@@ -1412,6 +1693,14 @@ window.gameplay = {
   updateTricksWonDisplay,
   calculateEndOfRoundScores,
   checkForGameEnd,
+  showEndGameModal,
+  setupEndGameModalEventListeners,
+  handlePlayAgainClick,
+  handleSeeLastHandClick,
+  handleBackToEndGameClick,
+  populateEndGameRoundScoringData,
+  handleYourStatsClick,
+  handleStatsBackClick,
   getCurrentGameScores,
   getRoundHistory,
   getCurrentRoundNumber,
@@ -1425,3 +1714,12 @@ window.gameplay = {
 };
 
 console.log('gameplay exported:', Object.keys(window.gameplay));
+
+// Test function to simulate end game (for debugging)
+window.testEndGame = function() {
+  console.log('Testing end game...');
+  const gameState = window.gameState.getGameState();
+  gameState.scores.team1 = 500;
+  gameState.scores.team2 = 300;
+  checkForGameEnd();
+};
