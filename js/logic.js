@@ -212,6 +212,328 @@ function createNewGame(numPlayers = 4) {
   };
 }
 
+/**
+ * Bidding Logic
+ * Handles bidding rounds, validation, and AI bidding decisions
+ */
+
+/**
+ * Start a new bidding round
+ * @param {number} roundNumber - Current round number (1-based)
+ * @returns {Object} Bidding round state
+ */
+function startBiddingRound(roundNumber) {
+  // Determine who bids first based on round number
+  // Round 1: PLAYER3 (You), Round 2: PLAYER0 (Patricia), etc.
+  const firstBidderIndex = (roundNumber - 1) % 4;
+  const playerOrder = [
+    window.gameSetup.PLAYERS.PLAYER0.name, // Patricia
+    window.gameSetup.PLAYERS.PLAYER1.name, // Alex  
+    window.gameSetup.PLAYERS.PLAYER2.name, // Jordan
+    window.gameSetup.PLAYERS.PLAYER3.name  // You
+  ];
+  
+  return {
+    currentBid: 0,
+    currentPlayerIndex: firstBidderIndex,
+    playerOrder: playerOrder,
+    bids: [],
+    passes: [],
+    highestBidder: null,
+    highestBid: 0,
+    isComplete: false,
+    winner: null,
+    winningBid: 0
+  };
+}
+
+/**
+ * Get the next player to bid (skip those who have passed)
+ * @param {Object} biddingState - Current bidding state
+ * @returns {string} Next player name, or null if bidding is complete
+ */
+function getNextBidder(biddingState) {
+  if (biddingState.isComplete) {
+    return null;
+  }
+  
+  // Find next player who hasn't passed
+  let nextIndex = biddingState.currentPlayerIndex;
+  let attempts = 0;
+  
+  while (attempts < 4) {
+    nextIndex = (nextIndex + 1) % 4;
+    const nextPlayer = biddingState.playerOrder[nextIndex];
+    
+    if (!biddingState.passes.includes(nextPlayer)) {
+      return nextPlayer;
+    }
+    
+    attempts++;
+  }
+  
+  return null; // All players have passed
+}
+
+/**
+ * Check if a bid is valid
+ * @param {number} newBid - The bid amount to validate
+ * @param {number} currentHighestBid - Current highest bid
+ * @returns {boolean} True if bid is valid
+ */
+function isValidBid(newBid, currentHighestBid) {
+  // Must be at least 5 points higher than current highest bid
+  if (newBid <= currentHighestBid) {
+    return false;
+  }
+  
+  // Must be divisible by 5
+  if (newBid % 5 !== 0) {
+    return false;
+  }
+  
+  // Must be within valid range (70-200)
+  if (newBid < 70 || newBid > 200) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Make a bid for a player
+ * @param {Object} biddingState - Current bidding state
+ * @param {string} playerName - Name of the player making the bid
+ * @param {number} bidAmount - Amount to bid
+ * @returns {Object} Updated bidding state
+ */
+function makeBid(biddingState, playerName, bidAmount) {
+  const updatedState = { ...biddingState };
+  
+  // Validate the bid
+  if (!isValidBid(bidAmount, updatedState.highestBid)) {
+    throw new Error(`Invalid bid: ${bidAmount}. Must be at least 5 points higher than ${updatedState.highestBid} and divisible by 5.`);
+  }
+  
+  // Record the bid
+  updatedState.bids.push({
+    player: playerName,
+    amount: bidAmount
+  });
+  
+  // Update highest bid
+  updatedState.highestBid = bidAmount;
+  updatedState.highestBidder = playerName;
+  
+  // Check if bidding should end (someone bid 200)
+  if (bidAmount === 200) {
+    updatedState.isComplete = true;
+    updatedState.winner = playerName;
+    updatedState.winningBid = bidAmount;
+  }
+  
+  // Move to next player
+  updatedState.currentPlayerIndex = (updatedState.currentPlayerIndex + 1) % 4;
+  
+  return updatedState;
+}
+
+/**
+ * Pass on bidding for a player
+ * @param {Object} biddingState - Current bidding state
+ * @param {string} playerName - Name of the player passing
+ * @returns {Object} Updated bidding state
+ */
+function passBid(biddingState, playerName) {
+  const updatedState = { ...biddingState };
+  
+  // Record the pass
+  updatedState.passes.push(playerName);
+  
+  // Check if bidding should end (3 players have passed)
+  if (updatedState.passes.length >= 3) {
+    updatedState.isComplete = true;
+    updatedState.winner = updatedState.highestBidder;
+    updatedState.winningBid = updatedState.highestBid;
+  }
+  
+  // Move to next player
+  updatedState.currentPlayerIndex = (updatedState.currentPlayerIndex + 1) % 4;
+  
+  return updatedState;
+}
+
+/**
+ * Simple AI bidding decision
+ * @param {string} aiPlayerName - Name of the AI player
+ * @param {Array} aiHand - The AI's hand
+ * @param {Object} biddingState - Current bidding state
+ * @returns {Object} AI decision { action: 'bid'|'pass', amount?: number }
+ */
+function makeAIBidDecision(aiPlayerName, aiHand, biddingState) {
+  // Simple AI: bid 75 or pass
+  const currentHighestBid = biddingState.highestBid;
+  
+  // If no one has bid yet, bid 75
+  if (currentHighestBid === 0) {
+    return { action: 'bid', amount: 75 };
+  }
+  
+  // If current bid is 75, pass (AI doesn't bid higher than 75)
+  if (currentHighestBid >= 75) {
+    return { action: 'pass' };
+  }
+  
+  // Otherwise, bid 75
+  return { action: 'bid', amount: 75 };
+}
+
+/**
+ * Get the current player whose turn it is to bid
+ * @param {Object} biddingState - Current bidding state
+ * @returns {string} Current player name
+ */
+function getCurrentBidder(biddingState) {
+  return biddingState.playerOrder[biddingState.currentPlayerIndex];
+}
+
+/**
+ * Check if bidding is complete
+ * @param {Object} biddingState - Current bidding state
+ * @returns {boolean} True if bidding is complete
+ */
+function isBiddingComplete(biddingState) {
+  return biddingState.isComplete;
+}
+
+/**
+ * Get bidding result
+ * @param {Object} biddingState - Current bidding state
+ * @returns {Object} Bidding result { winner, winningBid, bids, passes }
+ */
+function getBiddingResult(biddingState) {
+  if (!biddingState.isComplete) {
+    return null;
+  }
+  
+  return {
+    winner: biddingState.winner,
+    winningBid: biddingState.winningBid,
+    bids: biddingState.bids,
+    passes: biddingState.passes
+  };
+}
+
+/**
+ * Shuffle an array using Fisher-Yates algorithm
+ * @param {Array} array - Array to shuffle
+ * @returns {Array} Shuffled array
+ */
+function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+/**
+ * Choose power suit based on most cards, alphabetical tiebreaker
+ * @param {Array} hand - Array of card objects
+ * @returns {string} Chosen power suit
+ */
+function choosePowerSuit(hand) {
+  const suitCounts = { orange: 0, yellow: 0, blue: 0, green: 0 };
+  
+  // Count cards in each suit (excluding dunk card)
+  hand.forEach(card => {
+    if (card.suit !== 'dunk') {
+      suitCounts[card.suit]++;
+    }
+  });
+  
+  // Find suit with most cards
+  const maxCount = Math.max(...Object.values(suitCounts));
+  const candidates = Object.entries(suitCounts)
+    .filter(([suit, count]) => count === maxCount)
+    .map(([suit]) => suit);
+  
+  // Return first alphabetical if tie
+  return candidates.sort()[0];
+}
+
+/**
+ * Handle computer kitty management
+ * @param {string} computerPlayer - Name of the computer player
+ * @param {Array} computerHand - Computer's current hand
+ * @param {Array} kitty - Current kitty cards
+ * @returns {Object} Result with new hand, new kitty, and power suit
+ */
+function handleComputerKitty(computerPlayer, computerHand, kitty) {
+  console.log(`${computerPlayer} managing kitty...`);
+  
+  // 1. Add kitty cards to hand (13 + 5 = 18 cards)
+  const combinedHand = [...computerHand, ...kitty];
+  console.log(`${computerPlayer} combined hand (18 cards):`, combinedHand.map(card => `${card.suit} ${card.value}`).join(', '));
+  
+  // 2. Randomly select 13 cards to keep, 5 to return
+  const shuffled = shuffleArray(combinedHand);
+  const newHand = shuffled.slice(0, 13);
+  const newKitty = shuffled.slice(13, 18);
+  
+  console.log(`${computerPlayer} new hand (13 cards):`, newHand.map(card => `${card.suit} ${card.value}`).join(', '));
+  console.log(`${computerPlayer} new kitty (5 cards):`, newKitty.map(card => `${card.suit} ${card.value}`).join(', '));
+  
+  // 3. Choose power suit (most cards, alphabetical tiebreaker)
+  const powerSuit = choosePowerSuit(newHand);
+  console.log(`${computerPlayer} chose power suit: ${powerSuit}`);
+  
+  return { newHand, newKitty, powerSuit };
+}
+
+/**
+ * Handle human kitty management
+ * @param {Array} playerHand - Player's current hand (13 cards)
+ * @param {Array} kitty - Current kitty cards (5 cards)
+ * @param {Array} selectedCards - Cards selected by player to return to kitty
+ * @param {string} chosenPowerSuit - Power suit chosen by player
+ * @returns {Object} Result with new hand, new kitty, and power suit
+ */
+function handleHumanKitty(playerHand, kitty, selectedCards, chosenPowerSuit) {
+  // Validate that exactly 5 cards were selected
+  if (selectedCards.length !== 5) {
+    throw new Error(`Must select exactly 5 cards. Selected: ${selectedCards.length}`);
+  }
+  
+  // 1. Combine player hand and kitty (13 + 5 = 18 cards)
+  const combinedCards = [...playerHand, ...kitty];
+  
+  // 2. Create new hand by removing selected cards from combined set
+  const newHand = combinedCards.filter(card => 
+    !selectedCards.some(selected => 
+      selected.suit === card.suit && selected.value === card.value
+    )
+  );
+  
+  // 3. Create new kitty from selected cards
+  const newKitty = [...selectedCards];
+  
+  console.log('Kitty management complete:', newHand.length, 'cards in hand,', newKitty.length, 'cards in kitty');
+  
+  return { newHand, newKitty, powerSuit: chosenPowerSuit };
+}
+
+/**
+ * Get all available cards for human kitty selection (player hand + kitty)
+ * @param {Array} playerHand - Player's current hand
+ * @param {Array} kitty - Current kitty cards
+ * @returns {Array} Combined array of all available cards
+ */
+function getAvailableCardsForSelection(playerHand, kitty) {
+  return [...playerHand, ...kitty];
+}
+
 // Export functions for use in other modules
 window.cardLogic = {
   SUITS,
@@ -224,7 +546,23 @@ window.cardLogic = {
   getHandPoints,
   hasSuit,
   getCardsOfSuit,
-  createNewGame
+  createNewGame,
+  // Bidding functions
+  startBiddingRound,
+  getNextBidder,
+  isValidBid,
+  makeBid,
+  passBid,
+  makeAIBidDecision,
+  getCurrentBidder,
+  isBiddingComplete,
+  getBiddingResult,
+  // Computer kitty functions
+  handleComputerKitty,
+  handleHumanKitty,
+  getAvailableCardsForSelection,
+  choosePowerSuit,
+  shuffleArray
 };
 
 console.log('cardLogic exported:', Object.keys(window.cardLogic));

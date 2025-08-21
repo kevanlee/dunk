@@ -34,6 +34,7 @@
 </head>
 <body>
   <div id="container"> <!-- NEW -->
+    <img src="images/logo.svg" class="logo">
 
     <!-- Jumbotron vv -->
     <section class="row modal-row">
@@ -51,7 +52,7 @@
 
     <section class="row modal-row">
       <div class="modal get-started">
-        <h2>Welcome to Kentucky Rook!</h2>
+        <h2>Let's play some cards ok!</h2>
         <button>Start</button>
         <p>Quick game</p>
       </div>
@@ -386,31 +387,26 @@
               
               <h2>Bidding</h2>
               <img src="images/bidding-underline.png">
-              <div class="bidding-details">
-                <div class="bid">
-                  <p class="player-name">Patrice</p>
-                  <p class="player-bid">105</p>
-                </div>
-                <div class="bid">
-                  <p class="player-name">Patrice</p>
-                  <p class="player-bid">Pass</p>
-                </div>
-                <div class="bid win-bid">
-                  <p class="player-name">Patrice</p>
-                  <p class="player-bid">125</p>
-                </div>
+              <div class="bidding-details" id="biddingDetails">
+                <!-- Dynamic bid entries will be inserted here -->
               </div>
-              <div class="bid-enter">
+              <div class="bid-enter" id="humanBidForm">
                 <div class="bid-form">
-                  <form action="/submit" method="post">
-                    <label for="numberInput">Your bid</label>
-                    <div class="inputs">
-                      <input type="number" id="numberInput" name="number" required>
-                      <button type="submit">Bid</button>
+                  <form id="bidForm">
+                    <div class="inputs-top">
+                      <div class="label-container">
+                      <label for="bidInput">Your bid</label>
+                      <div class="inputs">
+                        <input type="number" id="bidInput" name="bid" min="70" max="200" step="5" required>
+                        <button type="submit" id="bidButton">Bid</button>
+                      </div>
+                      </div>
+                    </div>
+                    <div class="inputs-bottom">
+                      <button type="button" id="passButton">Too rich for my blood</button>
                     </div>                    
                   </form>
-                  <div class="error-message">Um, that bid is not allowed.</div>
-
+                  <div class="error-message" id="bidError" style="display: none;"></div>
                 </div>
               </div>
 
@@ -435,29 +431,29 @@
                   <p class="player-name">Patrice</p>
                   <p class="player-bid">125</p>
                 </div>
-                <div class="item">
-                  <img src="images/check.png"> Look through the kitty
+                <div class="item step-1">
+                  <img src="images/check.png" class="invisible"> Look through the kitty
                 </div>
-                <div class="item">
-                  <img src="images/check.png"> Pick a power suit
+                <div class="item step-2">
+                  <img src="images/check.png" class="invisible"> Pick a power suit
                 </div>
                 <p class="pick-a-color">Power suit:</p>
-                <div class="power-suit blue">
-                  <span class="card-icon"></span> Bottled water
+                <div class="power-suit gray power-suit-display">
+                  <span class="card-icon"></span> <span class="power-suit-text">TBD</span>
                 </div>
               </div>
             </div>
         </div>
         <div class="right">
-          <button>Let's go →</button>
+          <button class="computer-kitty-button">Let's go →</button>
         </div>
       </div>
     </section>
 
     <!-- picking the kitty (human) -->
-    <section class="row modal-row your-hand hidden">
+    <section class="row modal-row your-hand kitty-addon hidden">
       <div class="modal dealing">
-        <div class="your-hand-header">
+        <!-- commenting this out so it doesn't confuse anyone <div class="your-hand-header">
             <h2>Your hand</h2>
             <div class="pill">Power suit</div>
             <div class="tbd">TBD</div>
@@ -479,49 +475,50 @@
             <div class="card blue">11</div>
             <div class="card blue">9</div>
             <div class="card green">14</div>
-        </div>
+        </div> -->
+        <div class="kitty-power-selection">
+          <div class="kitty-container">
+          <div class="kitty-power">
+          <div class="pick-kitty">
+            <h2>Kitty</h2>
+            <div class="card-layout">
+              <div class="card orange selected">14</div>
+              <div class="card orange">4</div>
+              <div class="card orange">3</div>
+              <div class="card yellow selected">14</div>
+              <div class="card yellow">10</div>
+            </div>
+          </div>
 
-        <div class="kitty-container">
-        <div class="kitty-power">
-        <div class="pick-kitty">
-          <h2>Kitty</h2>
-          <div class="card-layout">
-            <div class="card orange selected">14</div>
-            <div class="card orange">4</div>
-            <div class="card orange">3</div>
-            <div class="card yellow selected">14</div>
-            <div class="card yellow">10</div>
+          <div class="power-suit-container">
+            <h2>Power suit</h2>
+            <div class="power-suit-list">
+            <div class="power-suit orange">
+              <span class="card-icon"></span> Gatorade orange
+            </div>
+            <div class="power-suit yellow">
+              <span class="card-icon"></span> Mellow yellow
+            </div>
+            <div class="power-suit blue">
+              <span class="card-icon"></span> Bottled water
+            </div>
+            <div class="power-suit green">
+              <span class="card-icon"></span> Baja blast green
+            </div>
+            </div>
           </div>
-        </div>
-
-        <div class="power-suit-container">
-          <h2>Power suit</h2>
-          <div class="power-suit-list">
-          <div class="power-suit orange">
-            <span class="card-icon"></span> Gatorade orange
-          </div>
-          <div class="power-suit yellow selected">
-            <span class="card-icon"></span> Mellow yellow
-          </div>
-          <div class="power-suit blue">
-            <span class="card-icon"></span> Bottled water
-          </div>
-          <div class="power-suit green">
-            <span class="card-icon"></span> Baja blast green
-          </div>
-          </div>
-        </div>
         </div>
       
 
           <div class="checklist">
           <div class="item">
-            <img src="images/check.png"> Pick 5 cards to put back in the kitty.
+            <img src="images/dot.png"> Pick 5 cards to put back in the kitty.
           </div>
           <div class="item">
-            <img src="images/check.png"> Pick your power suit
+            <img src="images/dot.png"> Pick your power suit
           </div>
           <button>Let's go →</button>
+        </div>
         </div>
         </div>
       
@@ -532,48 +529,123 @@
     <!-- end game win -->
     <section class="row modal-row hidden">
       <div class="modal end-game win">
-        <h2>You + Patricia win!</h2>
-        <div class="final-score">
-          <div class="jumbotron-team">
-          <div class="scoreboard-team"><p>You + Patricia</p></div>
-          <div class="scorebox"><p>220</p></div>
-          </div>
-          <div class="jumbotron-team">
-            <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+        <!-- Main end game content -->
+        <div class="end-game-main">
+          <h2>You + Patricia win!</h2>
+          <div class="final-score">
+            <div class="jumbotron-team">
+            <div class="scoreboard-team"><p>You + Patricia</p></div>
             <div class="scorebox"><p>220</p></div>
-          </div>       
+            </div>
+            <div class="jumbotron-team">
+              <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+              <div class="scorebox"><p>220</p></div>
+            </div>       
+          </div>
+          <button>Play again</button>
+          <div class="end-game-details">
+            <p>See the last hand</p>
+            <p>|</p>
+            <p>See my overall stats</p>
+          </div>
+          <img src="images/curly.png">
         </div>
-        <button>Play again</button>
-        <div class="end-game-details">
-          <p>See the last hand</p>
-          <p>|</p>
-          <p>See my overall stats</p>
+        
+        <!-- Hidden round scoring content -->
+        <div class="end-game-round-scoring hidden">
+          <div class="hand-score-heading">
+            <h2>Final Round Results</h2>
+            <img src="images/boom.png" width="56" height="44">
+          </div>
+          <div class="hand-score-team">
+            <div class="team">
+              <div class="heading">
+                <p class="names">You + Patricia</p>
+                <p class="score">145</p>
+              </div>
+              <img src="images/underline.png" >
+              <div class="cards-won">
+                <!-- Cards will be populated dynamically -->
+              </div>
+              <p class="tricks-won">Tricks won: 8</p>
+            </div>
+            <div class="team">
+              <div class="heading">
+                <p class="names">Patricia + Patricia</p>
+                <p class="score">55</p>
+              </div>
+              <img src="images/underline.png" >
+              <div class="cards-won">
+                <!-- Cards will be populated dynamically -->
+              </div>
+              <p class="tricks-won">Tricks won: 8</p>
+            </div>
+          </div>
+          <button class="back-to-end-game">← Back</button>
         </div>
-        <img src="images/curly.png">
       </div>
     </section>
 
     <!-- end game lose -->
     <section class="row modal-row hidden">
       <div class="modal end-game lose">
-        <h2>You + Patricia lose.</h2>
-        <div class="final-score">
-          <div class="jumbotron-team">
-          <div class="scoreboard-team"><p>You + Patricia</p></div>
-          <div class="scorebox"><p>220</p></div>
-          </div>
-          <div class="jumbotron-team">
-            <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+        <!-- Main end game content -->
+        <div class="end-game-main">
+          <h2>You + Patricia lose.</h2>
+          <div class="final-score">
+            <div class="jumbotron-team">
+            <div class="scoreboard-team"><p>You + Patricia</p></div>
             <div class="scorebox"><p>220</p></div>
-          </div>       
+            </div>
+            <div class="jumbotron-team">
+              <div class="scoreboard-team"><p>Patricia + Patricia</p></div>
+              <div class="scorebox"><p>220</p></div>
+            </div>       
+          </div>
+          <button>Play again</button>
+          <div class="end-game-details">
+            <p>See the last hand</p>
+            <p>|</p>
+            <p>See my overall stats</p>
+          </div>
+          <img src="images/curly.png">
         </div>
-        <button>Play again</button>
-        <div class="end-game-details">
-          <p>See the last hand</p>
-          <p>|</p>
-          <p>See my overall stats</p>
+        
+        <!-- Hidden round scoring content -->
+        <div class="end-game-round-scoring hidden">
+          <div class="hand-score-heading">
+            <h2>Final Round Results</h2>
+            <img src="images/boom.png" width="56" height="44">
+          </div>
+          <div class="hand-score-team">
+            <div class="team">
+              <div class="heading">
+                <p class="names">You + Patricia</p>
+                <p class="score">145</p>
+              </div>
+              <img src="images/underline.png" >
+              <div class="cards-won">
+                <!-- Cards will be populated dynamically -->
+              </div>
+              <p class="tricks-won">Tricks won: 8</p>
+            </div>
+            <div class="team">
+              <div class="heading">
+                <p class="names">Patricia + Patricia</p>
+                <p class="score">55</p>
+              </div>
+              <img src="images/underline.png" >
+              <div class="cards-won">
+                <!-- Cards will be populated dynamically -->
+              </div>
+              <p class="tricks-won">Tricks won: 8</p>
+            </div>
+          </div>
+          <div class="quotable">
+            <p>"Winning is in the eye of the beholder." ~ Cake Boss</p>
+          </div>
+          <button class="back-to-end-game">← Back to end game</button>
         </div>
-        <img src="images/curly.png">
       </div>
     </section>
 

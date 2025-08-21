@@ -2,6 +2,24 @@
 
 python3 -m http.server 2500
 
+Fixes and polish: 
+
+* Fix the disabled cards logic or else add error state
+* FIx: The jumpy css when bid is won by anyone
+* ADD: shooting the moon
+* UPDATE: Error state styling for the bid form
+* UPDATE: the style of the bid so that it scrolls up rather than just gets super long
+* Nice-to-have: More sayings at the end of scoring
+* Nice-to-have: New players
+* Nice-to-have: Add funny commentary
+* Nice-to-have: Mobile app version
+
+Implement bidding validation (minimum bids, valid increments)
+Add AI bidding logic (hand evaluation, bid strategy)
+Create bidding flow (turn management, pass handling)
+Connect the bidding form to game logic
+Implement kitty management (card exchange, power suit selection)
+
 ## Game Overview
 
 Dunk is a four-person, trick-taking card game inspired by Rook, specifically the variant known as Kentucky Rook. If you've never played Rook before, it's a little like Bridge-meets-Hearts. Dunk is played with a special card deck and involves bidding, power suits, and team play.
