@@ -202,6 +202,11 @@ button.inactive { background-color: #C4C4C4; border: none; }
     gap: 20px;
 }
 
+.your-hand-header-dealing img, .your-hand-header img {
+  max-width: 100%;
+  height: auto;
+}
+
 .power-suit-indicator {
     height: 25px;
     width: 25px;
@@ -946,100 +951,36 @@ input {
 
 /* =========== iPad Compatibility =========== */
 
-/* iPad Portrait (768px and up) */
-@media screen and (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
-  body {
-    padding: 10px;
-  }
-  
-  #container {
-    padding: 10px;
-    gap: 16px;
-  }
-  
-  .modal {
-    width: min(95vw, 600px);
-    padding: 25px;
-  }
-  
-  .card {
-    height: 70px;
-    width: 55px;
-    font-size: 1.4rem;
-    padding-top: 12px;
-  }
-  
-  .card-layout {
-    gap: 8px;
-  }
-  
-  button {
-    padding: 14px 16px;
-    font-size: 1.4rem;
-    min-height: 44px; /* Apple's recommended minimum touch target */
-  }
-  
-  .cols {
-    gap: 12px;
-  }
-  
-  .cols-bidding {
-    gap: 12px;
-  }
+/* iPad Portrait (768px to 834px) */
+@media screen and (min-width: 768px) and (max-width: 834px) and (orientation: portrait) {
+  /* iPad Portrait styles will go here */
 }
 
-/* iPad Landscape (1024px and up) */
+/* iPad Landscape (1024px to 1366px) */
 @media screen and (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
-  .modal {
-    width: min(90vw, 700px);
-    padding: 30px;
+    .your-hand .modal, .cols {
+      min-width: 96%;
+      text-align: center;
   }
-  
-  .card {
-    height: 75px;
-    width: 60px;
-    font-size: 1.5rem;
-    padding-top: 15px;
-  }
-  
-  button {
-    padding: 16px 18px;
-    font-size: 1.5rem;
-    min-height: 48px;
-  }
+  .cols-bidding { width: 100%; grid-template-columns: 1fr 2fr 1fr; }
+}
+
+/* iPad Pro 12.9" Portrait (1024px) */
+@media screen and (min-width: 1024px) and (max-width: 1024px) and (orientation: portrait) {
+  /* iPad Pro 12.9" Portrait styles will go here */
+}
+
+/* iPad Pro 12.9" Landscape (1024px to 1366px) */
+@media screen and (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
+  /* iPad Pro 12.9" Landscape styles will go here */
 }
 
 /* Prevent zoom on input focus for iPad */
-@media screen and (max-width: 1024px) {
-  input[type="number"] {
-    font-size: 16px; /* Prevents zoom on iOS */
-  }
-  
-  /* Ensure touch targets are large enough */
-  .card, .power-suit, .tab {
-    min-height: 44px;
-    min-width: 44px;
-  }
-  
-  /* Improve touch feedback */
-  .card:active, .power-suit:active, .tab:active {
-    transform: scale(0.95);
-    transition: transform 0.1s ease;
-  }
-  
-  button:active {
-    transform: scale(0.98);
-    transition: transform 0.1s ease;
-  }
+@media screen and (max-width: 1024px) and (orientation: portrait) {
+  /* Touch-specific styles will go here */
 }
 
 /* Disable hover effects on touch devices */
 @media (hover: none) and (pointer: coarse) {
-  button:hover {
-    opacity: 1;
-  }
-  
-  .card:hover, .power-suit:hover, .tab:hover {
-    /* Remove any hover effects */
-  }
+  /* Touch device hover overrides will go here */
 }
