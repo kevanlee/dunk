@@ -991,6 +991,11 @@ function activateTab(container, tabEl) {
     if (startButton) {
       startButton.addEventListener('click', handleStartButtonClick);
     }
+    
+    // Initialize touch support for iPad compatibility
+    if (window.gameplay && window.gameplay.addTouchSupport) {
+      window.gameplay.addTouchSupport();
+    }
   });
 
   // Export functions for testing and external use

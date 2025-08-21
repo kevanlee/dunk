@@ -1381,6 +1381,19 @@ function getCurrentRoundNumber() {
   return gameState.currentHand;
 }
 
+// Add touch event support for iPad compatibility
+function addTouchSupport() {
+  // Add touchstart events to all clickable elements
+  const clickableElements = document.querySelectorAll('button, .card, .power-suit, .tab');
+  
+  clickableElements.forEach(element => {
+    element.addEventListener('touchstart', function(e) {
+      e.preventDefault(); // Prevent double-tap zoom on iPad
+      this.click(); // Trigger the existing click handler
+    }, { passive: false });
+  });
+}
+
 // Export functions for use in other modules
 window.gameplay = {
   getNextPlayer,
@@ -1421,7 +1434,8 @@ window.gameplay = {
   removeCardFromAIHand,
   updateGameStateAfterAICardPlay,
   proceedToNextTrick,
-  clearPlayArea
+  clearPlayArea,
+  addTouchSupport
 };
 
 console.log('gameplay exported:', Object.keys(window.gameplay));

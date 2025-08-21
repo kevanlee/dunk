@@ -1,0 +1,27 @@
+{
+  "name": "Dunk - Card Game",
+  "short_name": "Dunk",
+  "description": "A trick-taking, rim-rattling card game inspired by Kentucky Rook",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "images/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "images/favicon-32.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "images/favicon-32.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

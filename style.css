@@ -875,3 +875,103 @@ input {
 /*.get-started { display: none; }
  .bballs { display: none; }
 .your-hand { display: none; } */
+
+/* =========== iPad Compatibility =========== */
+
+/* iPad Portrait (768px and up) */
+@media screen and (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+  body {
+    padding: 10px;
+  }
+  
+  #container {
+    padding: 10px;
+    gap: 16px;
+  }
+  
+  .modal {
+    width: min(95vw, 600px);
+    padding: 25px;
+  }
+  
+  .card {
+    height: 70px;
+    width: 55px;
+    font-size: 1.4rem;
+    padding-top: 12px;
+  }
+  
+  .card-layout {
+    gap: 8px;
+  }
+  
+  button {
+    padding: 14px 16px;
+    font-size: 1.4rem;
+    min-height: 44px; /* Apple's recommended minimum touch target */
+  }
+  
+  .cols {
+    gap: 12px;
+  }
+  
+  .cols-bidding {
+    gap: 12px;
+  }
+}
+
+/* iPad Landscape (1024px and up) */
+@media screen and (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
+  .modal {
+    width: min(90vw, 700px);
+    padding: 30px;
+  }
+  
+  .card {
+    height: 75px;
+    width: 60px;
+    font-size: 1.5rem;
+    padding-top: 15px;
+  }
+  
+  button {
+    padding: 16px 18px;
+    font-size: 1.5rem;
+    min-height: 48px;
+  }
+}
+
+/* Prevent zoom on input focus for iPad */
+@media screen and (max-width: 1024px) {
+  input[type="number"] {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  /* Ensure touch targets are large enough */
+  .card, .power-suit, .tab {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve touch feedback */
+  .card:active, .power-suit:active, .tab:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+  
+  button:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* Disable hover effects on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  button:hover {
+    opacity: 1;
+  }
+  
+  .card:hover, .power-suit:hover, .tab:hover {
+    /* Remove any hover effects */
+  }
+}
