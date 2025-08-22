@@ -1324,11 +1324,14 @@ function handleRoundScoringNextClick() {
   
   // Check if game should end (either team has 500+ points)
   if (window.gameplay && window.gameplay.checkForGameEnd) {
-    window.gameplay.checkForGameEnd();
+    const gameEnded = window.gameplay.checkForGameEnd();
     
     // If game ended, checkForGameEnd will have shown the end game modal
     // and we don't need to proceed to score update
-    return;
+    if (gameEnded) {
+      console.log('Game ended - showing end game modal');
+      return;
+    }
   }
   
   console.log('Game continues - transitioning to score update phase');

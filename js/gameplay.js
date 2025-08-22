@@ -1132,7 +1132,11 @@ function checkForGameEnd() {
       window.gameState.setCurrentPhase('end');
       showEndGameModal(winner);
     }
+    
+    return true; // Game ended
   }
+  
+  return false; // Game continues
 }
 
 /**
