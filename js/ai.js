@@ -46,7 +46,13 @@ function getValidCards(hand, playedCards, powerSuit) {
   }
   
   // Not leading - must follow suit if possible
-  const ledSuit = playedCards[0].card.suit;
+  let ledSuit = playedCards[0].card.suit;
+  
+  // If Dunk card is led, it declares the power suit
+  if (ledSuit === 'dunk') {
+    ledSuit = powerSuit;
+  }
+  
   const cardsOfLedSuit = hand.filter(card => {
     if (card.suit === ledSuit) return true;
     if (card.suit === 'dunk' && powerSuit === ledSuit) return true;

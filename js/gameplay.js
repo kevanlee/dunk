@@ -421,7 +421,12 @@ function completeTrick() {
   const powerSuit = gameState.roundState.powerSuit;
   
   // Determine the led suit (first card played)
-  const ledSuit = playedCards[0].card.suit;
+  let ledSuit = playedCards[0].card.suit;
+  
+  // If Dunk card is led, it declares the power suit
+  if (ledSuit === 'dunk') {
+    ledSuit = powerSuit;
+  }
   
   // Determine trick winner
   const trickWinner = determineTrickWinner(playedCards, powerSuit, ledSuit);
@@ -430,9 +435,6 @@ function completeTrick() {
   
   // Track point cards won in this trick
   trackTrickPoints(playedCards, trickWinner);
-  
-  // Log remaining cards in player's hand
-  logPlayerHandRemaining();
   
   // Add a small delay before marking the winner
   setTimeout(() => {
@@ -510,6 +512,20 @@ function handleFinalTrickRewards(finalTrickWinner) {
     return;
   }
   
+  // Log kitty contents before calculating points
+  console.log('=== KITTY BEFORE FINAL TRICK SCORING ===');
+  if (gameState.kitty && gameState.kitty.length > 0) {
+    console.log(`Kitty has ${gameState.kitty.length} cards:`);
+    gameState.kitty.forEach((card, index) => {
+      console.log(`  ${index + 1}. ${card.suit} ${card.value} (${card.points} points)`);
+    });
+    const totalKittyPoints = gameState.kitty.reduce((sum, card) => sum + (card.points || 0), 0);
+    console.log(`Total kitty points: ${totalKittyPoints}`);
+  } else {
+    console.log('Kitty is empty or null');
+  }
+  console.log('========================================');
+  
   // Calculate kitty points
   let kittyPoints = 0;
   const kittyCards = [];
@@ -552,6 +568,9 @@ function handleFinalTrickRewards(finalTrickWinner) {
   console.log(`- Kitty points: ${kittyPoints}`);
   console.log(`- Final trick bonus: ${finalTrickBonus}`);
   console.log(`- Total bonus: ${totalBonusPoints}`);
+  
+  // Clear the kitty since points have been awarded
+  gameState.kitty = [];
   
   // Verify total points = 200
   const totalPoints = gameState.roundState.team1Score + gameState.roundState.team2Score;
@@ -731,7 +750,13 @@ function proceedToNextTrick() {
   // Get the trick winner to be the new trick leader
   const playedCards = gameState.roundState.playedCards;
   const powerSuit = gameState.roundState.powerSuit;
-  const ledSuit = playedCards[0].card.suit;
+  let ledSuit = playedCards[0].card.suit;
+  
+  // If Dunk card is led, it declares the power suit
+  if (ledSuit === 'dunk') {
+    ledSuit = powerSuit;
+  }
+  
   const trickWinner = determineTrickWinner(playedCards, powerSuit, ledSuit);
   
   // Store the trick winner in the trickWinners array
@@ -790,42 +815,7 @@ function proceedToNextTrick() {
   }
 }
 
-/**
- * Log the remaining cards in the player's hand
- */
-function logPlayerHandRemaining() {
-  const gameState = window.gameState.getGameState();
-  const playerHand = gameState.playerHand;
-  
-  // Also check what's actually in the DOM
-  const cardLayout = document.querySelector('.your-hand .card-layout');
-  const domCards = cardLayout ? cardLayout.querySelectorAll('.card') : [];
-  
-  console.log(`=== HAND COMPARISON ===`);
-  console.log(`Game state hand: ${playerHand ? playerHand.length : 0} cards`);
-  console.log(`DOM cards: ${domCards.length} cards`);
-  
-  if (playerHand && playerHand.length > 0) {
-    const sortedHand = window.cardLogic.sortHand(playerHand);
-    const cardList = sortedHand.map(card => `${card.suit} ${card.value}`).join(', ');
-    console.log(`Your remaining cards (${playerHand.length}): ${cardList}`);
-  } else {
-    console.log('Your hand is empty');
-  }
-  
-  if (domCards.length > 0) {
-    const domCardList = Array.from(domCards).map(card => {
-      const cardText = card.textContent.trim();
-      const cardSuit = card.className.includes('dunk') ? 'dunk' : 
-                      card.className.includes('orange') ? 'orange' :
-                      card.className.includes('yellow') ? 'yellow' :
-                      card.className.includes('blue') ? 'blue' : 'green';
-      return `${cardSuit} ${cardText}`;
-    }).join(', ');
-    console.log(`DOM cards (${domCards.length}): ${domCardList}`);
-  }
-  console.log(`=======================`);
-}
+
 
 /**
  * Log round end summary with team scores and point cards
@@ -1097,9 +1087,6 @@ function calculateEndOfRoundScores() {
   console.log(`Team 2 earned: ${team2EarnedPoints}, final: ${gameState.roundState.team2FinalScore}, total: ${gameState.scores.team2}`);
   console.log(`Bid ${roundRecord.bidMade ? 'MADE' : 'FAILED'}`);
   console.log('============================');
-  
-  // Check for game end (500 points)
-  checkForGameEnd();
 }
 
 /**
@@ -1160,6 +1147,16 @@ function showEndGameModal(winner) {
   const currentPlayer = teams.TEAM1.players.find(p => p.name === "You") || teams.TEAM2.players.find(p => p.name === "You");
   const playerTeam = currentPlayer ? (currentPlayer.team === 1 ? 'team1' : 'team2') : 'team1'; // Default to team1 if not found
   const playerWon = winner === playerTeam;
+  
+  // Update player stats with enhanced game data
+  const gameData = {
+    finalScore: playerTeam === 'team1' ? gameState.scores.team1 : gameState.scores.team2,
+    bidAmount: gameState.roundState.currentBid,
+    bidMade: gameState.roundState.team1Score >= gameState.roundState.currentBid || 
+             gameState.roundState.team2Score >= gameState.roundState.currentBid,
+    maxTrickPoints: calculateMaxTrickPoints()
+  };
+  updateGameStats(playerWon, gameData);
   
   // Hide all modal sections first
   const allModalSections = document.querySelectorAll('.modal-row');
@@ -1336,12 +1333,41 @@ function populateEndGameRoundScoringData() {
     return;
   }
   
-  // Update the heading
+  // Update the heading with proper team names and bid result
   const heading = document.querySelector('.end-game-round-scoring .hand-score-heading h2');
-  if (heading) {
+  const headingImage = document.querySelector('.end-game-round-scoring .hand-score-heading img');
+  if (heading && headingImage) {
     const bidWinner = lastRound.bidWinner;
-    const bidAmount = lastRound.bidAmount;
-    heading.textContent = `${bidWinner} made the bid!`;
+    const currentBid = lastRound.bidAmount;
+    
+    // Determine which team made the bid
+    let team1MadeBid = false;
+    let team2MadeBid = false;
+    
+    if (bidWinner === teams.TEAM1.players[0].name || bidWinner === teams.TEAM1.players[1].name) {
+      team1MadeBid = lastRound.team1Earned >= currentBid;
+      team2MadeBid = false;
+    } else {
+      team2MadeBid = lastRound.team2Earned >= currentBid;
+      team1MadeBid = false;
+    }
+    
+    if (team1MadeBid) {
+      heading.textContent = `${teams.TEAM1.players[0].name} + ${teams.TEAM1.players[1].name} made the bid!`;
+      headingImage.src = 'images/boom.png';
+    } else if (team2MadeBid) {
+      heading.textContent = `${teams.TEAM2.players[0].name} + ${teams.TEAM2.players[1].name} made the bid!`;
+      headingImage.src = 'images/boom.png';
+    } else {
+      // Determine which team failed
+      if (bidWinner === teams.TEAM1.players[0].name || bidWinner === teams.TEAM1.players[1].name) {
+        heading.textContent = `${teams.TEAM1.players[0].name} + ${teams.TEAM1.players[1].name} failed the bid!`;
+        headingImage.src = 'images/eek.png';
+      } else {
+        heading.textContent = `${teams.TEAM2.players[0].name} + ${teams.TEAM2.players[1].name} failed the bid!`;
+        headingImage.src = 'images/eek.png';
+      }
+    }
   }
   
   // Update team names and scores
@@ -1353,7 +1379,7 @@ function populateEndGameRoundScoringData() {
     const team1ScoreElement = team1Element.querySelector('.score');
     if (team1NameElement && team1ScoreElement) {
       team1NameElement.textContent = `${teams.TEAM1.players[0].name} + ${teams.TEAM1.players[1].name}`;
-      team1ScoreElement.textContent = lastRound.team1Final;
+      team1ScoreElement.textContent = lastRound.team1Earned;
     }
     
     // Team 2 (Patricia + Jordan)
@@ -1362,7 +1388,7 @@ function populateEndGameRoundScoringData() {
     const team2ScoreElement = team2Element.querySelector('.score');
     if (team2NameElement && team2ScoreElement) {
       team2NameElement.textContent = `${teams.TEAM2.players[0].name} + ${teams.TEAM2.players[1].name}`;
-      team2ScoreElement.textContent = lastRound.team2Final;
+      team2ScoreElement.textContent = lastRound.team2Earned;
     }
   }
   
@@ -1385,9 +1411,27 @@ function populateEndGameRoundScoringData() {
     tricksWonElements[1].textContent = `Tricks won: ${team2Tricks}`;
   }
   
-  // Update cards won (this would need to be populated with actual card data)
-  // For now, we'll leave the cards-won sections as placeholders
-  // TODO: Populate with actual cards won by each team
+  // Update cards won with actual point cards
+  const teamElementsForCards = document.querySelectorAll('.end-game-round-scoring .team');
+  if (teamElementsForCards.length >= 2) {
+    // Team 1 cards
+    const team1CardsElement = teamElementsForCards[0].querySelector('.cards-won');
+    if (team1CardsElement) {
+      const team1Cards = gameState.roundState.trickPoints.team1.map(card => 
+        `${card.suit} ${card.value} (${card.points})`
+      ).join(', ');
+      team1CardsElement.textContent = team1Cards || 'No point cards won';
+    }
+    
+    // Team 2 cards
+    const team2CardsElement = teamElementsForCards[1].querySelector('.cards-won');
+    if (team2CardsElement) {
+      const team2Cards = gameState.roundState.trickPoints.team2.map(card => 
+        `${card.suit} ${card.value} (${card.points})`
+      ).join(', ');
+      team2CardsElement.textContent = team2Cards || 'No point cards won';
+    }
+  }
 }
 
 /**
@@ -1403,6 +1447,9 @@ function handleYourStatsClick() {
   // Show stats modal
   const statsModal = document.querySelector('.your-stats').closest('.modal-row');
   statsModal.classList.remove('hidden');
+  
+  // Populate stats with current data
+  populateStatsModal();
   
   // Set up back button
   const statsBackButton = document.querySelector('.your-stats button');
@@ -1681,6 +1728,246 @@ function addTouchSupport() {
   });
 }
 
+/**
+ * Stats Management Functions
+ */
+
+// Default stats structure
+const DEFAULT_STATS = {
+  // Basic stats
+  totalGames: 0,
+  gamesWon: 0,
+  gamesLost: 0,
+  winPercentage: 0,
+  
+  // Enhanced stats
+  totalPoints: 0,
+  averagePointsPerGame: 0,
+  longestWinStreak: 0,
+  currentWinStreak: 0,
+  bestRoundScore: 0,
+  mostPointsInOneTrick: 0,
+  perfectRounds: 0, // Rounds with 200 points
+  bidSuccessRate: 0,
+  totalBids: 0,
+  successfulBids: 0,
+  
+  // Game history (last 10 games for trends)
+  recentGames: [],
+  
+  lastUpdated: null
+};
+
+/**
+ * Load player stats from localStorage
+ * @returns {Object} Player stats object
+ */
+function loadPlayerStats() {
+  try {
+    const storedStats = localStorage.getItem('dunkStats');
+    if (storedStats) {
+      const stats = JSON.parse(storedStats);
+      // Merge with defaults in case new fields are added
+      return { ...DEFAULT_STATS, ...stats };
+    }
+  } catch (error) {
+    console.error('Error loading stats from localStorage:', error);
+  }
+  return { ...DEFAULT_STATS };
+}
+
+/**
+ * Save player stats to localStorage
+ * @param {Object} stats - Stats object to save
+ */
+function savePlayerStats(stats) {
+  try {
+    stats.lastUpdated = new Date().toISOString();
+    localStorage.setItem('dunkStats', JSON.stringify(stats));
+    console.log('Stats saved successfully:', stats);
+  } catch (error) {
+    console.error('Error saving stats to localStorage:', error);
+  }
+}
+
+/**
+ * Update stats when a game ends
+ * @param {boolean} playerWon - Whether the player's team won
+ * @param {Object} gameData - Additional game data for enhanced stats
+ */
+function updateGameStats(playerWon, gameData = {}) {
+  const stats = loadPlayerStats();
+  const gameState = window.gameState.getGameState();
+  
+  // Basic stats
+  stats.totalGames++;
+  if (playerWon) {
+    stats.gamesWon++;
+    stats.currentWinStreak++;
+    if (stats.currentWinStreak > stats.longestWinStreak) {
+      stats.longestWinStreak = stats.currentWinStreak;
+    }
+  } else {
+    stats.gamesLost++;
+    stats.currentWinStreak = 0;
+  }
+  
+  // Calculate win percentage
+  stats.winPercentage = stats.totalGames > 0 ? 
+    Math.round((stats.gamesWon / stats.totalGames) * 100 * 10) / 10 : 0;
+  
+  // Enhanced stats
+  if (gameData.finalScore) {
+    stats.totalPoints += gameData.finalScore;
+    stats.averagePointsPerGame = Math.round(stats.totalPoints / stats.totalGames);
+    
+    // Track best round score
+    if (gameData.finalScore > stats.bestRoundScore) {
+      stats.bestRoundScore = gameData.finalScore;
+    }
+  }
+  
+  // Track perfect rounds (200 points)
+  if (gameData.finalScore === 200) {
+    stats.perfectRounds++;
+  }
+  
+  // Track bid success rate
+  if (gameData.bidAmount !== undefined) {
+    stats.totalBids++;
+    if (gameData.bidMade) {
+      stats.successfulBids++;
+    }
+    stats.bidSuccessRate = stats.totalBids > 0 ? 
+      Math.round((stats.successfulBids / stats.totalBids) * 100 * 10) / 10 : 0;
+  }
+  
+  // Track most points in one trick
+  if (gameData.maxTrickPoints && gameData.maxTrickPoints > stats.mostPointsInOneTrick) {
+    stats.mostPointsInOneTrick = gameData.maxTrickPoints;
+  }
+  
+  // Add to recent games history (keep last 10)
+  const gameRecord = {
+    date: new Date().toISOString(),
+    won: playerWon,
+    score: gameData.finalScore || 0,
+    bidAmount: gameData.bidAmount || 0,
+    bidMade: gameData.bidMade || false
+  };
+  
+  stats.recentGames.unshift(gameRecord);
+  if (stats.recentGames.length > 10) {
+    stats.recentGames = stats.recentGames.slice(0, 10);
+  }
+  
+  savePlayerStats(stats);
+  console.log('Enhanced game stats updated:', stats);
+}
+
+/**
+ * Clear all player stats
+ */
+function clearPlayerStats() {
+  try {
+    localStorage.removeItem('dunkStats');
+    console.log('Player stats cleared');
+    return true;
+  } catch (error) {
+    console.error('Error clearing stats:', error);
+    return false;
+  }
+}
+
+/**
+ * Populate the stats modal with current player stats
+ */
+function populateStatsModal() {
+  const stats = loadPlayerStats();
+  
+  // Update stats display
+  const statsDetails = document.querySelector('.your-stats .stats-details');
+  if (statsDetails) {
+    // Clear existing content
+    statsDetails.innerHTML = '';
+    
+    // Basic stats
+    addStatLine(statsDetails, `Total games played: ${stats.totalGames}`);
+    addStatLine(statsDetails, `Games won: ${stats.gamesWon}`);
+    addStatLine(statsDetails, `Games lost: ${stats.gamesLost}`);
+    addStatLine(statsDetails, `Win %: ${stats.winPercentage}%`);
+    
+    // Enhanced stats (only show if there's data)
+    if (stats.totalGames > 0) {
+      addStatLine(statsDetails, `Average points per game: ${stats.averagePointsPerGame}`);
+      addStatLine(statsDetails, `Best round score: ${stats.bestRoundScore}`);
+      addStatLine(statsDetails, `Perfect rounds: ${stats.perfectRounds}`);
+      addStatLine(statsDetails, `Longest win streak: ${stats.longestWinStreak}`);
+      addStatLine(statsDetails, `Current win streak: ${stats.currentWinStreak}`);
+      
+      if (stats.totalBids > 0) {
+        addStatLine(statsDetails, `Bid success rate: ${stats.bidSuccessRate}%`);
+      }
+      
+      if (stats.mostPointsInOneTrick > 0) {
+        addStatLine(statsDetails, `Most points in one trick: ${stats.mostPointsInOneTrick}`);
+      }
+    }
+    
+    // Add clear stats option
+    const clearStatsElement = document.createElement('p');
+    clearStatsElement.textContent = 'Clear my stats';
+    clearStatsElement.style.cursor = 'pointer';
+    clearStatsElement.onclick = handleClearStatsClick;
+    statsDetails.appendChild(clearStatsElement);
+  }
+}
+
+/**
+ * Helper function to add a stat line to the stats modal
+ * @param {Element} container - Container element
+ * @param {string} text - Stat text to display
+ */
+function addStatLine(container, text) {
+  const statLine = document.createElement('p');
+  statLine.textContent = text;
+  container.appendChild(statLine);
+}
+
+/**
+ * Calculate the maximum points won in a single trick during the game
+ * @returns {number} Maximum points in one trick
+ */
+function calculateMaxTrickPoints() {
+  const gameState = window.gameState.getGameState();
+  let maxTrickPoints = 0;
+  
+  // This would need to be tracked during gameplay
+  // For now, we'll calculate from the final round data
+  if (gameState.roundState.trickPoints && gameState.roundState.trickPoints.team1) {
+    const team1Points = gameState.roundState.trickPoints.team1.reduce((sum, card) => sum + card.points, 0);
+    const team2Points = gameState.roundState.trickPoints.team2.reduce((sum, card) => sum + card.points, 0);
+    maxTrickPoints = Math.max(team1Points, team2Points);
+  }
+  
+  return maxTrickPoints;
+}
+
+/**
+ * Handle clear stats click
+ */
+function handleClearStatsClick() {
+  if (confirm('Are you sure you want to clear all your stats? This cannot be undone.')) {
+    if (clearPlayerStats()) {
+      // Refresh the stats display
+      populateStatsModal();
+      alert('Stats cleared successfully!');
+    } else {
+      alert('Error clearing stats. Please try again.');
+    }
+  }
+}
+
 // Export functions for use in other modules
 window.gameplay = {
   getNextPlayer,
@@ -1697,7 +1984,7 @@ window.gameplay = {
   advanceToNextTurn,
   completeTrick,
   trackTrickPoints,
-  logPlayerHandRemaining,
+
   logRoundEndSummary,
   markWinningCard,
   showNextTrickButton,
@@ -1730,7 +2017,15 @@ window.gameplay = {
   updateGameStateAfterAICardPlay,
   proceedToNextTrick,
   clearPlayArea,
-  addTouchSupport
+  addTouchSupport,
+  updateGameStats,
+  clearPlayerStats,
+  populateStatsModal,
+  handleClearStatsClick,
+  loadPlayerStats,
+  savePlayerStats,
+  addStatLine,
+  calculateMaxTrickPoints
 };
 
 console.log('gameplay exported:', Object.keys(window.gameplay));
@@ -1743,3 +2038,15 @@ window.testEndGame = function() {
   gameState.scores.team2 = 300;
   checkForGameEnd();
 };
+
+// Initialize stats when the game loads
+window.initializeStats = function() {
+  console.log('Initializing player stats...');
+  const stats = loadPlayerStats();
+  console.log('Current player stats:', stats);
+};
+
+// Call initialization when the script loads
+if (typeof window !== 'undefined') {
+  window.initializeStats();
+}

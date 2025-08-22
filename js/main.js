@@ -813,6 +813,15 @@ function getSelectedCards() {
   const selectedElements = document.querySelectorAll('.card.selected');
   const selectedCards = [];
   
+  // Card values and their point values (same as in logic.js)
+  const CARD_VALUES = {
+    1: 15,   // 1s are worth 15 points
+    5: 5,    // 5s are worth 5 points
+    10: 10,  // 10s are worth 10 points
+    14: 10,  // 14s are worth 10 points
+    'D': 20  // Dunk card is worth 20 points
+  };
+  
   selectedElements.forEach(element => {
     const card = {
       suit: element.dataset.suit || 
@@ -827,6 +836,9 @@ function getSelectedCards() {
     if (!isNaN(card.value)) {
       card.value = parseInt(card.value);
     }
+    
+    // Add points property using the same logic as createCard
+    card.points = CARD_VALUES[card.value] || 0;
     
     selectedCards.push(card);
   });
@@ -1308,7 +1320,18 @@ function markWinningBid(winner, winningBid) {
  * Handle Next button click during round scoring phase - transition to score update phase
  */
 function handleRoundScoringNextClick() {
-  console.log('Round scoring Next button clicked - transitioning to score update phase');
+  console.log('Round scoring Next button clicked');
+  
+  // Check if game should end (either team has 500+ points)
+  if (window.gameplay && window.gameplay.checkForGameEnd) {
+    window.gameplay.checkForGameEnd();
+    
+    // If game ended, checkForGameEnd will have shown the end game modal
+    // and we don't need to proceed to score update
+    return;
+  }
+  
+  console.log('Game continues - transitioning to score update phase');
   
   // Hide the round scoring section (hand-score)
   const handScoreSections = document.querySelectorAll('.row');
@@ -1386,67 +1409,24 @@ function populateScoreUpdateData() {
 function handleScoreUpdateNextClick() {
   console.log('Score update Next button clicked');
   
-  // Check if game should end (either team has 500+ points)
-  if (!window.gameplay || !window.gameplay.checkForGameEnd) {
-    console.error('Gameplay functions not available');
-    return;
-  }
+  // Start next round - transition to NEW_ROUND phase
+  console.log('Starting next round');
   
-  const gameState = window.gameState.getGameState();
-  const winningScore = window.gameSetup.GAME_CONSTANTS.WINNING_SCORE;
+  // Hide the score update section
+  const scoreUpdateSections = document.querySelectorAll('.row');
+  scoreUpdateSections.forEach(section => {
+    if (section.querySelector('.score-update')) {
+      section.classList.add('hidden');
+    }
+  });
   
-  if (gameState.scores.team1 >= winningScore || gameState.scores.team2 >= winningScore) {
-    // Game should end - transition to end game phase
-    console.log('Game end detected - transitioning to end game phase');
-    
-    // Determine winner
-    let winner = null;
-    if (gameState.scores.team1 >= winningScore && gameState.scores.team2 >= winningScore) {
-      // Both teams reached 500 - highest score wins
-      if (gameState.scores.team1 > gameState.scores.team2) {
-        winner = 'team1';
-      } else if (gameState.scores.team2 > gameState.scores.team1) {
-        winner = 'team2';
-      } else {
-        // Tie - winner of most recent round wins
-        const lastRound = gameState.roundHistory[gameState.roundHistory.length - 1];
-        if (lastRound.team1Final > lastRound.team2Final) {
-          winner = 'team1';
-        } else {
-          winner = 'team2';
-        }
-      }
-    } else if (gameState.scores.team1 >= winningScore) {
-      winner = 'team1';
-    } else {
-      winner = 'team2';
-    }
-    
-    // Transition to end game phase
-    setCurrentPhase(GAME_PHASES.END);
-    if (window.gameplay && window.gameplay.showEndGameModal) {
-      window.gameplay.showEndGameModal(winner);
-    }
-  } else {
-    // Start next round - transition to NEW_ROUND phase
-    console.log('Starting next round');
-    
-    // Hide the score update section
-    const scoreUpdateSections = document.querySelectorAll('.row');
-    scoreUpdateSections.forEach(section => {
-      if (section.querySelector('.score-update')) {
-        section.classList.add('hidden');
-      }
-    });
-    
-    // Initialize new round (this increments the round number and preserves scores)
-    setCurrentPhase(GAME_PHASES.NEW_ROUND);
-    initializeNewRound();
-    
-    // Transition to DEALING phase and update UI
-    setCurrentPhase(GAME_PHASES.DEALING);
-    updateUIForCurrentPhase();
-  }
+  // Initialize new round (this increments the round number and preserves scores)
+  setCurrentPhase(GAME_PHASES.NEW_ROUND);
+  initializeNewRound();
+  
+  // Transition to DEALING phase and update UI
+  setCurrentPhase(GAME_PHASES.DEALING);
+  updateUIForCurrentPhase();
 }
 
 /**

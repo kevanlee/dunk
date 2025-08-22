@@ -223,6 +223,7 @@ button.inactive { background-color: #C4C4C4; border: none; }
     justify-content: center;
     align-items: center; 
     gap: 5px;
+    min-height: 120px; /* Prevent container squishing during card transitions */
 }
 
 /* =========== Play area =========== */
@@ -949,35 +950,18 @@ input {
  .bballs { display: none; }
 .your-hand { display: none; } */
 
-/* =========== iPad Compatibility =========== */
+/* =========== Mobile/Tablet Compatibility =========== */
 
-/* iPad Portrait (768px to 834px) */
-@media screen and (min-width: 768px) and (max-width: 834px) and (orientation: portrait) {
-  /* iPad Portrait styles will go here */
-}
-
-/* iPad Landscape (1024px to 1366px) */
-@media screen and (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
-    .your-hand .modal, .cols {
-      min-width: 96%;
-      text-align: center;
+/* Styles for screens less than 1024px (mobile and tablet) */
+@media screen and (max-width: 1024px) {
+  .your-hand .modal, .cols {
+    min-width: 96%;
+    text-align: center;
   }
-  .cols-bidding { width: 100%; grid-template-columns: 1fr 2fr 1fr; }
-}
-
-/* iPad Pro 12.9" Portrait (1024px) */
-@media screen and (min-width: 1024px) and (max-width: 1024px) and (orientation: portrait) {
-  /* iPad Pro 12.9" Portrait styles will go here */
-}
-
-/* iPad Pro 12.9" Landscape (1024px to 1366px) */
-@media screen and (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
-  /* iPad Pro 12.9" Landscape styles will go here */
-}
-
-/* Prevent zoom on input focus for iPad */
-@media screen and (max-width: 1024px) and (orientation: portrait) {
-  /* Touch-specific styles will go here */
+  .cols-bidding { 
+    width: 100%; 
+    grid-template-columns: 1fr 2fr 1fr; 
+  }
 }
 
 /* Disable hover effects on touch devices */
