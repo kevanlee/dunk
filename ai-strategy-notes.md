@@ -8,17 +8,17 @@ This document outlines a complete AI strategy system for the Dunk card game. It'
 ### What is "AI" in a card game?
 Think of AI as a set of rules that tell the computer how to make decisions. Instead of randomly picking cards, we give the computer strategies that good human players use.
 
-### Trick-taking games (like Dunk)
+### Dunk rules (see README.md)
 - Players take turns playing cards
-- The highest card wins the "trick" 
-- Trump cards (including Dunk cards) are special and can beat regular cards
+- The highest card wins the "trick". Card rank is 1, 14, 13, 12, ...
 - Players must "follow suit" (play the same suit as the first card) if they can
+- Exception: A power suit card beats other cards that are played in the trick
+- The Dunk card is valued at 10.5 and takes on the claimed power suit of the round
 
 ### Hand strength
 How good your cards are. We calculate this by looking at:
-- High-value cards (Aces, Kings, etc.)
+- High-value cards (1s, 14s, 13s, etc.)
 - Long suits (having many cards of the same suit)
-- Trump cards (including Dunk cards)
 - "Control" cards (highest card of a suit)
 - "Voids" (not having any cards of a suit - can be good for trumping)
 
@@ -32,10 +32,13 @@ How good your cards are. We calculate this by looking at:
 ### 1. Bid amount (or pass)
 When it's your turn to bid, how much should you bid, or should you pass?
 
-### 2. Trump choice (if you win the bid)
-If you win the bidding, which suit should be trump?
+### 2. Power suit choice (if you win the bid)
+If you win the bidding, which suit should be the power suit?
 
-### 3. Card to play each trick
+### 3. Kitty management (if you win the bid)
+If you win the bidding, which cards should you keep from the kitty and which should you put back in the kitty?
+
+### 4. Card to play each trick
 Which card should you play when it's your turn?
 
 ## File Structure (Single file to start)
@@ -61,19 +64,19 @@ const context = {
   rules: {                    // Game rules
     mustFollow: true,         // Must follow suit if possible
     dunkIsTrump: true,        // Dunk cards are trump
-    handSize: 10,             // Cards per hand
+    handSize: 13,             // Cards per hand
     maxBid: 200,              // Highest possible bid
     minBid: 70                // Lowest possible bid
   },
-  phase: "bidding",           // Current game phase: "bidding" | "trump" | "play"
+  phase: "bidding",           // Current game phase: "bidding" | "kitty" | "power-suit" | "play"
   score: { team0: 0, team1: 0 }, // Current scores
   history: {                  // What's happened so far
     bids: [],                 // Bidding history
     tricks: []                // Completed tricks
   },
   deck: {                     // Card information
-    ranks: ["A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"],
-    suits: ["hearts", "diamonds", "clubs", "spades", "dunk"],
+    ranks: ["1", "14", "13", "12", "11", "10", "9", "8", "7", "6", "5", "4", "3", "2", "D"],
+    suits: ["yellow", "orange", "green", "blue", "dunk"],
     dunk: { suit: "dunk", rank: "dunk" }
   }
 };
@@ -82,8 +85,8 @@ const context = {
 const hand = [/* your cards */];           // Your current hand
 const legalCards = [/* playable cards */]; // Cards you can legally play
 const trick = {                            // Current trick state
-  leadSuit: "hearts",                      // Suit led
-  cards: [{seat: 0, card: {suit: "hearts", rank: "A"}}], // Cards played
+  leadSuit: "orange",                      // Suit led
+  cards: [{seat: 0, card: {suit: "orange", rank: "14"}}], // Cards played
   trump: "spades"                          // Current trump suit
 };
 ```
