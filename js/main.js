@@ -17,6 +17,30 @@ const GAME_PHASES = {
   END: 'end'
 };
 
+// Game quotes for end-of-round/hand messages
+const GAME_QUOTES = [
+  "Winning is in the eye of the beholder. ~ Cake Boss",
+  "Ball is life. ~ Basketball Culture",
+  "Shoot for the stars. ~ Basketball Proverb",
+  "Every shot counts. ~ Basketball Wisdom",
+  "Defense wins championships. ~ Basketball Truth",
+  "The game isn't over until the final buzzer. ~ Basketball Reality",
+  "Practice makes perfect. ~ Basketball Mantra",
+  "Teamwork makes the dream work. ~ Basketball Spirit",
+  "You miss 100% of the shots you don't take. ~ Wayne Gretzky",
+  "Basketball is a beautiful game. ~ Basketball Love",
+  "Champions are made in practice. ~ Basketball Truth"
+];
+
+// Function to get a random quote
+function getRandomQuote() {
+  const randomIndex = Math.floor(Math.random() * GAME_QUOTES.length);
+  return GAME_QUOTES[randomIndex];
+}
+
+// Export to window for use in other modules
+window.getRandomQuote = getRandomQuote;
+
 
 
 // Current game state
@@ -1076,15 +1100,18 @@ function processAIBid(aiPlayerName) {
   const thinkingDelay = 500 + Math.random() * 500;
   
   setTimeout(() => {
+    console.log(`Making AI decision for ${aiPlayerName}...`);
     // Make AI decision
     const aiDecision = window.cardLogic.makeAIBidDecision(aiPlayerName, aiHand, gameState.biddingState);
     
     if (aiDecision.action === 'bid') {
       // AI makes a bid
+      console.log(`${aiPlayerName} making bid of ${aiDecision.amount}`);
       gameState.biddingState = window.cardLogic.makeBid(gameState.biddingState, aiPlayerName, aiDecision.amount);
       addBidToDisplay(aiPlayerName, aiDecision.amount);
     } else {
       // AI passes
+      console.log(`${aiPlayerName} passing`);
       gameState.biddingState = window.cardLogic.passBid(gameState.biddingState, aiPlayerName);
       addPassToDisplay(aiPlayerName);
     }

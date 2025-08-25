@@ -371,21 +371,27 @@ function passBid(biddingState, playerName) {
  * @returns {Object} AI decision { action: 'bid'|'pass', amount?: number }
  */
 function makeAIBidDecision(aiPlayerName, aiHand, biddingState) {
-  // Simple AI: bid 75 or pass
+  console.log(`=== ${aiPlayerName} AI BIDDING DECISION ===`);
+  console.log(`Current highest bid: ${biddingState.highestBid}`);
+  console.log(`Hand: ${aiHand.map(c => `${c.suit} ${c.value}`).join(', ')}`);
+  
+  // Use the new AI bidding logic
   const currentHighestBid = biddingState.highestBid;
+  const minBid = 70;
+  const maxBid = 200;
   
-  // If no one has bid yet, bid 75
-  if (currentHighestBid === 0) {
-    return { action: 'bid', amount: 75 };
-  }
+  // Use AI module to make bidding decision
+  const aiDecision = window.ai.chooseAIBid(aiHand, currentHighestBid, minBid, maxBid);
   
-  // If current bid is 75, pass (AI doesn't bid higher than 75)
-  if (currentHighestBid >= 75) {
+  console.log(`AI decision: ${aiDecision}`);
+  
+  if (aiDecision === 'pass') {
+    console.log(`${aiPlayerName} decided to PASS`);
     return { action: 'pass' };
+  } else {
+    console.log(`${aiPlayerName} decided to BID ${aiDecision}`);
+    return { action: 'bid', amount: aiDecision };
   }
-  
-  // Otherwise, bid 75
-  return { action: 'bid', amount: 75 };
 }
 
 /**
@@ -444,23 +450,8 @@ function shuffleArray(array) {
  * @returns {string} Chosen power suit
  */
 function choosePowerSuit(hand) {
-  const suitCounts = { orange: 0, yellow: 0, blue: 0, green: 0 };
-  
-  // Count cards in each suit (excluding dunk card)
-  hand.forEach(card => {
-    if (card.suit !== 'dunk') {
-      suitCounts[card.suit]++;
-    }
-  });
-  
-  // Find suit with most cards
-  const maxCount = Math.max(...Object.values(suitCounts));
-  const candidates = Object.entries(suitCounts)
-    .filter(([suit, count]) => count === maxCount)
-    .map(([suit]) => suit);
-  
-  // Return first alphabetical if tie
-  return candidates.sort()[0];
+  // Use the new AI power suit selection logic
+  return window.ai.chooseAIPowerSuit(hand);
 }
 
 /**
@@ -477,17 +468,17 @@ function handleComputerKitty(computerPlayer, computerHand, kitty) {
   const combinedHand = [...computerHand, ...kitty];
   console.log(`${computerPlayer} combined hand (18 cards):`, combinedHand.map(card => `${card.suit} ${card.value}`).join(', '));
   
-  // 2. Randomly select 13 cards to keep, 5 to return
-  const shuffled = shuffleArray(combinedHand);
-  const newHand = shuffled.slice(0, 13);
-  const newKitty = shuffled.slice(13, 18);
+  // 2. Use AI to choose power suit first
+  const powerSuit = window.ai.chooseAIPowerSuit(combinedHand);
+  console.log(`${computerPlayer} AI chose power suit: ${powerSuit}`);
   
-  console.log(`${computerPlayer} new hand (13 cards):`, newHand.map(card => `${card.suit} ${card.value}`).join(', '));
-  console.log(`${computerPlayer} new kitty (5 cards):`, newKitty.map(card => `${card.suit} ${card.value}`).join(', '));
+  // 3. Use AI to manage kitty (choose which cards to keep)
+  const kittyResult = window.ai.manageKitty(computerHand, kitty, powerSuit);
+  const newHand = kittyResult.keep;
+  const newKitty = kittyResult.return;
   
-  // 3. Choose power suit (most cards, alphabetical tiebreaker)
-  const powerSuit = choosePowerSuit(newHand);
-  console.log(`${computerPlayer} chose power suit: ${powerSuit}`);
+  console.log(`${computerPlayer} AI new hand (13 cards):`, newHand.map(card => `${card.suit} ${card.value}`).join(', '));
+  console.log(`${computerPlayer} AI new kitty (5 cards):`, newKitty.map(card => `${card.suit} ${card.value}`).join(', '));
   
   return { newHand, newKitty, powerSuit };
 }

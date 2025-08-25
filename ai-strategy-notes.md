@@ -20,7 +20,7 @@ How good your cards are. We calculate this by looking at:
 - High-value cards (1s, 14s, 13s, etc.)
 - Long suits (having many cards of the same suit)
 - "Control" cards (highest card of a suit)
-- "Voids" (not having any cards of a suit - can be good for trumping)
+- "Voids" (not having any cards of a suit - can be good for power suit play)
 
 ## Current State
 - Basic random card selection (very simple)
@@ -48,7 +48,7 @@ The AI will be organized into these sections:
 - **Helper functions** - Small, reusable tools
 - **Hand strength evaluator** - How good is your hand?
 - **Bidding logic** - How much to bid
-- **Trump choice** - Which suit to pick
+- **Power suit choice** - Which suit to pick
 - **Card play logic** - Which card to play
 - **Memory system** - Remembering what opponents played
 
@@ -63,7 +63,7 @@ const context = {
   players: 4,                 // Total players
   rules: {                    // Game rules
     mustFollow: true,         // Must follow suit if possible
-    dunkIsTrump: true,        // Dunk cards are trump
+    dunkIsPowerSuit: true,    // Dunk cards are power suit
     handSize: 13,             // Cards per hand
     maxBid: 200,              // Highest possible bid
     minBid: 70                // Lowest possible bid
@@ -87,7 +87,7 @@ const legalCards = [/* playable cards */]; // Cards you can legally play
 const trick = {                            // Current trick state
   leadSuit: "orange",                      // Suit led
   cards: [{seat: 0, card: {suit: "orange", rank: "14"}}], // Cards played
-  trump: "spades"                          // Current trump suit
+  powerSuit: "orange"                      // Current power suit
 };
 ```
 
@@ -108,9 +108,9 @@ export class AIPlayer {
     return Bidding.chooseBid(hand, ctx, this.cfg, this.memory);
   }
 
-  // Called when you win the bid and need to pick trump
-  chooseTrump(hand, ctx) {
-    return Trump.chooseTrump(hand, ctx, this.cfg, this.memory);
+  // Called when you win the bid and need to pick power suit
+  choosePowerSuit(hand, ctx) {
+    return PowerSuit.choosePowerSuit(hand, ctx, this.cfg, this.memory);
   }
 
   // Called when it's your turn to play a card
@@ -127,11 +127,11 @@ These settings control how the AI behaves. You can change them without touching 
 ```javascript
 const DEFAULTS = {
   weights: {
-    highCard: 6,        // How much to value high cards (A, K, Q)
+    highCard: 6,        // How much to value high cards (1, 14, 13)
     dunkCard: 12,       // How much to value Dunk cards
     suitLen: 1.5,       // Bonus for having many cards of same suit
-    voidBonus: 4,       // Bonus for not having a suit (good for trumping)
-    trumpLen: 2.5,      // Bonus for trump cards
+    voidBonus: 4,       // Bonus for not having a suit (good for power suit play)
+    powerSuitLen: 2.5,  // Bonus for power suit cards
     controlCard: 3,     // Bonus for having highest card of a suit
     partnerLeadBonus: 1.5 // Bonus when partner is leading
   },
@@ -159,11 +159,11 @@ These are simple functions that help with common tasks:
 
 ```javascript
 // Convert a card to a number for sorting (higher = better)
-function cardSortKey(card, trump, ranksOrder) {
-  const isTrump = card.suit === trump || card.suit === "dunk";
+function cardSortKey(card, powerSuit, ranksOrder) {
+  const isPowerSuit = card.suit === powerSuit || card.suit === "dunk";
   const rankIdx = ranksOrder.indexOf(card.rank);
-  const trumpBias = isTrump ? 100 : 0;  // Trump cards are always higher
-  return trumpBias + rankIdx;
+  const powerSuitBias = isPowerSuit ? 100 : 0;  // Power suit cards are always higher
+  return powerSuitBias + rankIdx;
 }
 
 // Check if you can legally follow suit
@@ -185,11 +185,11 @@ function hasSuit(hand, suit) {
 }
 
 // Check if this is the highest card of its suit in your hand
-function isControlCard(card, hand, trump, ranksOrder) {
+function isControlCard(card, hand, powerSuit, ranksOrder) {
   if (card.suit === "dunk") return true;  // Dunk is always control
   const higherInHand = hand.some(
     c => c.suit === card.suit && 
-         cardSortKey(c, trump, ranksOrder) > cardSortKey(card, trump, ranksOrder)
+         cardSortKey(c, powerSuit, ranksOrder) > cardSortKey(card, powerSuit, ranksOrder)
   );
   return !higherInHand;  // No higher card found = this is control
 }
@@ -197,12 +197,12 @@ function isControlCard(card, hand, trump, ranksOrder) {
 
 ## Hand Strength Evaluator
 
-This calculates how good your hand is for bidding and trump selection:
+This calculates how good your hand is for bidding and power suit selection:
 
 ```javascript
 const Eval = {
   // Calculate overall hand strength
-  handStrength(hand, trumpGuess, ranksOrder, W) {
+  handStrength(hand, powerSuitGuess, ranksOrder, W) {
     let score = 0;
     const bySuit = countBySuit(hand);
 
@@ -214,22 +214,22 @@ const Eval = {
 
       // Special cards
       if (c.suit === "dunk") score += W.dunkCard;
-      if (c.suit === trumpGuess) score += W.trumpLen;
-      if (isControlCard(c, hand, trumpGuess, ranksOrder)) score += W.controlCard;
+      if (c.suit === powerSuitGuess) score += W.powerSuitLen;
+      if (isControlCard(c, hand, powerSuitGuess, ranksOrder)) score += W.controlCard;
     }
 
     // Suit distribution bonuses
     for (const suit in bySuit) {
       const len = bySuit[suit];
       score += len * W.suitLen;  // Longer suits are better
-      if (len === 0) score += W.voidBonus;  // Voids are good for trumping
+      if (len === 0) score += W.voidBonus;  // Voids are good for power suit play
     }
 
     return score;
   },
 
-  // Find the best trump suit for your hand
-  bestTrumpSuit(hand, suits, ranksOrder, W) {
+  // Find the best power suit for your hand
+  bestPowerSuit(hand, suits, ranksOrder, W) {
     let best = { suit: suits[0], score: -Infinity };
     for (const s of suits) {
       const sc = Eval.handStrength(hand, s, ranksOrder, W);
@@ -251,9 +251,9 @@ const Bidding = {
     const ranks = ctx.deck.ranks;
     const suits = ctx.deck.suits.filter(s => s !== "dunk");
 
-    // Figure out best trump and hand strength
-    const trumpGuess = Eval.bestTrumpSuit(hand, suits, ranks, W);
-    const strength = Eval.handStrength(hand, trumpGuess, ranks, W);
+    // Figure out best power suit and hand strength
+    const powerSuitGuess = Eval.bestPowerSuit(hand, suits, ranks, W);
+    const strength = Eval.handStrength(hand, powerSuitGuess, ranks, W);
 
     // Convert strength to a bid amount
     let base = Math.round(60 + strength * 4 * cfg.aggression);
@@ -297,16 +297,16 @@ function biddingPressure(bids, seat) {
 }
 ```
 
-## Trump Choice
+## Power Suit Choice
 
 Simple: pick the suit that makes your hand strongest:
 
 ```javascript
-const Trump = {
-  chooseTrump(hand, ctx, cfg, memory) {
+const PowerSuit = {
+  choosePowerSuit(hand, ctx, cfg, memory) {
     const ranks = ctx.deck.ranks;
     const suits = ctx.deck.suits.filter(s => s !== "dunk");
-    return Eval.bestTrumpSuit(hand, suits, ranks, cfg.weights);
+    return Eval.bestPowerSuit(hand, suits, ranks, cfg.weights);
   }
 };
 ```
@@ -315,121 +315,121 @@ const Trump = {
 
 This is the most complex part. The AI follows these rules:
 
-1. **If leading:** Lead your strongest suit or trump
+1. **If leading:** Lead your strongest suit or power suit
 2. **If partner is winning:** Play low to conserve cards
 3. **If you can win cheaply:** Do it
-4. **If you can't follow suit:** Trump low or throw junk
+4. **If you can't follow suit:** Power suit low or throw junk
 
 ```javascript
 const Play = {
   chooseCard(hand, legal, trick, ctx, cfg, memory) {
     const ranks = ctx.deck.ranks;
-    const trump = trick.trump;
+    const powerSuit = trick.powerSuit;
 
     // Leading the trick
     if (trick.cards.length === 0) {
-      return leadStrategy(hand, legal, trump, ranks, cfg, memory);
+      return leadStrategy(hand, legal, powerSuit, ranks, cfg, memory);
     }
 
     // Following to a trick
-    const winning = currentWinner(trick, trump, ranks);
+    const winning = currentWinner(trick, powerSuit, ranks);
     const partnerSeat = (ctx.seat + 2) % ctx.players;
     const partnerIsWinning = winning && winning.seat === partnerSeat;
 
     // Partner is winning - play low to conserve
     if (partnerIsWinning) {
-      const safe = lowestPointPreserving(legal, trump, ranks);
+      const safe = lowestPointPreserving(legal, powerSuit, ranks);
       return safe;
     }
 
     // Try to win if possible
-    const canWin = bestWinningCard(legal, trick, trump, ranks);
+    const canWin = bestWinningCard(legal, trick, powerSuit, ranks);
     if (canWin) return canWin;
 
     // Can't win - throw lowest card
-    return cheapestThrow(legal, trump, ranks);
+    return cheapestThrow(legal, powerSuit, ranks);
   }
 };
 
 // Strategy for leading a trick
-function leadStrategy(hand, legal, trump, ranks, cfg, memory) {
-  const sorted = [...legal].sort((a, b) => cardSortKey(b, trump, ranks) - cardSortKey(a, trump, ranks));
+function leadStrategy(hand, legal, powerSuit, ranks, cfg, memory) {
+  const sorted = [...legal].sort((a, b) => cardSortKey(b, powerSuit, ranks) - cardSortKey(a, powerSuit, ranks));
   const bySuit = countBySuit(hand);
 
   // Prefer leading top card of your longest suit
   const longSuit = Object.entries(bySuit).sort((a, b) => b[1] - a[1])[0]?.[0];
-  const candidate = sorted.find(c => c.suit === longSuit && isControlCard(c, hand, trump, ranks));
+  const candidate = sorted.find(c => c.suit === longSuit && isControlCard(c, hand, powerSuit, ranks));
   if (candidate) return candidate;
 
-  // Or lead trump
-  const trumpLead = sorted.find(c => c.suit === trump || c.suit === "dunk");
-  if (trumpLead) return trumpLead;
+  // Or lead power suit
+  const powerSuitLead = sorted.find(c => c.suit === powerSuit || c.suit === "dunk");
+  if (powerSuitLead) return powerSuitLead;
 
   // Or just highest card
   return sorted[0];
 }
 
 // Find who's currently winning the trick
-function currentWinner(trick, trump, ranks) {
+function currentWinner(trick, powerSuit, ranks) {
   if (trick.cards.length === 0) return null;
-  const leadSuit = trick.cards[0].card.suit === "dunk" ? trump : trick.cards[0].card.suit;
+  const leadSuit = trick.cards[0].card.suit === "dunk" ? powerSuit : trick.cards[0].card.suit;
   let best = trick.cards[0];
   for (const play of trick.cards.slice(1)) {
     const a = best.card, b = play.card;
-    const aKey = winningKey(a, leadSuit, trump, ranks);
-    const bKey = winningKey(b, leadSuit, trump, ranks);
+    const aKey = winningKey(a, leadSuit, powerSuit, ranks);
+    const bKey = winningKey(b, leadSuit, powerSuit, ranks);
     if (bKey > aKey) best = play;
   }
   return best;
 }
 
 // Calculate how strong a card is in the current trick
-function winningKey(card, leadSuit, trump, ranks) {
-  const follows = (card.suit === leadSuit) || (card.suit === "dunk" && leadSuit === trump);
-  const isTrump = (card.suit === trump) || card.suit === "dunk";
+function winningKey(card, leadSuit, powerSuit, ranks) {
+  const follows = (card.suit === leadSuit) || (card.suit === "dunk" && leadSuit === powerSuit);
+  const isPowerSuit = (card.suit === powerSuit) || card.suit === "dunk";
   const base = ranks.indexOf(card.rank);
-  if (isTrump && follows) return 300 + base;  // Trump following suit
-  if (isTrump) return 200 + base;             // Trump not following
-  if (follows) return 100 + base;             // Following suit
-  return base;                                // Not following
+  if (isPowerSuit && follows) return 300 + base;  // Power suit following suit
+  if (isPowerSuit) return 200 + base;             // Power suit not following
+  if (follows) return 100 + base;                 // Following suit
+  return base;                                    // Not following
 }
 
 // Find the cheapest card that can win the trick
-function bestWinningCard(legal, trick, trump, ranks) {
-  const leadSuit = trick.cards[0].card.suit === "dunk" ? trump : trick.cards[0].card.suit;
+function bestWinningCard(legal, trick, powerSuit, ranks) {
+  const leadSuit = trick.cards[0].card.suit === "dunk" ? powerSuit : trick.cards[0].card.suit;
   const beats = [];
-  const current = currentWinner(trick, trump, ranks);
+  const current = currentWinner(trick, powerSuit, ranks);
   if (!current) return null;
 
   // Test each legal card to see if it wins
   for (const c of legal) {
-    const hypothetic = { cards: [...trick.cards, { seat: -1, card: c }], trump };
-    const winner = currentWinner(hypothetic, trump, ranks);
+    const hypothetic = { cards: [...trick.cards, { seat: -1, card: c }], powerSuit };
+    const winner = currentWinner(hypothetic, powerSuit, ranks);
     if (winner && winner.seat === -1) beats.push(c);
   }
   if (beats.length === 0) return null;
   
   // Play the cheapest winning card
-  beats.sort((a, b) => cardSortKey(a, trump, ranks) - cardSortKey(b, trump, ranks));
+  beats.sort((a, b) => cardSortKey(a, powerSuit, ranks) - cardSortKey(b, powerSuit, ranks));
   return beats[0];
 }
 
 // Find the lowest card that preserves partner's lead
-function lowestPointPreserving(legal, trump, ranks) {
-  const sorted = [...legal].sort((a, b) => cardSortKey(a, trump, ranks) - cardSortKey(b, trump, ranks));
+function lowestPointPreserving(legal, powerSuit, ranks) {
+  const sorted = [...legal].sort((a, b) => cardSortKey(a, powerSuit, ranks) - cardSortKey(b, powerSuit, ranks));
   return sorted[0];
 }
 
 // Find the cheapest card to throw away
-function cheapestThrow(legal, trump, ranks) {
-  // Prefer non-trump cards
-  const nonTrump = legal.filter(c => c.suit !== trump && c.suit !== "dunk");
-  if (nonTrump.length) {
-    nonTrump.sort((a, b) => cardSortKey(a, trump, ranks) - cardSortKey(b, trump, ranks));
-    return nonTrump[0];
+function cheapestThrow(legal, powerSuit, ranks) {
+  // Prefer non-power suit cards
+  const nonPowerSuit = legal.filter(c => c.suit !== powerSuit && c.suit !== "dunk");
+  if (nonPowerSuit.length) {
+    nonPowerSuit.sort((a, b) => cardSortKey(a, powerSuit, ranks) - cardSortKey(b, powerSuit, ranks));
+    return nonPowerSuit[0];
   }
-  // If only trump available, play lowest
-  const sorted = [...legal].sort((a, b) => cardSortKey(a, trump, ranks) - cardSortKey(b, trump, ranks));
+  // If only power suit available, play lowest
+  const sorted = [...legal].sort((a, b) => cardSortKey(a, powerSuit, ranks) - cardSortKey(b, powerSuit, ranks));
   return sorted[0];
 }
 ```
@@ -442,17 +442,17 @@ Track what opponents likely have based on what they play:
 class Memory {
   constructor() {
     this.cannotFollow = new Map();  // Who can't follow which suits
-    this.trumpCountShown = 0;       // How many trump cards have been played
+    this.powerSuitCountShown = 0;   // How many power suit cards have been played
   }
 }
 
 // Update memory when a card is played
-function onCardSeen(memory, play, leadSuit, trump) {
+function onCardSeen(memory, play, leadSuit, powerSuit) {
   const s = play.seat;
   const c = play.card;
   
-  // Count trump cards played
-  if (c.suit === trump || c.suit === "dunk") memory.trumpCountShown++;
+  // Count power suit cards played
+  if (c.suit === powerSuit || c.suit === "dunk") memory.powerSuitCountShown++;
 
   // Track who can't follow suit
   if (leadSuit && c.suit !== leadSuit && c.suit !== "dunk") {
@@ -472,7 +472,7 @@ function onCardSeen(memory, play, leadSuit, trump) {
 
 ### Phase 2: Add Bidding
 1. Implement bidding logic
-2. Add trump selection
+2. Add power suit selection
 3. Test full game flow
 
 ### Phase 3: Enhancements
@@ -525,7 +525,7 @@ Before implementing, ensure your game engine:
 ## Questions for You
 
 1. **Scoring system** - How does your game score? This affects bidding strategy.
-2. **Game rules** - Are there special rules for Dunk cards beyond being trump?
+2. **Game rules** - Are there special rules for Dunk cards beyond being power suit?
 3. **AI difficulty** - Do you want multiple AI personalities (easy/medium/hard)?
 4. **Performance** - How fast do decisions need to be made?
 

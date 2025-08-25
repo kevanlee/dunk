@@ -629,7 +629,13 @@ function playAICard(aiPlayer) {
   // Use AI module to select a card
   const playedCards = gameState.roundState.playedCards;
   const powerSuit = gameState.roundState.powerSuit;
-  const cardData = window.ai.selectAICard(aiPlayer, aiHand, playedCards, powerSuit);
+  
+  // Determine AI seat and current winner for strategic play
+  const aiSeat = getPlayerSeat(aiPlayer);
+  const currentWinner = getCurrentTrickWinner(playedCards, powerSuit);
+  const currentWinnerSeat = currentWinner ? getPlayerSeat(currentWinner.player) : null;
+  
+  const cardData = window.ai.selectAICard(aiPlayer, aiHand, playedCards, powerSuit, aiSeat, currentWinnerSeat);
   
   if (!cardData) {
     console.error(`${aiPlayer} could not select a valid card`);
@@ -1580,6 +1586,23 @@ function populateRoundScoringData() {
   
   // Update tricks won
   updateTricksWonDisplay();
+  
+  // Update the quote with a random one
+  updateRandomQuote();
+}
+
+/**
+ * Update the quote with a random one
+ */
+function updateRandomQuote() {
+  // Get a random quote from the main.js quotes array
+  const randomQuote = window.getRandomQuote ? window.getRandomQuote() : "Winning is in the eye of the beholder. ~ Cake Boss";
+  
+  // Update all quotable elements
+  const quotableElements = document.querySelectorAll('.quotable p');
+  quotableElements.forEach(element => {
+    element.textContent = `"${randomQuote}"`;
+  });
 }
 
 /**
@@ -2029,7 +2052,8 @@ window.gameplay = {
   loadPlayerStats,
   savePlayerStats,
   addStatLine,
-  calculateMaxTrickPoints
+  calculateMaxTrickPoints,
+  updateRandomQuote
 };
 
 console.log('gameplay exported:', Object.keys(window.gameplay));
@@ -2053,4 +2077,79 @@ window.initializeStats = function() {
 // Call initialization when the script loads
 if (typeof window !== 'undefined') {
   window.initializeStats();
+}
+
+/**
+ * Get player seat number by player name
+ * @param {string} playerName - Name of the player
+ * @returns {number} Seat number (0-3)
+ */
+function getPlayerSeat(playerName) {
+  const players = window.gameSetup.PLAYERS;
+  if (playerName === players.PLAYER0.name) return 0; // Patricia
+  if (playerName === players.PLAYER1.name) return 1; // Alex
+  if (playerName === players.PLAYER2.name) return 2; // Jordan
+  if (playerName === players.PLAYER3.name) return 3; // You
+  return 0; // Default fallback
+}
+
+/**
+ * Get the current winner of the trick
+ * @param {Array} playedCards - Cards played in current trick
+ * @param {string} powerSuit - Current power suit
+ * @returns {Object|null} Winner object or null if no cards played
+ */
+function getCurrentTrickWinner(playedCards, powerSuit) {
+  if (playedCards.length === 0) return null;
+  
+  // Check if AI module is available
+  if (!window.ai || !window.ai.getCurrentWinner) {
+    console.warn('AI module not available for getCurrentWinner, using fallback logic');
+    // Fallback logic for determining winner
+    if (playedCards.length === 0) return null;
+    
+    let winner = playedCards[0];
+    const leadSuit = playedCards[0].card.suit === 'dunk' ? powerSuit : playedCards[0].card.suit;
+    
+    for (let i = 1; i < playedCards.length; i++) {
+      const current = playedCards[i];
+      const currentValue = getCardValue(current.card.value);
+      const winnerValue = getCardValue(winner.card.value);
+      
+      // Power suit cards beat non-power suit cards
+      const currentIsPowerSuit = current.card.suit === powerSuit || current.card.suit === 'dunk';
+      const winnerIsPowerSuit = winner.card.suit === powerSuit || winner.card.suit === 'dunk';
+      
+      if (currentIsPowerSuit && !winnerIsPowerSuit) {
+        winner = current;
+      } else if (!currentIsPowerSuit && winnerIsPowerSuit) {
+        // winner stays the same
+      } else if (currentIsPowerSuit && winnerIsPowerSuit) {
+        // Both power suit, compare values
+        if (currentValue > winnerValue) {
+          winner = current;
+        }
+      } else if (current.card.suit === leadSuit && winner.card.suit === leadSuit) {
+        // Both following suit, compare values
+        if (currentValue > winnerValue) {
+          winner = current;
+        }
+      } else if (current.card.suit === leadSuit && winner.card.suit !== leadSuit) {
+        // Current follows suit, winner doesn't
+        winner = current;
+      }
+      // Otherwise winner stays the same
+    }
+    
+    return winner;
+  }
+  
+  // Use AI logic to determine winner
+  return window.ai.getCurrentWinner(playedCards, powerSuit);
+}
+
+// Helper function for card values (fallback)
+function getCardValue(value) {
+  const values = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "1", "D"];
+  return values.indexOf(value);
 }
