@@ -1176,6 +1176,12 @@ function showEndGameModal(winner) {
     }
   });
   
+  // Explicitly hide the standalone hand score modal to prevent conflicts
+  const standaloneHandScoreModal = document.querySelector('.modal.hand-score').closest('.modal-row');
+  if (standaloneHandScoreModal) {
+    standaloneHandScoreModal.classList.add('hidden');
+  }
+  
   // Show the appropriate end game modal
   const endGameModal = document.querySelector(`.end-game.${playerWon ? 'win' : 'lose'}`).closest('.modal-row');
   if (endGameModal) {
@@ -1344,8 +1350,8 @@ function populateEndGameRoundScoringData() {
   }
   
   // Update the heading with proper team names and bid result
-  const heading = document.querySelector('.end-game-round-scoring .hand-score-heading h2');
-  const headingImage = document.querySelector('.end-game-round-scoring .hand-score-heading img');
+  const heading = document.querySelector('.end-game-round-scoring .end-game-hand-score-heading h2');
+  const headingImage = document.querySelector('.end-game-round-scoring .end-game-hand-score-heading img');
   if (heading && headingImage) {
     const bidWinner = lastRound.bidWinner;
     const currentBid = lastRound.bidAmount;
@@ -1381,12 +1387,12 @@ function populateEndGameRoundScoringData() {
   }
   
   // Update team names and scores
-  const teamElements = document.querySelectorAll('.end-game-round-scoring .team');
+  const teamElements = document.querySelectorAll('.end-game-round-scoring .end-game-team');
   if (teamElements.length >= 2) {
     // Team 1 (Alex + You)
     const team1Element = teamElements[0];
-    const team1NameElement = team1Element.querySelector('.names');
-    const team1ScoreElement = team1Element.querySelector('.score');
+    const team1NameElement = team1Element.querySelector('.end-game-names');
+    const team1ScoreElement = team1Element.querySelector('.end-game-score');
     if (team1NameElement && team1ScoreElement) {
       team1NameElement.textContent = `${teams.TEAM1.players[0].name} + ${teams.TEAM1.players[1].name}`;
       team1ScoreElement.textContent = lastRound.team1Earned;
@@ -1394,8 +1400,8 @@ function populateEndGameRoundScoringData() {
     
     // Team 2 (Patricia + Jordan)
     const team2Element = teamElements[1];
-    const team2NameElement = team2Element.querySelector('.names');
-    const team2ScoreElement = team2Element.querySelector('.score');
+    const team2NameElement = team2Element.querySelector('.end-game-names');
+    const team2ScoreElement = team2Element.querySelector('.end-game-score');
     if (team2NameElement && team2ScoreElement) {
       team2NameElement.textContent = `${teams.TEAM2.players[0].name} + ${teams.TEAM2.players[1].name}`;
       team2ScoreElement.textContent = lastRound.team2Earned;
@@ -1403,7 +1409,7 @@ function populateEndGameRoundScoringData() {
   }
   
   // Update tricks won
-  const tricksWonElements = document.querySelectorAll('.end-game-round-scoring .tricks-won');
+  const tricksWonElements = document.querySelectorAll('.end-game-round-scoring .end-game-tricks-won');
   if (tricksWonElements.length >= 2) {
     // Count tricks won by each team
     let team1Tricks = 0;
@@ -1422,10 +1428,10 @@ function populateEndGameRoundScoringData() {
   }
   
   // Update cards won with actual point cards
-  const teamElementsForCards = document.querySelectorAll('.end-game-round-scoring .team');
+  const teamElementsForCards = document.querySelectorAll('.end-game-round-scoring .end-game-team');
   if (teamElementsForCards.length >= 2) {
     // Team 1 cards
-    const team1CardsElement = teamElementsForCards[0].querySelector('.cards-won');
+    const team1CardsElement = teamElementsForCards[0].querySelector('.end-game-cards-won');
     if (team1CardsElement) {
       const team1Cards = gameState.roundState.trickPoints.team1.map(card => 
         `${card.suit} ${card.value} (${card.points})`
@@ -1434,7 +1440,7 @@ function populateEndGameRoundScoringData() {
     }
     
     // Team 2 cards
-    const team2CardsElement = teamElementsForCards[1].querySelector('.cards-won');
+    const team2CardsElement = teamElementsForCards[1].querySelector('.end-game-cards-won');
     if (team2CardsElement) {
       const team2Cards = gameState.roundState.trickPoints.team2.map(card => 
         `${card.suit} ${card.value} (${card.points})`

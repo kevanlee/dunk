@@ -396,6 +396,91 @@ button.inactive { background-color: #C4C4C4; border: none; }
     gap: 5px;
 }
 
+/* =========== Embedded end-game hand score =========== */
+
+.end-game-hand-score {
+    display: flex; 
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+
+.end-game-hand-score-heading {
+    display: flex; 
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.end-game-hand-score-heading h2 {
+    flex: 1;                  /* take up remaining space */
+    text-align: left; 
+    font-size: 2rem;        /* keep text to the left */
+  }
+  
+  .end-game-hand-score-heading img {
+    flex: 0;                  /* don't stretch */
+  }
+
+.end-game-hand-score-team {
+    padding: 30px;
+    display: flex; 
+    flex-direction: row;
+    justify-content: center;
+    gap: 60px;
+}
+
+.end-game-hand-score-team .end-game-team {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.end-game-heading {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.end-game-heading .end-game-names {
+    flex: 1;                  /* take up remaining space */
+    text-align: left; 
+    font-size: 1.2rem;        /* keep text to the left */
+  }
+  
+.end-game-heading .end-game-score {
+    flex: 0; 
+    font-size: 1.5rem;                 /* don't stretch */
+  }
+
+.end-game-team img { max-width: 100%; }
+
+.end-game-cards-won {
+    display: flex; 
+    flex-direction: row;
+    justify-content: left;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.end-game-tricks-won {
+    font-size: 1rem;
+    margin-top: 15px;
+    text-align: center;
+}
+
+.end-game-quotable {
+    font-style: italic;
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #666;
+}
+
 .heading {
     display: flex;
     flex-direction: row;
@@ -807,17 +892,17 @@ input[type=number] {
   background-color:white;
 }
 
-.end-game-round-scoring .hand-score-heading {
+.end-game-round-scoring .end-game-hand-score-heading {
   width: 100%;
   padding:0 30px;
 }
 
-.end-game-round-scoring .hand-score-heading h2 {
+.end-game-round-scoring .end-game-hand-score-heading h2 {
   flex: 1;                 /* take up remaining space */
   text-align: left;        /* keep content left-aligned */
 }
 
-.end-game-round-scoring .hand-score-heading img {
+.end-game-round-scoring .end-game-hand-score-heading img {
   flex: 0 auto;            /* shrink-wrap to content width */
   text-align: right;  
   margin-top: 0px;     /* text inside aligns right */

@@ -19,17 +19,16 @@ const GAME_PHASES = {
 
 // Game quotes for end-of-round/hand messages
 const GAME_QUOTES = [
-  "Winning is in the eye of the beholder. ~ Cake Boss",
-  "Ball is life. ~ Basketball Culture",
-  "Shoot for the stars. ~ Basketball Proverb",
-  "Every shot counts. ~ Basketball Wisdom",
-  "Defense wins championships. ~ Basketball Truth",
-  "The game isn't over until the final buzzer. ~ Basketball Reality",
-  "Practice makes perfect. ~ Basketball Mantra",
-  "Teamwork makes the dream work. ~ Basketball Spirit",
-  "You miss 100% of the shots you don't take. ~ Wayne Gretzky",
-  "Basketball is a beautiful game. ~ Basketball Love",
-  "Champions are made in practice. ~ Basketball Truth"
+  "Bang!. ~ Mike Breen",
+  "Boomshakalaka! ~ NBA Jam",
+  "Yes! And it counts! ~ Marv Albert",
+  "Right between the eyes! ~ Kevin Harlan",
+  "Onions! ~ Bill Raftery",
+  "No regard for human life! ~ Kevin Harlan",
+  "Success is never final. Failure is never fatal. ~ Pat Riley",
+  "And I took it personally. ~ Michael Jordan",
+  "Fear is not real. It's created in our minds. ~ Giannis Antetokounmpo",
+  "We goin' Sizzler! ~ Anonymous, White Men Can't Jump"
 ];
 
 // Function to get a random quote
@@ -180,6 +179,27 @@ function resetGame() {
     // Human kitty selection state
     humanKittySelection: null
   };
+  
+  // Hide any lingering modals when resetting the game
+  const allModalSections = document.querySelectorAll('.modal-row');
+  allModalSections.forEach(section => {
+    if (!section.querySelector('.bballs')) {
+      section.classList.add('hidden');
+    }
+  });
+  
+  // Explicitly hide the standalone hand score modal
+  const standaloneHandScoreModal = document.querySelector('.modal.hand-score')?.closest('.modal-row');
+  if (standaloneHandScoreModal) {
+    standaloneHandScoreModal.classList.add('hidden');
+  }
+  
+  // Reset jumbotron scores to zero
+  const jumbotronScores = document.querySelectorAll('.jumbotron.top .scorebox p');
+  jumbotronScores.forEach(scoreElement => {
+    scoreElement.textContent = '0';
+  });
+  
   console.log('Game reset complete');
 }
 
@@ -1563,6 +1583,12 @@ function initializeNewGame() {
   gameState.scores.team1 = 0;
   gameState.scores.team2 = 0;
   gameState.currentHand = 0;
+  
+  // Reset jumbotron scores to zero
+  const jumbotronScores = document.querySelectorAll('.jumbotron.top .scorebox p');
+  jumbotronScores.forEach(scoreElement => {
+    scoreElement.textContent = '0';
+  });
   
   console.log('New game initialized with scores reset');
   console.log('Player setup complete - ready for gameplay');
