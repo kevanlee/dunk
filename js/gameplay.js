@@ -196,11 +196,16 @@ function isCardPlayValid(cardData, gameState) {
   }
   
   // Not leading - must follow suit if possible
-  const ledSuit = playedCards[0].card.suit;
+  let ledSuit = playedCards[0].card.suit;
   const playerHand = gameState.playerHand;
+  const powerSuit = gameState.roundState.powerSuit;
+  
+  // If Dunk card is led, it declares the power suit
+  if (ledSuit === 'dunk') {
+    ledSuit = powerSuit;
+  }
   
   // Check if player has cards of the led suit (including Dunk card if it matches the power suit)
-  const powerSuit = gameState.roundState.powerSuit;
   const cardsOfLedSuit = playerHand.filter(card => {
     if (card.suit === ledSuit) return true;
     if (card.suit === 'dunk' && powerSuit === ledSuit) return true;
@@ -1102,6 +1107,12 @@ function checkForGameEnd() {
   const gameState = window.gameState.getGameState();
   const winningScore = window.gameSetup.GAME_CONSTANTS.WINNING_SCORE;
   
+  // Check if we've already processed the end of this game
+  if (gameState.currentPhase === 'end') {
+    console.log('Game end already processed, skipping...');
+    return true;
+  }
+  
   if (gameState.scores.team1 >= winningScore || gameState.scores.team2 >= winningScore) {
     console.log('=== GAME END DETECTED ===');
     console.log(`Team 1: ${gameState.scores.team1} points`);
@@ -1158,15 +1169,20 @@ function showEndGameModal(winner) {
   const playerTeam = currentPlayer ? (currentPlayer.team === 1 ? 'team1' : 'team2') : 'team1'; // Default to team1 if not found
   const playerWon = winner === playerTeam;
   
-  // Update player stats with enhanced game data
-  const gameData = {
-    finalScore: playerTeam === 'team1' ? gameState.scores.team1 : gameState.scores.team2,
-    bidAmount: gameState.roundState.currentBid,
-    bidMade: gameState.roundState.team1Score >= gameState.roundState.currentBid || 
-             gameState.roundState.team2Score >= gameState.roundState.currentBid,
-    maxTrickPoints: calculateMaxTrickPoints()
-  };
-  updateGameStats(playerWon, gameData);
+  // Update player stats with enhanced game data (only if not already updated)
+  if (!gameState.statsUpdated) {
+    const gameData = {
+      finalScore: playerTeam === 'team1' ? gameState.scores.team1 : gameState.scores.team2,
+      bidAmount: gameState.roundState.currentBid,
+      bidMade: gameState.roundState.team1Score >= gameState.roundState.currentBid || 
+               gameState.roundState.team2Score >= gameState.roundState.currentBid,
+      maxTrickPoints: calculateMaxTrickPoints()
+    };
+    updateGameStats(playerWon, gameData);
+    
+    // Mark stats as updated for this game
+    gameState.statsUpdated = true;
+  }
   
   // Hide all modal sections first
   const allModalSections = document.querySelectorAll('.modal-row');

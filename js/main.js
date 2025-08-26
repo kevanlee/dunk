@@ -83,7 +83,9 @@ let gameState = {
   // Bidding state
   biddingState: null,
   // Human kitty selection state
-  humanKittySelection: null
+  humanKittySelection: null,
+  // Stats tracking flag
+  statsUpdated: false
 };
 
 /**
@@ -177,7 +179,9 @@ function resetGame() {
     // Bidding state
     biddingState: null,
     // Human kitty selection state
-    humanKittySelection: null
+    humanKittySelection: null,
+    // Stats tracking flag
+    statsUpdated: false
   };
   
   // Hide any lingering modals when resetting the game
@@ -243,7 +247,9 @@ function initializeGameState() {
     // Bidding state
     biddingState: null,
     // Human kitty selection state
-    humanKittySelection: null
+    humanKittySelection: null,
+    // Stats tracking flag
+    statsUpdated: false
   };
   console.log('Game state initialized. Current phase:', gameState.currentPhase);
   
