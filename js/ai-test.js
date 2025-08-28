@@ -233,6 +233,78 @@ function testJordanHand() {
   }
 }
 
+// Test strategic point-throwing logic
+function testStrategicPointThrowing() {
+  console.log('Testing strategic point-throwing logic...');
+  
+  if (!window.ai) {
+    console.error('AI module not loaded!');
+    return;
+  }
+  
+  try {
+    // Test team determination
+    console.log('Alex team:', window.ai.getPlayerTeam('Alex'));
+    console.log('Patricia team:', window.ai.getPlayerTeam('Patricia'));
+    console.log('Jordan team:', window.ai.getPlayerTeam('Jordan'));
+    console.log('You team:', window.ai.getPlayerTeam('You'));
+    
+    // Test teammate detection
+    console.log('Alex and You are teammates:', window.ai.areTeammates('Alex', 'You'));
+    console.log('Patricia and Jordan are teammates:', window.ai.areTeammates('Patricia', 'Jordan'));
+    console.log('Alex and Patricia are teammates:', window.ai.areTeammates('Alex', 'Patricia'));
+    
+    // Test card point values
+    console.log('Dunk card points:', window.ai.getCardPoints({ suit: 'dunk', value: 'D' }));
+    console.log('1 card points:', window.ai.getCardPoints({ suit: 'orange', value: '1' }));
+    console.log('14 card points:', window.ai.getCardPoints({ suit: 'yellow', value: '14' }));
+    console.log('10 card points:', window.ai.getCardPoints({ suit: 'green', value: '10' }));
+    console.log('5 card points:', window.ai.getCardPoints({ suit: 'blue', value: '5' }));
+    console.log('2 card points:', window.ai.getCardPoints({ suit: 'orange', value: '2' }));
+    
+    // Test strategic card selection scenarios
+    const testHand = [
+      { suit: 'orange', value: '1' },   // 15 points
+      { suit: 'yellow', value: '14' },  // 10 points
+      { suit: 'blue', value: '5' },     // 5 points
+      { suit: 'green', value: '2' }     // 0 points
+    ];
+    
+    // Scenario 1: Teammate is winning, AI has point cards
+    const teammateWinningScenario = [
+      { card: { suit: 'orange', value: '14' }, player: 'Alex' }  // Alex (teammate) is winning
+    ];
+    
+    console.log('=== Scenario 1: Teammate winning, AI has point cards ===');
+    const card1 = window.ai.selectAICard('You', testHand, teammateWinningScenario, 'blue', 3, 1);
+    console.log('Selected card:', card1);
+    
+    // Scenario 2: Opponent is winning, AI has both point and non-point cards
+    const opponentWinningScenario = [
+      { card: { suit: 'orange', value: '14' }, player: 'Patricia' }  // Patricia (opponent) is winning
+    ];
+    
+    console.log('=== Scenario 2: Opponent winning, AI has both point and non-point cards ===');
+    const card2 = window.ai.selectAICard('You', testHand, opponentWinningScenario, 'blue', 3, 0);
+    console.log('Selected card:', card2);
+    
+    // Scenario 3: Opponent is winning, AI only has point cards
+    const onlyPointCardsHand = [
+      { suit: 'orange', value: '1' },   // 15 points
+      { suit: 'yellow', value: '14' },  // 10 points
+      { suit: 'blue', value: '5' }      // 5 points
+    ];
+    
+    console.log('=== Scenario 3: Opponent winning, AI only has point cards ===');
+    const card3 = window.ai.selectAICard('You', onlyPointCardsHand, opponentWinningScenario, 'blue', 3, 0);
+    console.log('Selected card:', card3);
+    
+    console.log('Strategic point-throwing test complete!');
+  } catch (error) {
+    console.error('Error during strategic test:', error);
+  }
+}
+
 // Simple function to check if AI is loaded
 function checkAI() {
   console.log('Checking AI module status...');
@@ -251,5 +323,6 @@ window.testPatriciaHand = testPatriciaHand;
 window.testAlexHand = testAlexHand;
 window.testJordanHand = testJordanHand;
 window.checkAI = checkAI;
+window.testStrategicPointThrowing = testStrategicPointThrowing;
 
-console.log('ai-test.js loaded, checkAI(), testAI(), testPatriciaHand(), testAlexHand(), and testJordanHand() are available');
+console.log('ai-test.js loaded, checkAI(), testAI(), testPatriciaHand(), testAlexHand(), testJordanHand(), and testStrategicPointThrowing() are available');

@@ -16,12 +16,21 @@ const AI_CONFIG = {
     controlCard: 3,     // Bonus for having highest card of a suit
     partnerLeadBonus: 1.5 // Bonus when partner is leading
   },
-  aggression: 1.0,      // Bidding style: 0.5 = conservative, 1.5 = aggressive
+  aggression: 1.4,      // Bidding style: 0.5 = conservative, 1.5 = aggressive
 };
 
 // Card ranking for Dunk (higher index = better card)
 const CARD_RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "1", "D"];
 const AI_SUITS = ["yellow", "orange", "green", "blue"];
+
+// Point values for cards
+const CARD_POINTS = {
+  "D": 20,  // Dunk card
+  "1": 15,  // All 1s
+  "14": 10, // All 14s
+  "10": 10, // All 10s
+  "5": 5    // All 5s
+};
 
 // Simple helper functions
 function cardSortKey(card, powerSuit) {
@@ -35,6 +44,67 @@ function countBySuit(hand) {
   const map = {};
   for (const c of hand) map[c.suit] = (map[c.suit] || 0) + 1;
   return map;
+}
+
+// Helper function to get card point value
+function getCardPoints(card) {
+  return CARD_POINTS[card.value] || 0;
+}
+
+// Helper function to determine which team a player is on
+function getPlayerTeam(playerName) {
+  const players = window.gameSetup.PLAYERS;
+  if (playerName === players.PLAYER0.name || playerName === players.PLAYER2.name) {
+    return 2; // Team 2 (Patricia + Jordan)
+  } else if (playerName === players.PLAYER1.name || playerName === players.PLAYER3.name) {
+    return 1; // Team 1 (Alex + You)
+  }
+  return null;
+}
+
+// Helper function to determine if two players are on the same team
+function areTeammates(player1, player2) {
+  return getPlayerTeam(player1) === getPlayerTeam(player2);
+}
+
+// Helper function to determine who is likely to win the current trick
+function getLikelyTrickWinner(playedCards, powerSuit) {
+  if (playedCards.length === 0) return null;
+  
+  let winner = playedCards[0];
+  const leadSuit = playedCards[0].card.suit === 'dunk' ? powerSuit : playedCards[0].card.suit;
+  
+  for (let i = 1; i < playedCards.length; i++) {
+    const current = playedCards[i];
+    const currentValue = CARD_RANKS.indexOf(current.card.value);
+    const winnerValue = CARD_RANKS.indexOf(winner.card.value);
+    
+    // Power suit cards beat non-power suit cards
+    const currentIsPowerSuit = current.card.suit === powerSuit || current.card.suit === 'dunk';
+    const winnerIsPowerSuit = winner.card.suit === powerSuit || winner.card.suit === 'dunk';
+    
+    if (currentIsPowerSuit && !winnerIsPowerSuit) {
+      winner = current;
+    } else if (!currentIsPowerSuit && winnerIsPowerSuit) {
+      // winner stays the same
+    } else if (currentIsPowerSuit && winnerIsPowerSuit) {
+      // Both power suit, compare values
+      if (currentValue > winnerValue) {
+        winner = current;
+      }
+    } else if (current.card.suit === leadSuit && winner.card.suit === leadSuit) {
+      // Both following suit, compare values
+      if (currentValue > winnerValue) {
+        winner = current;
+      }
+    } else if (current.card.suit === leadSuit && winner.card.suit !== leadSuit) {
+      // Current follows suit, winner doesn't
+      winner = current;
+    }
+    // Otherwise winner stays the same
+  }
+  
+  return winner;
 }
 
 // Simple hand strength evaluator
@@ -86,9 +156,9 @@ function chooseAIBid(hand, currentBid = 0, minBid = 70, maxBid = 200) {
     return minBid;
   }
 
-  // Be more conservative - only bid if we have a strong hand
-  if (strength < 35) {
-    console.log(`AI BIDDING DEBUG: Hand too weak (${strength} < 35), passing`);
+  // Be more aggressive - bid with moderately strong hands
+  if (strength < 25) {
+    console.log(`AI BIDDING DEBUG: Hand too weak (${strength} < 25), passing`);
     return "pass";
   }
 
@@ -111,16 +181,20 @@ function chooseAIBid(hand, currentBid = 0, minBid = 70, maxBid = 200) {
   let bidIncrement;
   if (strength >= 50) {
     // Very strong hand - bid aggressively to show confidence
-    bidIncrement = 20;
+    bidIncrement = 30;
     console.log(`AI BIDDING DEBUG: Strong hand (${strength}), aggressive increment: ${bidIncrement}`);
   } else if (strength >= 45) {
     // Strong hand - moderate increment
-    bidIncrement = 15;
+    bidIncrement = 25;
     console.log(`AI BIDDING DEBUG: Good hand (${strength}), moderate increment: ${bidIncrement}`);
+  } else if (strength >= 35) {
+    // Moderate hand - moderate increment
+    bidIncrement = 20;
+    console.log(`AI BIDDING DEBUG: Moderate hand (${strength}), moderate increment: ${bidIncrement}`);
   } else {
-    // Moderate hand - conservative increment
-    bidIncrement = 10;
-    console.log(`AI BIDDING DEBUG: Moderate hand (${strength}), conservative increment: ${bidIncrement}`);
+    // Weak hand - still bid but conservatively
+    bidIncrement = 15;
+    console.log(`AI BIDDING DEBUG: Weak hand (${strength}), conservative increment: ${bidIncrement}`);
   }
 
   // Ensure increment is at least 5 and is a multiple of 5
@@ -137,7 +211,7 @@ function chooseAIPowerSuit(hand) {
   return chooseBestPowerSuit(hand);
 }
 
-// Strategic card selection
+// Strategic card selection with point-throwing logic
 function selectAICard(aiPlayer, aiHand, playedCards, powerSuit, aiSeat = 0, currentWinnerSeat = null) {
   console.log(`${aiPlayer} selecting card from ${aiHand.length} cards`);
   
@@ -169,25 +243,12 @@ function selectAICard(aiPlayer, aiHand, playedCards, powerSuit, aiSeat = 0, curr
     return bestCard;
   }
 
-  // Determine if partner is winning
-  const partnerSeat = (aiSeat + 2) % 4;
-  const partnerIsWinning = currentWinnerSeat === partnerSeat;
-
-  // If partner is winning, play low to conserve cards
-  if (partnerIsWinning) {
-    const lowestCard = validCards.sort((a, b) => 
-      CARD_RANKS.indexOf(a.value) - CARD_RANKS.indexOf(b.value)
-    )[0];
-    console.log(`${aiPlayer} supporting partner with: ${lowestCard.suit} ${lowestCard.value}`);
-    return lowestCard;
-  }
-
-  // Try to win the trick
+  // Strategic decision tree for non-leading play
   const leadSuit = playedCards[0].card.suit === 'dunk' ? powerSuit : playedCards[0].card.suit;
   const currentWinner = getCurrentWinner(playedCards, powerSuit);
   
+  // Step 1: Can I win this trick?
   if (currentWinner) {
-    // Find cards that can beat the current winner
     const winningCards = validCards.filter(card => {
       const cardValue = CARD_RANKS.indexOf(card.value);
       const winnerValue = CARD_RANKS.indexOf(currentWinner.card.value);
@@ -227,12 +288,48 @@ function selectAICard(aiPlayer, aiHand, playedCards, powerSuit, aiSeat = 0, curr
     }
   }
 
-  // Can't win, play lowest card
-  const lowestCard = validCards.sort((a, b) => 
-    CARD_RANKS.indexOf(a.value) - CARD_RANKS.indexOf(b.value)
-  )[0];
-  console.log(`${aiPlayer} throwing: ${lowestCard.suit} ${lowestCard.value}`);
-  return lowestCard;
+  // Step 2: Can't win - determine who is likely to win and make strategic decision
+  const likelyWinner = getLikelyTrickWinner(playedCards, powerSuit);
+  const isTeammateWinning = likelyWinner && areTeammates(aiPlayer, likelyWinner.player);
+  
+  if (isTeammateWinning) {
+    // Teammate is winning - play point card if available, otherwise lowest card
+    const pointCards = validCards.filter(card => getCardPoints(card) > 0);
+    if (pointCards.length > 0) {
+      // Play a point card to help teammate
+      const bestPointCard = pointCards.sort((a, b) => getCardPoints(b) - getCardPoints(a))[0];
+      console.log(`${aiPlayer} supporting teammate with point card: ${bestPointCard.suit} ${bestPointCard.value} (${getCardPoints(bestPointCard)} points)`);
+      return bestPointCard;
+    } else {
+      // No point cards available, play lowest card
+      const lowestCard = validCards.sort((a, b) => 
+        CARD_RANKS.indexOf(a.value) - CARD_RANKS.indexOf(b.value)
+      )[0];
+      console.log(`${aiPlayer} supporting teammate with: ${lowestCard.suit} ${lowestCard.value}`);
+      return lowestCard;
+    }
+  } else {
+    // Opponent is winning - avoid playing point cards unless forced
+    const pointCards = validCards.filter(card => getCardPoints(card) > 0);
+    const nonPointCards = validCards.filter(card => getCardPoints(card) === 0);
+    
+    // Check if we have non-point cards available
+    if (nonPointCards.length > 0) {
+      // Play lowest non-point card
+      const lowestNonPoint = nonPointCards.sort((a, b) => 
+        CARD_RANKS.indexOf(a.value) - CARD_RANKS.indexOf(b.value)
+      )[0];
+      console.log(`${aiPlayer} avoiding points, playing: ${lowestNonPoint.suit} ${lowestNonPoint.value}`);
+      return lowestNonPoint;
+    } else {
+      // Forced to play a point card - play the lowest value one
+      const lowestPointCard = pointCards.sort((a, b) => 
+        CARD_RANKS.indexOf(a.value) - CARD_RANKS.indexOf(b.value)
+      )[0];
+      console.log(`${aiPlayer} forced to play point card: ${lowestPointCard.suit} ${lowestPointCard.value} (${getCardPoints(lowestPointCard)} points)`);
+      return lowestPointCard;
+    }
+  }
 }
 
 // Helper function to determine current winner
@@ -352,6 +449,10 @@ window.ai = {
   chooseAIPowerSuit,
   manageKitty,
   getCurrentWinner,
+  getCardPoints,
+  getPlayerTeam,
+  areTeammates,
+  getLikelyTrickWinner,
   AI_CONFIG
 };
 

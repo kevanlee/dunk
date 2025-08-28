@@ -608,16 +608,24 @@ button.inactive { background-color: #C4C4C4; border: none; }
 
 .bidding {
     width: auto;
-    padding: 30px;
+    padding: 40px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 10px;
+    gap: 24px;
 }
 
-.bidding h2 { font-size: 2rem;  }
-.bidding img { width: 200px; }
+.bidding h2 { 
+    font-size: 2.2rem;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.bidding img { 
+    width: 200px;
+    margin-bottom: 8px;
+}
 
 .bid {
     display: flex;
@@ -649,81 +657,142 @@ button.inactive { background-color: #C4C4C4; border: none; }
 }
   
 
-  .bidding-details, .bid-enter { margin-top: 15px; }
+.bidding-details, .bid-enter { 
+    margin-top: 20px;
+    width: 100%;
+    max-width: 400px;
+}
 
-  .inputs-top {
+.inputs-top {
     display: flex;
     align-items: center;
     flex-direction: column;
-    gap: 20px; /* space between label and inputs */
-  }
+    gap: 24px;
+}
 
-  
-  .label-container {
+.label-container {
     display: flex;
-    border-radius: 8px;
-    overflow: hidden; /* makes the corners smooth between input and button */
-    gap: 20px;
     align-items: center;
-    margin-bottom: 10px;
-  }
+    gap: 16px;
+    width: 100%;
+    justify-content: center;
+}
 
-  .label-container .inputs {
-    border: 1px solid #c4c4c4;
-    border-radius: 5px;
-  }
+.label-container label {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #333;
+    white-space: nowrap;
+}
+
+.label-container .inputs {
+    display: flex;
+    border: 2px solid #c4c4c4;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+}
+
+.label-container .inputs:focus-within {
+    border-color: #000;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
   
-  .inputs input[type="number"] {
+.inputs input[type="number"] {
     border: none;
-    padding: 8px 12px;
-    font-size: 1rem;
-    background-color: #ddd;
+    padding: 12px 16px;
+    font-size: 1.1rem;
+    background-color: #f8f8f8;
     outline: none;
-    width: 80px; /* adjust to fit */
-    margin-right:-6px;
-    border-top-left-radius: 5px;
-    border-bottom-left-radius: 5px;
-  }
+    width: 100px;
+    text-align: center;
+    font-family: 'Comic Neue', Tahoma, Geneva, Verdana, sans-serif;
+    transition: background-color 0.2s ease;
+}
+
+.inputs input[type="number"]:focus {
+    background-color: #fff;
+}
   
-  .inputs button {
+.inputs button {
     border: none;
-    padding: 8px 16px;
-    font-size: 1rem;
+    padding: 12px 20px;
+    font-size: 1.1rem;
     background-color: black;
     color: white;
     cursor: url('./images/hand.png') 0 0, auto;
-    border-radius: 0 5px 5px 0; /* TL=0, TR=8px, BR=8px, BL=0 */
-  }
+    font-family: 'Comic Neue', Tahoma, Geneva, Verdana, sans-serif;
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
   
-  .inputs button:hover, #passButton:hover {
+.inputs button:hover, #passButton:hover {
     opacity: 0.85;
-    transform: rotate(-0deg);
-    box-shadow: none;
-  }
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.inputs button:active, #passButton:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
   
-  .inputs button.inactive {
+.inputs button.inactive {
     background-color: #C4C4C4;
     border: none;
-  }
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
 
-  .inputs-bottom {
+.inputs button.inactive:hover {
+    opacity: 1;
+    transform: none;
+    box-shadow: none;
+}
+
+.inputs-bottom {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-  }
+    gap: 16px;
+    margin-top: 8px;
+}
 
-  #passButton {
-    border: none;
-    padding: 8px 16px;
+#passButton {
+    border: 2px solid #ddd;
+    padding: 12px 24px;
     font-size: 1rem;
     background-color: white;
-    color: black;
+    color: #666;
     cursor: url('./images/hand.png') 0 0, auto;
-  }
-  #passButton.inactive { color: #c4c4c4; }
+    border-radius: 8px;
+    font-family: 'Comic Neue', Tahoma, Geneva, Verdana, sans-serif;
+    transition: all 0.2s ease;
+    min-width: 200px;
+}
 
-  /* Chrome, Safari, Edge, Opera */
+#passButton:hover {
+    border-color: #999;
+    color: #333;
+    background-color: #f8f8f8;
+}
+
+#passButton.inactive { 
+    color: #c4c4c4;
+    border-color: #e0e0e0;
+    cursor: not-allowed;
+}
+
+#passButton.inactive:hover {
+    border-color: #e0e0e0;
+    color: #c4c4c4;
+    background-color: white;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Chrome, Safari, Edge, Opera */
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -1043,6 +1112,15 @@ input {
     min-width: 96%;
     text-align: center;
   }
+  
+  .cols {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .cols .left {
+    grid-column: 1 / -1; /* Span full width */
+  }
+  
   .cols-bidding { 
     width: 100%; 
     grid-template-columns: 1fr 2fr 1fr; 
@@ -1055,6 +1133,9 @@ input {
   .dealing { gap: 25px; padding-bottom: 25px; }
   .card-layout { min-height: 100px;}
   .jumbotron-top { margin-right: 6%; }
+
+  .played-card.winner::before { width: 35px; height: 35px;}
+  .played-card.winner { border: none; }
 }
 
 /* Disable hover effects on touch devices */

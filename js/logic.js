@@ -258,17 +258,18 @@ function getNextBidder(biddingState) {
   }
   
   // Find next player who hasn't passed
-  let nextIndex = biddingState.currentPlayerIndex;
+  // Start from the next player after the current one
+  let nextIndex = (biddingState.currentPlayerIndex + 1) % 4;
   let attempts = 0;
   
   while (attempts < 4) {
-    nextIndex = (nextIndex + 1) % 4;
     const nextPlayer = biddingState.playerOrder[nextIndex];
     
     if (!biddingState.passes.includes(nextPlayer)) {
       return nextPlayer;
     }
     
+    nextIndex = (nextIndex + 1) % 4;
     attempts++;
   }
   

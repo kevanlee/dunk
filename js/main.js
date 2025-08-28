@@ -1100,15 +1100,21 @@ function processNextBid() {
     return;
   }
   
-  const currentPlayer = window.cardLogic.getCurrentBidder(gameState.biddingState);
-  const isHumanTurn = currentPlayer === window.gameSetup.PLAYERS.PLAYER3.name;
+  const nextPlayer = window.cardLogic.getNextBidder(gameState.biddingState);
+  if (!nextPlayer) {
+    // No next bidder found - bidding should be complete
+    handleBiddingComplete();
+    return;
+  }
+  
+  const isHumanTurn = nextPlayer === window.gameSetup.PLAYERS.PLAYER3.name;
   
   if (isHumanTurn) {
     // Show human bidding form
     showHumanBidForm();
   } else {
     // AI turn - make decision after a thinking delay
-    processAIBid(currentPlayer);
+    processAIBid(nextPlayer);
   }
 }
 

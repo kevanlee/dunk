@@ -2,7 +2,7 @@
   "name": "Dunk - Card Game",
   "short_name": "Dunk",
   "description": "A trick-taking, rim-rattling card game inspired by Kentucky Rook",
-  "start_url": "https://kevanlee.github.io/rook",
+  "start_url": "https://kevanlee.github.io/dunk",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
