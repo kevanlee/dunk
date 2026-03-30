@@ -41,6 +41,38 @@ A mobile-first Kentucky Rook web app with a bold arcade presentation and a clean
 - Rook ranks as **10.5** of trump
 - First team to **500** wins
 
+## Run (development)
+
+```bash
+npm install
+npm run dev
+```
+
+## Preview production build
+
+```bash
+npm run build
+npm run preview
+```
+
+Or via Python static server (after build):
+
+```bash
+npm run build
+cd dist
+python3 -m http.server 3000
+```
+
+## Important troubleshooting
+
+If you run `python3 -m http.server` from the project root, the browser will try to load `/src/main.jsx` directly.
+That causes MIME/module errors (for example: module script served as `application/octet-stream`) because Vite source files are not meant to run unbundled in a plain static server.
+
+Use one of these instead:
+- `npm run dev` (recommended for development)
+- `npm run preview` (serves the built app)
+- Python server **inside `dist/` after `npm run build`**
+
 ## Project Structure
 
 ```txt
@@ -68,20 +100,6 @@ A mobile-first Kentucky Rook web app with a bold arcade presentation and a clean
 │   │   └── table/TableScreen.jsx
 │   └── services/storage.js
 └── vite.config.js
-```
-
-## Run
-
-```bash
-npm install
-npm run dev
-```
-
-Build:
-
-```bash
-npm run build
-npm run preview
 ```
 
 ## Architecture Notes
