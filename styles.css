@@ -49,6 +49,8 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  width: min(100%, 430px);
+  margin: 0 auto;
   padding: 14px 16px;
   background: rgba(243, 243, 243, 0.96);
   border-bottom: 1px solid var(--line);
@@ -126,6 +128,8 @@ body {
 
 .main {
   flex: 1;
+  width: min(100%, 430px);
+  margin: 0 auto;
   padding: 12px;
 }
 
@@ -1416,9 +1420,7 @@ h2.is-dealing::after {
 
 @media (min-width: 700px) {
   .main {
-    max-width: 760px;
-    width: 100%;
-    margin: 0 auto;
+    width: min(100%, 430px);
   }
 
   .hand-grid {

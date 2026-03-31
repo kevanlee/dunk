@@ -1,0 +1,23 @@
+{
+  "name": "Kentucky Rook",
+  "short_name": "Rook",
+  "description": "A fast, mobile-first Kentucky Rook web app.",
+  "id": "/dunk/",
+  "start_url": "/dunk/",
+  "scope": "/dunk/",
+  "display": "standalone",
+  "background_color": "#f3f3f3",
+  "theme_color": "#f3f3f3",
+  "icons": [
+    {
+      "src": "img/App-icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "img/App-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

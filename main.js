@@ -7,7 +7,7 @@
     black: "Black"
   };
   var PLAYER_NAMES = ["You", "Bea", "Mae", "Cal"];
-  var MIN_BID = 80;
+  var MIN_BID = 100;
   var MAX_BID = 200;
   var BID_STEP = 5;
   var PLAYERS = [0, 1, 2, 3];
@@ -264,7 +264,6 @@
           return;
         }
         state.selectedTrump = button.getAttribute("data-trump");
-        sortHand(state.kittyReviewHand, state.selectedTrump);
         renderTrumpPhase();
       });
     });
@@ -1214,6 +1213,7 @@
     var bidderTeam = teamForPlayer(state.bidder);
     var otherTeam = bidderTeam === 0 ? 1 : 0;
     var bidMade = state.roundPoints[bidderTeam] >= state.winningBid;
+    var bidMargin = Math.abs(state.roundPoints[bidderTeam] - state.winningBid);
     var summaryUs = roundSummaryPoints(0, bidderTeam, bidMade);
     var summaryThem = roundSummaryPoints(1, bidderTeam, bidMade);
 
@@ -1230,7 +1230,8 @@
       them: summaryThem,
       bid: PLAYER_NAMES[state.bidder] + " bid " + state.winningBid,
       bidMade: bidMade,
-      result: bidMade ? "Made" : "Set"
+      result: bidMade ? "Made" : "Set",
+      margin: (bidMade ? "Made it by " : "Missed it by ") + bidMargin + " points"
     };
     state.roundHistory.unshift({
       round: "R" + state.roundNumber,
@@ -1442,10 +1443,15 @@
     ui.usScoreBar.style.width = scoreProgressWidth(state.matchPoints[0]);
     ui.themScoreBar.style.width = scoreProgressWidth(state.matchPoints[1]);
 
-    renderBiddingPhase();
-    renderTrumpPhase();
-    renderPlayPhase();
-    renderSummaryPhase();
+    if (state.phase === "bidding") {
+      renderBiddingPhase();
+    } else if (state.phase === "trump") {
+      renderTrumpPhase();
+    } else if (state.phase === "play") {
+      renderPlayPhase();
+    } else if (state.phase === "summary") {
+      renderSummaryPhase();
+    }
     renderHistoryDrawer();
   }
 
@@ -1625,6 +1631,7 @@
       if (ui.summaryNav.parentNode !== ui.phaseSummary.querySelector(".panel-card")) {
         ui.phaseSummary.querySelector(".panel-card").insertBefore(ui.summaryNav, ui.toggleScoring);
       }
+      ui.summaryDetail.textContent = state.summary.margin || "";
       if (state.summaryScoringOpen) {
         renderSummaryScoring();
       } else {
@@ -1637,6 +1644,7 @@
     if (ui.summaryNav.parentNode !== ui.summaryHistoryNav) {
       ui.summaryHistoryNav.appendChild(ui.summaryNav);
     }
+    ui.summaryDetail.textContent = "";
     ui.summaryMatchUs.textContent = state.matchPoints[0];
     ui.summaryMatchThem.textContent = state.matchPoints[1];
     ui.summaryMatchNote.textContent = matchSummaryNote();
@@ -1674,15 +1682,27 @@
 
   function renderHistoryDrawer() {
     var hasHistory = !!state.previousTrick && state.phase === "play";
+
     ui.historyToggle.classList.toggle("hidden", !hasHistory);
-    ui.historyDrawer.classList.toggle("open", hasHistory && state.historyOpen);
-    ui.historyBackdrop.classList.toggle("hidden", !(hasHistory && state.historyOpen));
-    ui.historyContent.innerHTML = "";
 
     if (!hasHistory) {
+      state.historyOpen = false;
+      ui.historyDrawer.classList.remove("open");
+      ui.historyBackdrop.classList.add("hidden");
+      if (ui.historyContent.innerHTML) {
+        ui.historyContent.innerHTML = "";
+      }
       return;
     }
 
+    ui.historyDrawer.classList.toggle("open", state.historyOpen);
+    ui.historyBackdrop.classList.toggle("hidden", !state.historyOpen);
+
+    if (!state.historyOpen) {
+      return;
+    }
+
+    ui.historyContent.innerHTML = "";
     state.previousTrick.cards.forEach(function (play) {
       var row = document.createElement("div");
       var info = document.createElement("div");
@@ -2122,7 +2142,20 @@
     return { label: "Weak hand" };
   }
 
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator) || window.location.protocol === "file:") {
+      return;
+    }
+
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function () {
+        return null;
+      });
+    });
+  }
+
   cacheDom();
   bindEvents();
   render();
+  registerServiceWorker();
 }());
