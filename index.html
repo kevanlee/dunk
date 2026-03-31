@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Kentucky Rook</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <h1 class="app-title">Kentucky Rook</h1>
+      <div class="scoreline">
+        <div class="scoregroup">
+          <div id="usScoreText" class="scoretext">Us 0</div>
+          <span class="scorebar-track" aria-hidden="true">
+            <span id="usScoreBar" class="scorebar-fill"></span>
+          </span>
+        </div>
+        <div class="scoregroup">
+          <div id="themScoreText" class="scoretext">Them 0</div>
+          <span class="scorebar-track" aria-hidden="true">
+            <span id="themScoreBar" class="scorebar-fill"></span>
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <section id="phaseWelcome" class="phase-panel">
+        <div class="panel-card welcome-card">
+          <div class="welcome-content">
+            <p class="phase-label">Kentucky Rook</p>
+            <h2>Welcome</h2>
+            <button id="startNewGame" class="primary-button" type="button">Start New Game</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="phaseBidding" class="phase-panel hidden">
+        <div class="panel-card">
+          <div class="bid-main">
+            <p id="biddingPhaseLabel" class="phase-label">Bidding</p>
+            <h2 id="biddingTitle">Choose Your Bid</h2>
+            <div class="info-stack">
+              <div id="currentHighRow" class="info-row">
+                <span id="currentHighLabel">Current high bid</span>
+                <strong id="currentHighBid">n/a</strong>
+              </div>
+              <div id="turnRow" class="info-row">
+                <span>Turn</span>
+                <strong id="currentTurn">You</strong>
+              </div>
+            </div>
+
+          <div id="bidPicker" class="bid-picker">
+            <button id="decreaseBid" class="step-button" type="button" aria-label="Lower bid">-</button>
+            <div class="bid-value">
+              <span>Selected bid</span>
+              <strong id="selectedBid">80</strong>
+            </div>
+            <button id="increaseBid" class="step-button" type="button" aria-label="Raise bid">+</button>
+          </div>
+
+          <div id="bidActions" class="bid-actions">
+            <button id="passBid" class="ghost-button" type="button">Pass</button>
+            <button id="placeBid" class="primary-button" type="button">Place Bid</button>
+          </div>
+          <button id="continueToTrump" class="primary-button hidden" type="button">Continue</button>
+          <div id="bidStatusBoard" class="bid-status-board"></div>
+          </div>
+
+          <section class="inline-hand bidding-hand-strip">
+            <div id="dealSeats" class="deal-seats hidden" aria-hidden="true">
+              <div class="deal-seat">
+                <span>Mae</span>
+                <strong id="dealCountMae">0</strong>
+              </div>
+              <div class="deal-seat">
+                <span>Bea</span>
+                <strong id="dealCountBea">0</strong>
+              </div>
+              <div class="deal-seat">
+                <span>Cal</span>
+                <strong id="dealCountCal">0</strong>
+              </div>
+            </div>
+            <div id="dealPile" class="deal-pile hidden" aria-hidden="true">
+              <span class="deal-pile-card"></span>
+              <span class="deal-pile-card"></span>
+              <span class="deal-pile-card"></span>
+            </div>
+            <div class="hand-header">
+              <span>Your hand</span>
+              <strong id="handStrengthHint" class="hand-strength-label">Medium hand</strong>
+            </div>
+            <div id="biddingHand" class="hand-grid bidding-hand-grid"></div>
+            <button id="startBidding" class="primary-button" type="button">Start Bidding</button>
+          </section>
+        </div>
+      </section>
+
+      <section id="phaseTrump" class="phase-panel hidden">
+        <div class="panel-card">
+          <p id="trumpPhaseLabel" class="phase-label">Trump and Kitty</p>
+          <h2 id="trumpTitle">Get Set Up</h2>
+          <div class="info-stack compact-stack">
+            <div class="info-row">
+              <span>Winning bid</span>
+              <strong id="trumpBidAmount">-</strong>
+            </div>
+          </div>
+          <div class="trump-grid">
+            <button class="trump-button" data-trump="red" type="button">Red</button>
+            <button class="trump-button" data-trump="green" type="button">Green</button>
+            <button class="trump-button" data-trump="yellow" type="button">Yellow</button>
+            <button class="trump-button" data-trump="black" type="button">Black</button>
+          </div>
+          <div id="trumpProcessing" class="trump-processing hidden">
+            <span id="trumpProcessingText">Looking through kitty, discarding, choosing trump.</span>
+            <span class="trump-processing-track" aria-hidden="true">
+              <span id="trumpProcessingBar" class="trump-processing-fill"></span>
+            </span>
+            <button id="aiTrumpContinue" class="primary-button" type="button" disabled>Let's Play</button>
+          </div>
+          <section id="trumpKittyBlock" class="kitty-block">
+            <div class="hand-header">
+              <span class="kitty-legend">Hand and kitty <span class="kitty-legend-icon" aria-hidden="true"></span></span>
+            </div>
+            <div id="trumpHand" class="hand-grid bidding-hand-grid hand-review-grid"></div>
+            <div id="discardStatusRow" class="info-row hidden">
+              <span>Discard 5 cards</span>
+              <strong id="discardStatus">0/5</strong>
+            </div>
+          </section>
+          <button id="confirmTrump" class="primary-button" type="button" disabled>Confirm Selection</button>
+          <section id="trumpReferenceBlock" class="kitty-block hidden">
+            <div class="hand-header">
+              <span>Your hand</span>
+            </div>
+            <div id="trumpReferenceHand" class="hand-grid bidding-hand-grid hand-review-grid"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="phasePlay" class="phase-panel hidden">
+        <div class="play-layout">
+          <section class="table-card">
+            <div class="table-header">
+              <div class="table-stats-group">
+                <div class="table-stat">
+                  <span>Trump</span>
+                  <strong id="playTrump" class="trump-display">-</strong>
+                </div>
+                <div class="table-stat">
+                  <span>Contract</span>
+                  <strong id="playContract">-</strong>
+                </div>
+              </div>
+              <button id="historyToggle" class="table-icon-button hidden" type="button" aria-label="Show previous trick">↺</button>
+            </div>
+
+            <div class="table-area">
+              <div class="seat seat-top">
+                <div id="seatTopName" class="seat-name">Mae</div>
+                <div id="seatTopCount" class="seat-count">0 points</div>
+              </div>
+              <div class="seat seat-left">
+                <div id="seatLeftName" class="seat-name">Bea</div>
+                <div id="seatLeftCount" class="seat-count">0 points</div>
+              </div>
+              <div class="seat seat-right">
+                <div id="seatRightName" class="seat-name">Cal</div>
+                <div id="seatRightCount" class="seat-count">0 points</div>
+              </div>
+              <div class="seat seat-bottom">
+                <div id="seatBottomName" class="seat-name">You</div>
+                <div id="seatBottomCount" class="seat-count">0 points</div>
+              </div>
+
+              <div class="trick-grid">
+                <div id="slotTop" class="table-slot"></div>
+                <div id="slotLeft" class="table-slot"></div>
+                <div id="slotRight" class="table-slot"></div>
+                <div id="slotBottom" class="table-slot"></div>
+              </div>
+            </div>
+
+            <p id="playMessage" class="play-message">Play a card.</p>
+          </section>
+
+          <section class="hand-card">
+            <div class="hand-header">
+              <span>Your Hand</span>
+              <strong id="handHint">Tap a card to play</strong>
+            </div>
+            <div id="playerHand" class="hand-grid"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="phaseSummary" class="phase-panel hidden">
+        <div class="panel-card">
+          <p id="summaryPhaseLabel" class="phase-label">Round Summary</p>
+          <h2 id="summaryTitle">Round Complete</h2>
+          <div id="summaryGrid" class="summary-grid">
+            <div class="summary-box">
+              <span>Us this round</span>
+              <strong id="summaryUs">0</strong>
+            </div>
+            <div class="summary-box">
+              <span>Them this round</span>
+              <strong id="summaryThem">0</strong>
+            </div>
+            <div class="summary-box">
+              <span>Winning bid</span>
+              <strong id="summaryBid">-</strong>
+            </div>
+            <div class="summary-box">
+              <span>Bid result</span>
+              <strong id="summaryResult">-</strong>
+            </div>
+          </div>
+          <div id="summaryNav" class="summary-nav">
+            <button id="backToRoundSummary" class="ghost-button hidden" type="button" aria-label="Back to round summary">←</button>
+            <button id="nextRound" class="primary-button" type="button">Next</button>
+          </div>
+          <button id="toggleScoring" class="ghost-button summary-toggle" type="button">View scoring cards</button>
+          <div id="summaryScoring" class="summary-scoring hidden">
+            <div class="summary-scoring-header">
+              <span>Scoring Cards</span>
+            </div>
+            <div id="summaryScoringGrid" class="summary-scoring-grid"></div>
+          </div>
+          <div id="summaryHistory" class="round-history hidden">
+            <div class="match-scoreboard">
+              <div class="match-score-card">
+                <span>Us</span>
+                <strong id="summaryMatchUs">0</strong>
+              </div>
+              <div class="match-score-card">
+                <span>Them</span>
+                <strong id="summaryMatchThem">0</strong>
+              </div>
+            </div>
+            <p id="summaryMatchNote" class="support-text summary-match-note">First to 500 wins.</p>
+            <div id="summaryHistoryNav" class="hidden"></div>
+            <p class="phase-label summary-history-label">Round history</p>
+            <div class="round-table-wrap">
+              <table class="round-table">
+                <thead>
+                  <tr>
+                    <th>R</th>
+                    <th>Bid</th>
+                    <th>Win</th>
+                    <th>Us</th>
+                    <th>Them</th>
+                  </tr>
+                </thead>
+                <tbody id="summaryTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside id="historyDrawer" class="history-drawer">
+      <div class="history-header">
+        <h2>Previous Trick</h2>
+        <button id="historyClose" class="ghost-button" type="button">Close</button>
+      </div>
+      <div id="historyContent" class="history-content"></div>
+    </aside>
+    <div id="historyBackdrop" class="history-backdrop hidden"></div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
