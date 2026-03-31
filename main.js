@@ -183,6 +183,7 @@
     ui.summaryThem = document.getElementById("summaryThem");
     ui.summaryBid = document.getElementById("summaryBid");
     ui.summaryResult = document.getElementById("summaryResult");
+    ui.summaryDetail = document.getElementById("summaryDetail");
     ui.summaryNav = document.getElementById("summaryNav");
     ui.toggleScoring = document.getElementById("toggleScoring");
     ui.summaryScoring = document.getElementById("summaryScoring");
@@ -458,6 +459,10 @@
     var plan = evaluateBidPlan(player);
     var floor = getMinimumBid();
     var match = getAiMatchState(player, getAiProfile(player));
+    var teammateHolding = state.currentBidHolder !== null &&
+      state.currentBidHolder !== player &&
+      teamForPlayer(state.currentBidHolder) === teamForPlayer(player);
+    var activeOpponents = countActiveOpponents(player);
     var target = plan.targetBid;
     var bid;
     var extraRoom;
@@ -476,6 +481,26 @@
       return Math.min(MAX_BID, Math.max(floor, Math.min(target, bid)));
     }
 
+    if (teammateHolding) {
+      var pressure = match.trailingPressure + match.disruptionPressure - match.closingPressure;
+      var takeoverThreshold = activeOpponents === 0 ? 25 : 20;
+      var teamEdge = target - state.currentBid;
+
+      if (pressure > 0.8) {
+        takeoverThreshold -= 5;
+      }
+      if (teamEdge < takeoverThreshold) {
+        return null;
+      }
+
+      bid = floor;
+      if (activeOpponents > 0 && teamEdge >= takeoverThreshold + 15) {
+        bid += 5;
+      }
+
+      return Math.min(MAX_BID, Math.min(target, bid));
+    }
+
     bid = floor;
     extraRoom = target - floor;
 
@@ -492,6 +517,19 @@
     }
 
     return Math.min(MAX_BID, Math.min(target, bid));
+  }
+
+  function countActiveOpponents(player) {
+    var team = teamForPlayer(player);
+    var active = 0;
+
+    PLAYERS.forEach(function (otherPlayer) {
+      if (teamForPlayer(otherPlayer) !== team && !state.passed[otherPlayer]) {
+        active += 1;
+      }
+    });
+
+    return active;
   }
 
   function estimateHandStrength(cards) {
@@ -806,6 +844,34 @@
     }, 0);
   }
 
+  function buriedKittyPoints() {
+    return state.buriedKitty.reduce(function (sum, card) {
+      return sum + cardPoints(card);
+    }, 0);
+  }
+
+  function endgameRetentionPenalty(card, context) {
+    var remainingCards = context.round.remainingCards;
+    var swingScale = clamp(context.lastTrickSwing / 25, 1, 2);
+    var keepScore;
+    var weight;
+
+    if (remainingCards > 3) {
+      return 0;
+    }
+
+    keepScore = aiKeepScore(card, context.hand, state.trump, context.player);
+    if (remainingCards === 3) {
+      weight = 0.06;
+    } else if (remainingCards === 2) {
+      weight = 0.18;
+    } else {
+      weight = 0;
+    }
+
+    return keepScore * weight * swingScale;
+  }
+
   function buildAiPlayContext(player) {
     var profile = getAiProfile(player);
     var winningPlay = null;
@@ -823,6 +889,7 @@
       match: getAiMatchState(player, profile),
       round: getAiRoundState(player),
       trickPoints: currentTrickPoints(),
+      lastTrickSwing: 20 + buriedKittyPoints(),
       playersAfter: 3 - state.trick.length,
       isLastToAct: state.trick.length === 3,
       remainingTrumpElsewhere: countRemainingTrumpOutsidePlayer(player),
@@ -848,6 +915,7 @@
     var suitCount = countSuitInHand(context.hand, suit, state.trump);
     var isTrump = suit === state.trump;
     var control = Math.max(0, 3 - higherUnknown);
+    var preservePenalty = endgameRetentionPenalty(card, context);
     var score = 0;
 
     if (!isTrump) {
@@ -872,6 +940,7 @@
     if (!isTrump && suitCount <= 1 && cardPoints(card) === 0) {
       score += 1.5;
     }
+    score -= preservePenalty;
 
     return score;
   }
@@ -880,6 +949,7 @@
     var profile = context.profile;
     var suit = effectiveSuit(card, state.trump);
     var suitCount = countSuitInHand(context.hand, suit, state.trump);
+    var preservePenalty = endgameRetentionPenalty(card, context);
     var score = 0;
 
     score += suit === state.trump ? -6 : 3;
@@ -892,6 +962,7 @@
     if (context.winningTeam === context.team && context.winningPlay && context.winningPlay.player !== context.player) {
       score += 3.5 * profile.partnerTrust;
     }
+    score -= preservePenalty;
 
     return score;
   }
@@ -902,10 +973,11 @@
     var confidence = canWin ? estimateWinningConfidence(card, context) : 0;
     var trickValue = context.trickPoints + cardPoints(card);
     var preserve = aiKeepScore(card, context.hand, state.trump, context.player);
-    var score = -preserve * 0.08;
+    var preservePenalty = endgameRetentionPenalty(card, context);
+    var score = -preserve * 0.08 - preservePenalty;
 
     if (context.hand.length === 1) {
-      trickValue += 20;
+      trickValue += context.lastTrickSwing;
     }
 
     if (canWin) {
