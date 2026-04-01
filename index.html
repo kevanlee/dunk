@@ -80,24 +80,22 @@
           </div>
 
           <section class="inline-hand bidding-hand-strip">
-            <div id="dealSeats" class="deal-seats hidden" aria-hidden="true">
-              <div class="deal-seat">
-                <span>Mae</span>
-                <strong id="dealCountMae">0</strong>
-              </div>
-              <div class="deal-seat">
-                <span>Bea</span>
-                <strong id="dealCountBea">0</strong>
-              </div>
-              <div class="deal-seat">
-                <span>Cal</span>
-                <strong id="dealCountCal">0</strong>
-              </div>
-            </div>
             <div id="dealPile" class="deal-pile hidden" aria-hidden="true">
               <span class="deal-pile-card"></span>
-              <span class="deal-pile-card"></span>
-              <span class="deal-pile-card"></span>
+            </div>
+            <div id="dealSeats" class="deal-seats hidden" aria-hidden="true">
+              <div class="deal-seat">
+                <span class="deal-seat-fill" id="dealFillMae"></span>
+                <span class="deal-seat-label">Mae</span>
+              </div>
+              <div class="deal-seat">
+                <span class="deal-seat-fill" id="dealFillBea"></span>
+                <span class="deal-seat-label">Bea</span>
+              </div>
+              <div class="deal-seat">
+                <span class="deal-seat-fill" id="dealFillCal"></span>
+                <span class="deal-seat-label">Cal</span>
+              </div>
             </div>
             <div class="hand-header">
               <span>Your hand</span>
@@ -193,6 +191,7 @@
                 <div id="slotRight" class="table-slot"></div>
                 <div id="slotBottom" class="table-slot"></div>
               </div>
+              <div id="rookStickerOverlay" class="sticker-overlay" aria-hidden="true"></div>
             </div>
 
             <p id="playMessage" class="play-message">Play a card.</p>
@@ -212,6 +211,13 @@
         <div class="panel-card">
           <p id="summaryPhaseLabel" class="phase-label">Round Summary</p>
           <h2 id="summaryTitle">Round Complete</h2>
+          <div id="summaryStory" class="summary-story hidden">
+            <div class="summary-story-row">
+              <span id="summaryStoryLabel">Contract</span>
+              <strong id="summaryStoryHeadline">You needed 140 and scored 165.</strong>
+            </div>
+            <p id="summaryStoryMood" class="support-text">Made it by 25 points. Comfortable finish.</p>
+          </div>
           <div id="summaryGrid" class="summary-grid">
             <div class="summary-box">
               <span>Us this round</span>

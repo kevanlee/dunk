@@ -10,6 +10,9 @@
   var MIN_BID = 100;
   var MAX_BID = 200;
   var BID_STEP = 5;
+  var MATCH_TARGET = 500;
+  var TOTAL_CARD_POINTS = 180;
+  var LAST_TRICK_BONUS = 20;
   var PLAYERS = [0, 1, 2, 3];
   var BID_DELAY = 1200;
   var AI_DELAY = 700;
@@ -26,7 +29,11 @@
       disruptionBias: 0.95,
       trumpPressure: 0.95,
       scoringProtection: 1.15,
-      discardPragmatism: 1.0
+      discardPragmatism: 1.0,
+      contractLockBias: 1.2,
+      extraPointGreed: 0.9,
+      denialBias: 1.0,
+      closerBias: 1.2
     },
     bold: {
       bidAggression: 1.15,
@@ -37,7 +44,11 @@
       disruptionBias: 1.0,
       trumpPressure: 1.15,
       scoringProtection: 0.9,
-      discardPragmatism: 0.95
+      discardPragmatism: 0.95,
+      contractLockBias: 0.9,
+      extraPointGreed: 1.15,
+      denialBias: 0.9,
+      closerBias: 0.9
     },
     disruptor: {
       bidAggression: 1.05,
@@ -48,7 +59,11 @@
       disruptionBias: 1.25,
       trumpPressure: 1.05,
       scoringProtection: 1.0,
-      discardPragmatism: 1.1
+      discardPragmatism: 1.1,
+      contractLockBias: 1.0,
+      extraPointGreed: 1.0,
+      denialBias: 1.25,
+      closerBias: 1.0
     }
   };
   var AI_STYLE_BY_PLAYER = [null, "steady", "bold", "disruptor"];
@@ -105,7 +120,8 @@
       previousTrick: null,
       gameOver: false,
       busy: false,
-      timeoutId: null
+      timeoutId: null,
+      rookStickerCleanupId: null
     };
   }
 
@@ -131,9 +147,9 @@
     ui.bidActions = document.getElementById("bidActions");
     ui.handStrengthHint = document.getElementById("handStrengthHint");
     ui.dealSeats = document.getElementById("dealSeats");
-    ui.dealCountMae = document.getElementById("dealCountMae");
-    ui.dealCountBea = document.getElementById("dealCountBea");
-    ui.dealCountCal = document.getElementById("dealCountCal");
+    ui.dealFillMae = document.getElementById("dealFillMae");
+    ui.dealFillBea = document.getElementById("dealFillBea");
+    ui.dealFillCal = document.getElementById("dealFillCal");
     ui.dealPile = document.getElementById("dealPile");
     ui.decreaseBid = document.getElementById("decreaseBid");
     ui.increaseBid = document.getElementById("increaseBid");
@@ -164,6 +180,8 @@
     ui.playMessage = document.getElementById("playMessage");
     ui.handHint = document.getElementById("handHint");
     ui.playerHand = document.getElementById("playerHand");
+    ui.rookStickerOverlay = document.getElementById("rookStickerOverlay");
+    ui.tableArea = document.querySelector(".table-area");
     ui.seatTopCount = document.getElementById("seatTopCount");
     ui.seatLeftCount = document.getElementById("seatLeftCount");
     ui.seatRightCount = document.getElementById("seatRightCount");
@@ -178,6 +196,10 @@
     ui.slotBottom = document.getElementById("slotBottom");
     ui.summaryTitle = document.getElementById("summaryTitle");
     ui.summaryPhaseLabel = document.getElementById("summaryPhaseLabel");
+    ui.summaryStory = document.getElementById("summaryStory");
+    ui.summaryStoryLabel = document.getElementById("summaryStoryLabel");
+    ui.summaryStoryHeadline = document.getElementById("summaryStoryHeadline");
+    ui.summaryStoryMood = document.getElementById("summaryStoryMood");
     ui.summaryGrid = document.getElementById("summaryGrid");
     ui.summaryUs = document.getElementById("summaryUs");
     ui.summaryThem = document.getElementById("summaryThem");
@@ -381,6 +403,7 @@
     state.previousTrick = null;
     state.completedTricks = [];
     state.busy = false;
+    clearRookSticker();
 
     dealInitialHands();
     state.hands = cloneHands(state.initialHands);
@@ -457,17 +480,26 @@
 
   function chooseAiBid(player) {
     var plan = evaluateBidPlan(player);
+    var profile = getAiProfile(player);
     var floor = getMinimumBid();
-    var match = getAiMatchState(player, getAiProfile(player));
+    var match = getAiMatchState(player, profile);
     var teammateHolding = state.currentBidHolder !== null &&
       state.currentBidHolder !== player &&
       teamForPlayer(state.currentBidHolder) === teamForPlayer(player);
     var activeOpponents = countActiveOpponents(player);
     var target = plan.targetBid;
+    var conservativeHand = plan.score < 84;
     var bid;
     var extraRoom;
 
     if (target < floor || floor > 175) {
+      return null;
+    }
+    if (state.currentBid !== null &&
+      target === floor &&
+      match.shouldReduceVariance > 0.78 &&
+      conservativeHand &&
+      teamForPlayer(state.currentBidHolder) !== teamForPlayer(player)) {
       return null;
     }
 
@@ -478,11 +510,19 @@
       } else if (target >= floor + 10) {
         bid += 5;
       }
+      if (match.mustStopOpponents > 0.75 && target - bid >= 5) {
+        bid += 5;
+      }
+      if (match.shouldReduceVariance > 0.8 && conservativeHand && bid > floor) {
+        bid -= 5;
+      }
       return Math.min(MAX_BID, Math.max(floor, Math.min(target, bid)));
     }
 
     if (teammateHolding) {
-      var pressure = match.trailingPressure + match.disruptionPressure - match.closingPressure;
+      var pressure = match.shouldIncreaseVariance +
+        match.mustStopOpponents * 0.6 -
+        match.shouldReduceVariance * 0.8;
       var takeoverThreshold = activeOpponents === 0 ? 25 : 20;
       var teamEdge = target - state.currentBid;
 
@@ -512,7 +552,13 @@
     if (match.trailingPressure > 0.65 && target - bid >= 5) {
       bid += 5;
     }
+    if (match.mustStopOpponents > 0.7 && target - bid >= 5) {
+      bid += 5;
+    }
     if (match.closingPressure > 0.7 && bid > floor) {
+      bid -= 5;
+    }
+    if (match.shouldReduceVariance > 0.8 && conservativeHand && bid > floor) {
       bid -= 5;
     }
 
@@ -575,38 +621,254 @@
     var ourScore = state.matchPoints[team];
     var theirScore = state.matchPoints[opponentTeam];
     var deficit = theirScore - ourScore;
+    var ourDistanceToWin = Math.max(0, MATCH_TARGET - ourScore);
+    var theirDistanceToWin = Math.max(0, MATCH_TARGET - theirScore);
+    var trailingPressure = clamp(deficit / 150, 0, 1) * profile.riskBias;
+    var closingPressure = clamp((ourScore - 430) / 70, 0, 1) * profile.safetyBias;
+    var disruptionPressure = clamp((theirScore - 430) / 70, 0, 1) * profile.disruptionBias;
+    var mustStopOpponents = clamp((95 - theirDistanceToWin) / 95, 0, 1) * profile.denialBias;
+    var canClinchSoon = clamp((105 - ourDistanceToWin) / 105, 0, 1) * profile.contractLockBias;
+    var leadMargin = ourScore - theirScore;
+    var shouldReduceVariance = clamp(
+      Math.max(canClinchSoon * 0.9, leadMargin > 0 ? leadMargin / 170 : 0) * profile.safetyBias,
+      0,
+      1
+    );
+    var shouldIncreaseVariance = clamp(
+      Math.max(trailingPressure, mustStopOpponents * 0.85) * profile.riskBias,
+      0,
+      1
+    );
 
     return {
       team: team,
       opponentTeam: opponentTeam,
       ourScore: ourScore,
       theirScore: theirScore,
-      trailingPressure: clamp(deficit / 150, 0, 1) * profile.riskBias,
-      closingPressure: clamp((ourScore - 430) / 70, 0, 1) * profile.safetyBias,
-      disruptionPressure: clamp((theirScore - 430) / 70, 0, 1) * profile.disruptionBias
+      ourDistanceToWin: ourDistanceToWin,
+      theirDistanceToWin: theirDistanceToWin,
+      leadingMargin: leadMargin,
+      trailingPressure: trailingPressure,
+      closingPressure: closingPressure,
+      disruptionPressure: disruptionPressure,
+      mustStopOpponents: mustStopOpponents,
+      canClinchSoon: canClinchSoon,
+      shouldReduceVariance: shouldReduceVariance,
+      shouldIncreaseVariance: shouldIncreaseVariance
     };
   }
 
   function getAiRoundState(player) {
     var team = teamForPlayer(player);
+    var opponentTeam = team === 0 ? 1 : 0;
     var bidderTeam = state.bidder === null ? null : teamForPlayer(state.bidder);
-    var hand = state.hands[player];
-    var remainingCards = hand && hand.length ? hand.length : 13;
+    var hand = state.hands[player] || state.initialHands[player] || [];
+    var remainingCards = hand ? hand.length : 13;
+    var awardedPoints = state.roundPoints[0] + state.roundPoints[1];
+    var remainingCardPoints = Math.max(0, TOTAL_CARD_POINTS - awardedPoints);
+    var lastTrickSwing = remainingCards > 0 ? LAST_TRICK_BONUS + buriedKittyPoints() : 0;
+    var totalSwingRemaining = remainingCardPoints + (remainingCards > 0 ? LAST_TRICK_BONUS : 0);
+    var bidderPoints = bidderTeam === null ? 0 : state.roundPoints[bidderTeam];
     var contractPressure = 0;
     var disruptionPressure = 0;
+    var pointsNeededToMake = 0;
+    var contractLocked = 0;
+    var setUrgency = 0;
+    var extraPointPressure = 0;
+    var closerWindow;
+    var closerStrength;
+    var closerPressure;
 
     if (bidderTeam === team && state.winningBid !== null) {
-      contractPressure = clamp((state.winningBid - state.roundPoints[team]) / Math.max(25, remainingCards * 18), 0, 1);
+      pointsNeededToMake = Math.max(0, state.winningBid - state.roundPoints[team]);
+      contractPressure = clamp(
+        pointsNeededToMake / Math.max(25, remainingCardPoints * 0.6 + lastTrickSwing),
+        0,
+        1
+      );
+      contractLocked = clamp(
+        (state.roundPoints[team] - state.winningBid + Math.max(10, lastTrickSwing * 0.35)) /
+          Math.max(25, lastTrickSwing + 15),
+        0,
+        1
+      ) * 1.05;
+      extraPointPressure = clamp(
+        Math.max(0, remainingCardPoints - pointsNeededToMake) / 85,
+        0,
+        1
+      );
     } else if (bidderTeam !== null && state.winningBid !== null) {
-      disruptionPressure = clamp((state.roundPoints[bidderTeam] - (state.winningBid - 40)) / 50, 0, 1);
+      pointsNeededToMake = Math.max(0, state.winningBid - bidderPoints);
+      disruptionPressure = clamp((bidderPoints - (state.winningBid - 45)) / 50, 0, 1);
+      setUrgency = clamp((45 - pointsNeededToMake) / 45, 0, 1);
+      extraPointPressure = clamp(
+        Math.max(0, state.roundPoints[team] - state.roundPoints[opponentTeam]) / 80,
+        0,
+        1
+      );
     }
 
+    closerWindow = clamp((5 - remainingCards) / 3, 0, 1);
+    closerStrength = state.phase === "play" ? estimateCloserStrength(player, hand, state.trump) : 0;
+    closerPressure = clamp(closerWindow * (closerStrength / 9), 0, 1);
+
     return {
+      team: team,
+      opponentTeam: opponentTeam,
       bidderTeam: bidderTeam,
+      ourRoundPoints: state.roundPoints[team],
+      theirRoundPoints: state.roundPoints[opponentTeam],
+      bidderPoints: bidderPoints,
+      pointsNeededToMake: pointsNeededToMake,
+      remainingCardPoints: remainingCardPoints,
+      totalSwingRemaining: totalSwingRemaining,
+      lastTrickSwing: lastTrickSwing,
       contractPressure: contractPressure,
       disruptionPressure: disruptionPressure,
+      contractLocked: contractLocked,
+      setUrgency: setUrgency,
+      extraPointPressure: extraPointPressure,
+      closerWindow: closerWindow,
+      closerStrength: closerStrength,
+      closerPressure: closerPressure,
       remainingCards: remainingCards
     };
+  }
+
+  function estimateCloserStrength(player, hand, trump) {
+    if (!hand || !hand.length || !trump) {
+      return 0;
+    }
+
+    return hand.reduce(function (best, card) {
+      var suit = effectiveSuit(card, trump);
+      var higherUnknown = countHigherUnknownCards(card, player, trump, hand);
+      var score = cardControlScore(card, trump) * 1.7;
+
+      if (suit === trump) {
+        score += 3.5;
+      }
+      if (card.isRook) {
+        score += 4;
+      } else if (card.rank === 1) {
+        score += 2.4;
+      }
+      score += cardPoints(card) * 0.2;
+      score -= higherUnknown * 1.8;
+
+      return Math.max(best, score);
+    }, 0);
+  }
+
+  function deriveAiTacticalMode(player, profile, match, round) {
+    var mode = {
+      label: "balanced",
+      pushToMake: 0,
+      setTheBid: 0,
+      cashPoints: 0,
+      preserveCloser: 0,
+      protectLead: 0,
+      feedPartner: 0,
+      denyPoints: 0
+    };
+
+    if (round.bidderTeam === null) {
+      return mode;
+    }
+
+    if (round.bidderTeam === round.team) {
+      mode.pushToMake = clamp(
+        round.contractPressure * (1.1 + match.shouldIncreaseVariance * 0.35) +
+          match.mustStopOpponents * 0.2,
+        0,
+        1.6
+      );
+      mode.protectLead = clamp(
+        round.contractLocked * profile.contractLockBias +
+          match.shouldReduceVariance * 0.8 +
+          match.canClinchSoon * 0.35,
+        0,
+        1.6
+      );
+      mode.preserveCloser = clamp(
+        round.closerPressure * profile.closerBias +
+          round.closerWindow * (0.35 + mode.protectLead * 0.5),
+        0,
+        1.6
+      );
+      mode.cashPoints = clamp(
+        round.contractLocked * 0.55 +
+          round.extraPointPressure * profile.extraPointGreed +
+          match.shouldIncreaseVariance * 0.45 -
+          match.shouldReduceVariance * 0.35,
+        0,
+        1.4
+      );
+      mode.feedPartner = clamp(
+        profile.partnerTrust * 0.35 +
+          mode.protectLead * 0.3 +
+          round.contractLocked * 0.2,
+        0,
+        1.3
+      );
+      mode.denyPoints = clamp(
+        match.mustStopOpponents * 0.3 + match.shouldReduceVariance * 0.2,
+        0,
+        0.8
+      );
+      if (mode.protectLead >= 1 && mode.preserveCloser > mode.pushToMake) {
+        mode.label = "protect_contract";
+      } else if (mode.pushToMake > 0.95) {
+        mode.label = "press_for_make";
+      } else if (mode.cashPoints > 0.9) {
+        mode.label = "cash_points";
+      }
+      return mode;
+    }
+
+    mode.setTheBid = clamp(
+      round.setUrgency * 1.15 * profile.denialBias +
+        match.mustStopOpponents * 0.7 +
+        match.disruptionPressure * 0.4,
+      0,
+      1.7
+    );
+    mode.denyPoints = clamp(
+      match.mustStopOpponents * 0.8 + round.setUrgency * 0.5,
+      0,
+      1.5
+    );
+    mode.protectLead = clamp(
+      match.shouldReduceVariance * 0.6 + mode.setTheBid * 0.25,
+      0,
+      1.2
+    );
+    mode.preserveCloser = clamp(
+      round.closerPressure * profile.closerBias +
+        round.closerWindow * 0.3 +
+        mode.setTheBid * 0.25,
+      0,
+      1.4
+    );
+    mode.cashPoints = clamp(
+      round.extraPointPressure * profile.extraPointGreed * 0.45 +
+        match.shouldIncreaseVariance * 0.35 -
+        match.mustStopOpponents * 0.25,
+      0,
+      1.1
+    );
+    mode.feedPartner = clamp(
+      profile.partnerTrust * 0.25 + mode.protectLead * 0.25,
+      0,
+      1
+    );
+    if (mode.setTheBid > 0.95) {
+      mode.label = "set_the_bid";
+    } else if (mode.preserveCloser > 0.95) {
+      mode.label = "preserve_closer";
+    }
+
+    return mode;
   }
 
   function buildEffectiveSuitCounts(cards, trump) {
@@ -797,6 +1059,9 @@
     score += match.trailingPressure * 8;
     score += match.disruptionPressure * 6;
     score -= match.closingPressure * 8;
+    score += match.shouldIncreaseVariance * 5;
+    score += match.mustStopOpponents * 5;
+    score -= match.shouldReduceVariance * 6;
 
     bidOffset = Math.max(0, roundToBidStep((score - 74) * 1.55 * profile.bidAggression));
 
@@ -853,6 +1118,15 @@
   function endgameRetentionPenalty(card, context) {
     var remainingCards = context.round.remainingCards;
     var swingScale = clamp(context.lastTrickSwing / 25, 1, 2);
+    var modeBias = clamp(
+      1 +
+        context.mode.preserveCloser * 0.9 +
+        context.mode.protectLead * 0.35 -
+        context.mode.pushToMake * 0.25 -
+        context.mode.setTheBid * 0.15,
+      0.6,
+      2.2
+    );
     var keepScore;
     var weight;
 
@@ -869,16 +1143,49 @@
       weight = 0;
     }
 
-    return keepScore * weight * swingScale;
+    return keepScore * weight * swingScale * modeBias;
+  }
+
+  function estimateVisibleWinnerConfidence(winningPlay, player, playersAfter) {
+    var higherUnknown;
+
+    if (!winningPlay) {
+      return 0;
+    }
+    if (playersAfter <= 0) {
+      return 1;
+    }
+
+    higherUnknown = countHigherUnknownCards(
+      winningPlay.card,
+      player,
+      state.trump,
+      state.hands[player] || []
+    );
+
+    return clamp(1 - (higherUnknown / Math.max(1, playersAfter + 1)), 0, 1);
   }
 
   function buildAiPlayContext(player) {
     var profile = getAiProfile(player);
+    var match = getAiMatchState(player, profile);
+    var round = getAiRoundState(player);
     var winningPlay = null;
+    var playersAfter = 3 - state.trick.length;
+    var teammateWinning = false;
+    var teammateWinConfidence = 0;
+    var mode;
 
     if (state.trick.length) {
       winningPlay = state.trick[determineTrickWinner(state.trick, state.leadSuit, state.trump)];
+      teammateWinning = teamForPlayer(winningPlay.player) === teamForPlayer(player) &&
+        winningPlay.player !== player;
+      if (teammateWinning) {
+        teammateWinConfidence = estimateVisibleWinnerConfidence(winningPlay, player, playersAfter);
+      }
     }
+
+    mode = deriveAiTacticalMode(player, profile, match, round);
 
     return {
       player: player,
@@ -886,15 +1193,18 @@
       partner: teammateForPlayer(player),
       hand: state.hands[player],
       profile: profile,
-      match: getAiMatchState(player, profile),
-      round: getAiRoundState(player),
+      match: match,
+      round: round,
+      mode: mode,
       trickPoints: currentTrickPoints(),
-      lastTrickSwing: 20 + buriedKittyPoints(),
-      playersAfter: 3 - state.trick.length,
+      lastTrickSwing: round.lastTrickSwing || (LAST_TRICK_BONUS + buriedKittyPoints()),
+      playersAfter: playersAfter,
       isLastToAct: state.trick.length === 3,
       remainingTrumpElsewhere: countRemainingTrumpOutsidePlayer(player),
       winningPlay: winningPlay,
-      winningTeam: winningPlay ? teamForPlayer(winningPlay.player) : null
+      winningTeam: winningPlay ? teamForPlayer(winningPlay.player) : null,
+      teammateWinning: teammateWinning,
+      teammateWinConfidence: teammateWinConfidence
     };
   }
 
@@ -910,6 +1220,7 @@
 
   function scoreAiLeadChoice(card, context) {
     var profile = context.profile;
+    var mode = context.mode;
     var suit = effectiveSuit(card, state.trump);
     var higherUnknown = countHigherUnknownCards(card, context.player, state.trump, context.hand);
     var suitCount = countSuitInHand(context.hand, suit, state.trump);
@@ -930,12 +1241,20 @@
     score += context.match.disruptionPressure * (isTrump ? 5 : 2) * profile.disruptionBias;
     score += context.round.contractPressure * (isTrump ? 6 : 3);
     score += context.round.disruptionPressure * (isTrump ? 4 : 2) * profile.disruptionBias;
+    score += mode.pushToMake * (isTrump ? 6 : 2.5);
+    score += mode.setTheBid * (isTrump ? 5 : 2);
+    score += mode.cashPoints * (control >= 1.5 ? cardPoints(card) * 0.45 : 0);
+    score -= mode.protectLead * higherUnknown * 2.5;
+    score += mode.denyPoints * (isTrump ? 3.5 : 1.5);
     if (isTrump) {
       score += 4 * profile.trumpPressure;
     }
     if (cardPoints(card) > 0 && control < 1.5) {
       score -= cardPoints(card) * 0.9 * profile.scoringProtection;
       score -= context.match.closingPressure * 6 * profile.safetyBias;
+    }
+    if (isTrump && higherUnknown > 1) {
+      score -= mode.preserveCloser * 4;
     }
     if (!isTrump && suitCount <= 1 && cardPoints(card) === 0) {
       score += 1.5;
@@ -947,6 +1266,7 @@
 
   function scoreAiSlough(card, context) {
     var profile = context.profile;
+    var mode = context.mode;
     var suit = effectiveSuit(card, state.trump);
     var suitCount = countSuitInHand(context.hand, suit, state.trump);
     var preservePenalty = endgameRetentionPenalty(card, context);
@@ -962,6 +1282,19 @@
     if (context.winningTeam === context.team && context.winningPlay && context.winningPlay.player !== context.player) {
       score += 3.5 * profile.partnerTrust;
     }
+    if (context.teammateWinning) {
+      score += 4 * context.teammateWinConfidence * profile.partnerTrust;
+      score += cardPoints(card) * 1.9 * context.teammateWinConfidence * profile.partnerTrust;
+      score += mode.feedPartner * context.teammateWinConfidence * (1.5 + cardPoints(card) * 0.9);
+      if (suit === state.trump) {
+        score -= 3.5 * context.teammateWinConfidence;
+      }
+    } else {
+      score -= mode.denyPoints * cardPoints(card) * 0.9;
+    }
+    if (suit === state.trump) {
+      score -= mode.preserveCloser * 2.5;
+    }
     score -= preservePenalty;
 
     return score;
@@ -969,6 +1302,7 @@
 
   function scoreAiFollowChoice(card, context) {
     var profile = context.profile;
+    var mode = context.mode;
     var canWin = canBeatCurrentWinner(card);
     var confidence = canWin ? estimateWinningConfidence(card, context) : 0;
     var trickValue = context.trickPoints + cardPoints(card);
@@ -988,15 +1322,31 @@
       score -= context.match.closingPressure * (1 - confidence) * 8 * profile.safetyBias;
       score += context.round.contractPressure * 7;
       score += context.round.disruptionPressure * 5 * profile.disruptionBias;
+      score += mode.pushToMake * trickValue * 0.45;
+      score += mode.setTheBid * Math.max(context.trickPoints, trickValue) * 0.4;
+      score += mode.denyPoints * context.trickPoints * 0.55;
+      score -= mode.protectLead * (1 - confidence) * 6;
       if (context.isLastToAct) {
         score += 4;
       }
       if (context.winningTeam === context.team && context.winningPlay && context.winningPlay.player !== context.player) {
         score -= 7 * profile.partnerTrust;
       }
+      if (context.teammateWinning) {
+        score -= (10 + (context.isLastToAct ? 10 : 0)) * context.teammateWinConfidence * profile.partnerTrust;
+        score -= cardControlScore(card, state.trump) *
+          (1.5 + context.teammateWinConfidence) *
+          profile.partnerTrust;
+        if (effectiveSuit(card, state.trump) === state.trump) {
+          score -= 5 * context.teammateWinConfidence * profile.partnerTrust;
+        }
+      }
       if (cardPoints(card) > 0 && trickValue < 10 && !context.isLastToAct) {
         score -= 2 * profile.scoringProtection;
         score -= context.match.closingPressure * 4 * profile.safetyBias;
+      }
+      if (effectiveSuit(card, state.trump) === state.trump) {
+        score -= mode.preserveCloser * 2.8;
       }
     } else {
       score += scoreAiSlough(card, context);
@@ -1209,6 +1559,9 @@
 
     hand.splice(index, 1);
     state.trick.push({ player: player, card: card });
+    if (card.isRook) {
+      showRookSticker();
+    }
 
     if (state.trick.length === 1) {
       state.leadSuit = effectiveSuit(card, state.trump);
@@ -1288,6 +1641,9 @@
     var bidMargin = Math.abs(state.roundPoints[bidderTeam] - state.winningBid);
     var summaryUs = roundSummaryPoints(0, bidderTeam, bidMade);
     var summaryThem = roundSummaryPoints(1, bidderTeam, bidMade);
+    var bidderName = PLAYER_NAMES[state.bidder];
+    var bidderTotal = state.roundPoints[bidderTeam];
+    var story = buildSummaryStory(bidderTeam, bidderName, bidderTotal, bidMade, bidMargin);
 
     if (bidMade) {
       state.matchPoints[bidderTeam] += state.roundPoints[bidderTeam];
@@ -1303,7 +1659,10 @@
       bid: PLAYER_NAMES[state.bidder] + " bid " + state.winningBid,
       bidMade: bidMade,
       result: bidMade ? "Made" : "Set",
-      margin: (bidMade ? "Made it by " : "Missed it by ") + bidMargin + " points"
+      margin: (bidMade ? "Made it by " : "Missed it by ") + bidMargin + " points",
+      storyLabel: story.label,
+      storyHeadline: story.headline,
+      storyMood: story.mood
     };
     state.roundHistory.unshift({
       round: "R" + state.roundNumber,
@@ -1553,9 +1912,11 @@
     ui.dealSeats.classList.toggle("hidden", !preBid);
     ui.dealPile.classList.toggle("hidden", !preBid);
     ui.dealPile.classList.toggle("empty", dealDone);
-    ui.dealCountMae.textContent = state.dealSeatCounts[0];
-    ui.dealCountBea.textContent = state.dealSeatCounts[1];
-    ui.dealCountCal.textContent = state.dealSeatCounts[2];
+    ui.dealFillMae.style.width = dealSeatWidth(state.dealSeatCounts[0]);
+    ui.dealFillBea.style.width = dealSeatWidth(state.dealSeatCounts[1]);
+    ui.dealFillCal.style.width = dealSeatWidth(state.dealSeatCounts[2]);
+    ui.currentHighRow.classList.toggle("bid-winner", state.biddingComplete);
+    ui.turnRow.classList.toggle("active-turn", !preBid && !state.biddingComplete);
     ui.bidPicker.classList.toggle("is-disabled", state.currentBidTurn !== 0 || state.busy || state.biddingComplete || !state.biddingStarted);
     ui.currentHighRow.classList.toggle("hidden", preBid);
     ui.turnRow.classList.toggle("hidden", preBid || state.biddingComplete);
@@ -1658,6 +2019,53 @@
     renderHandGrid(ui.playerHand, state.hands[0], state.currentPlayer === 0 && !state.busy ? playHumanCard : null, "play");
   }
 
+  function showRookSticker() {
+    var sticker;
+
+    if (!ui.rookStickerOverlay || !ui.tableArea) {
+      return;
+    }
+
+    clearRookSticker();
+
+    sticker = document.createElement("img");
+    sticker.className = "rook-sticker";
+    sticker.src = "img/rook-sticker.png";
+    sticker.alt = "";
+    sticker.decoding = "async";
+    sticker.setAttribute("aria-hidden", "true");
+    ui.rookStickerOverlay.appendChild(sticker);
+
+    ui.tableArea.classList.remove("rook-impact");
+    void ui.tableArea.offsetWidth;
+    ui.tableArea.classList.add("rook-impact");
+
+    sticker.addEventListener("animationend", function () {
+      if (sticker.parentNode === ui.rookStickerOverlay) {
+        ui.rookStickerOverlay.removeChild(sticker);
+      }
+    }, { once: true });
+
+    state.rookStickerCleanupId = window.setTimeout(function () {
+      state.rookStickerCleanupId = null;
+      ui.tableArea.classList.remove("rook-impact");
+      clearRookSticker();
+    }, 700);
+  }
+
+  function clearRookSticker() {
+    if (state.rookStickerCleanupId !== null) {
+      window.clearTimeout(state.rookStickerCleanupId);
+      state.rookStickerCleanupId = null;
+    }
+    if (ui.rookStickerOverlay) {
+      ui.rookStickerOverlay.innerHTML = "";
+    }
+    if (ui.tableArea) {
+      ui.tableArea.classList.remove("rook-impact");
+    }
+  }
+
   function playForSeat(player) {
     return state.trick.find(function (play) {
       return play.player === player;
@@ -1682,7 +2090,7 @@
 
     ui.summaryPhaseLabel.textContent = state.summaryStep === 1
       ? "Round Summary"
-      : (state.gameOver ? "Match Complete" : "Match Score");
+      : "Match Summary";
     ui.summaryTitle.textContent = state.summaryStep === 1 ? summaryHeading() : matchSummaryHeading();
     ui.summaryUs.textContent = state.summary.us;
     ui.summaryThem.textContent = state.summary.them;
@@ -1698,11 +2106,15 @@
     ui.toggleScoring.textContent = state.summaryScoringOpen ? "Hide scoring cards" : "View scoring cards";
     ui.summaryScoring.classList.toggle("hidden", state.summaryStep !== 1 || !state.summaryScoringOpen);
     ui.summaryHistory.classList.toggle("hidden", state.summaryStep !== 2);
+    ui.summaryStory.classList.toggle("hidden", state.summaryStep !== 1);
 
     if (state.summaryStep === 1) {
       if (ui.summaryNav.parentNode !== ui.phaseSummary.querySelector(".panel-card")) {
         ui.phaseSummary.querySelector(".panel-card").insertBefore(ui.summaryNav, ui.toggleScoring);
       }
+      ui.summaryStoryLabel.textContent = state.summary.storyLabel;
+      ui.summaryStoryHeadline.textContent = state.summary.storyHeadline;
+      ui.summaryStoryMood.textContent = state.summary.storyMood;
       ui.summaryDetail.textContent = state.summary.margin || "";
       if (state.summaryScoringOpen) {
         renderSummaryScoring();
@@ -1725,31 +2137,80 @@
 
   function summaryHeading() {
     var bidderName = state.bidder === 0 ? "You" : PLAYER_NAMES[state.bidder];
-    return state.summary && state.summary.bidMade
-      ? bidderName + " made the bid"
-      : bidderName + (state.bidder === 0 ? " were set" : " was set");
+    var bidderTeam = teamForPlayer(state.bidder);
+
+    if (bidderTeam === 0) {
+      return state.summary && state.summary.bidMade ? "Your team made the bid" : "Your team missed the bid";
+    }
+    return state.summary && state.summary.bidMade ? bidderName + " made the bid" : "You set " + bidderName;
   }
 
   function matchSummaryHeading() {
-    return state.gameOver ? matchWinnerLabel() + " win the match" : "Current Match Score";
+    return state.gameOver ? "Final Score" : "Overall Score";
   }
 
   function summaryButtonLabel() {
     if (state.summaryStep === 1) {
-      return state.gameOver ? "View Final Score" : "View Match Score";
+      return "Continue";
     }
     return state.gameOver ? "Start New Match" : "Next Round";
   }
 
   function matchSummaryNote() {
     if (state.gameOver) {
-      return matchWinnerLabel() + " finished ahead. Start New Match resets this match score and round history.";
+      return matchWinnerLabel() + " got to 500 first.";
     }
-    return "First to 500 wins. Next Round keeps this match going.";
+    return "First to 500 wins.";
   }
 
   function matchWinnerLabel() {
     return state.matchPoints[0] > state.matchPoints[1] ? "Us" : "Them";
+  }
+
+  function buildSummaryStory(bidderTeam, bidderName, bidderTotal, bidMade, bidMargin) {
+    var bidderIsUs = bidderTeam === 0;
+    var mood = bidOutcomeMood(bidMargin);
+
+    if (bidderIsUs) {
+      return {
+        label: state.bidder === 0 ? "Your bid" : bidderName + "'s bid",
+        headline: "Your team needed " + state.winningBid + " and finished with " + bidderTotal + ".",
+        mood: bidMade ? "Your side got there. " + mood.make : "Your side came up short. " + mood.miss
+      };
+    }
+
+    return {
+      label: bidderName + "'s bid",
+      headline: bidderName + " needed " + state.winningBid + " and finished with " + bidderTotal + ".",
+      mood: bidMade
+        ? bidderName + " got there. " + mood.oppMake
+        : "Your team set " + bidderName + ". " + mood.oppMiss
+    };
+  }
+
+  function bidOutcomeMood(margin) {
+    if (margin <= 5) {
+      return {
+        make: "A razor-thin finish.",
+        miss: "It was right there.",
+        oppMake: "They barely escaped.",
+        oppMiss: "You caught them at the line."
+      };
+    }
+    if (margin <= 20) {
+      return {
+        make: "A solid make.",
+        miss: "Not far off.",
+        oppMake: "They had just enough room.",
+        oppMiss: "Your team shut the door in time."
+      };
+    }
+    return {
+      make: "That one was never really in doubt.",
+      miss: "That one slipped away hard.",
+      oppMake: "They were in control most of the way.",
+      oppMiss: "Your team took over that round."
+    };
   }
 
   function renderHistoryDrawer() {
@@ -1800,7 +2261,7 @@
 
   function renderSummaryTable() {
     ui.summaryTableBody.innerHTML = "";
-    state.roundHistory.forEach(function (rowData) {
+    state.roundHistory.slice().reverse().forEach(function (rowData) {
       var row = document.createElement("tr");
       row.className = rowData.isLatest ? "latest-round" : "";
       row.innerHTML =
@@ -1893,21 +2354,36 @@
     PLAYERS.forEach(function (player) {
       var card = document.createElement("div");
       var name = document.createElement("span");
+      var meta = document.createElement("span");
       var status = document.createElement("strong");
 
       card.className = "bid-status-card" +
         (player === state.currentBidTurn && !state.biddingComplete ? " active-bidder" : "") +
         (teamForPlayer(player) === teamForPlayer(0) && player !== 0 ? " teammate-bidder" : "") +
         (state.passed[player] ? " passed-bidder" : "") +
-        (player === state.currentBidHolder ? " high-bidder" : "");
+        (player === state.currentBidHolder ? " high-bidder" : "") +
+        (state.biddingComplete && player === state.bidder ? " won-bidder" : "");
       name.className = "bid-status-name";
+      meta.className = "bid-status-meta";
       status.className = "bid-status-value";
       name.textContent = PLAYER_NAMES[player];
       if (teamForPlayer(player) === teamForPlayer(0) && player !== 0) {
         name.textContent += " •";
       }
-      status.textContent = state.bidStatuses[player];
+      meta.textContent = state.biddingComplete && player === state.bidder
+        ? "Bid winner"
+        : state.passed[player]
+          ? "Passed"
+          : player === state.currentBidTurn && !state.biddingComplete
+            ? "Bidding now"
+            : player === state.currentBidHolder
+              ? "High bid"
+              : "In";
+      status.textContent = state.biddingComplete && player === state.bidder
+        ? "Won " + state.winningBid
+        : state.bidStatuses[player];
       card.appendChild(name);
+      card.appendChild(meta);
       card.appendChild(status);
       ui.bidStatusBoard.appendChild(card);
     });
@@ -2181,6 +2657,10 @@
   function biddingStrengthHint(cards) {
     var profile = handStrengthProfile(cards || []);
     return profile.label;
+  }
+
+  function dealSeatWidth(count) {
+    return (Math.max(0, Math.min(13, count)) / 13) * 100 + "%";
   }
 
   function handStrengthProfile(cards) {
