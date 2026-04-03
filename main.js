@@ -53,7 +53,7 @@
       ],
       size: "large",
       intensity: "strong",
-      duration: 700,
+      duration: 780,
       impact: "strong"
     },
     big_trick: {
@@ -65,7 +65,7 @@
       ],
       size: "medium",
       intensity: "medium",
-      duration: 560
+      duration: 680
     },
     bid_set: {
       assets: [
@@ -76,7 +76,7 @@
       ],
       size: "large",
       intensity: "strong",
-      duration: 640
+      duration: 840
     },
     bid_made: {
       assets: [
@@ -87,7 +87,7 @@
       ],
       size: "medium",
       intensity: "medium",
-      duration: 560
+      duration: 760
     },
     game_win: {
       assets: [
@@ -97,7 +97,7 @@
       ],
       size: "xlarge",
       intensity: "strong",
-      duration: 820
+      duration: 1040
     }
   };
   var SUMMARY_STICKER_CONFIG = {
@@ -116,6 +116,83 @@
       "img/stickers/summary-team-loss-facepalm.png"
     ]
   };
+  var ACHIEVEMENT_DEFS = [
+    {
+      id: "first_match_win",
+      title: "First Feather",
+      description: "Win your first completed match.",
+      stickerPool: STICKER_CONFIG.game_win.assets
+    },
+    {
+      id: "bid_caller",
+      title: "Bid Caller",
+      description: "Win 5 bids.",
+      stickerPool: STICKER_CONFIG.bid_made.assets
+    },
+    {
+      id: "contract_clutch",
+      title: "Contract Clutch",
+      description: "Make 3 bids successfully.",
+      stickerPool: STICKER_CONFIG.bid_made.assets
+    },
+    {
+      id: "set_em_up",
+      title: "Set 'Em Up",
+      description: "Set opponents 3 times.",
+      stickerPool: STICKER_CONFIG.bid_set.assets
+    },
+    {
+      id: "big_round",
+      title: "Big Round Energy",
+      description: "Score 100 or more points in a round.",
+      stickerPool: STICKER_CONFIG.big_trick.assets
+    },
+    {
+      id: "perfect_200",
+      title: "Perfect 200",
+      description: "Make a 200 bid once.",
+      stickerPool: STICKER_CONFIG.game_win.assets
+    },
+    {
+      id: "close_shave",
+      title: "Close Shave",
+      description: "Win a match by 50 points or fewer.",
+      stickerPool: SUMMARY_STICKER_CONFIG.summary_close_call
+    },
+    {
+      id: "comeback_kid",
+      title: "Comeback Kid",
+      description: "Win a match after trailing along the way.",
+      stickerPool: SUMMARY_STICKER_CONFIG.summary_win
+    }
+  ];
+  var MINI_STICKER_DEFS = {
+    first_match_win: {
+      label: "First win",
+      assetPool: STICKER_CONFIG.game_win.assets
+    },
+    close_win: {
+      label: "Close win",
+      assetPool: SUMMARY_STICKER_CONFIG.summary_close_call
+    },
+    comeback_win: {
+      label: "Comeback win",
+      assetPool: SUMMARY_STICKER_CONFIG.summary_win
+    },
+    perfect_200: {
+      label: "Perfect 200",
+      assetPool: STICKER_CONFIG.bid_made.assets
+    },
+    opponent_set: {
+      label: "Opponent set",
+      assetPool: STICKER_CONFIG.bid_set.assets
+    },
+    streak_3: {
+      label: "3 match streak",
+      assetPool: STICKER_CONFIG.rook.assets
+    }
+  };
+  var COLLECTOR_SHEET_SLOT_COUNT = 12;
   // AI weights are profile-driven so we can swap personalities without rewriting decisions.
   var AI_PROFILES = {
     steady: {
@@ -277,6 +354,7 @@
       matchId: null,
       matchStartedAt: null,
       matchMaxDeficit: 0,
+      stickerBookPage: "achievements",
       profileRoundsTracked: 0,
       profileMatchCompleteRecorded: false,
       busy: false,
@@ -326,6 +404,10 @@
         currentMatchWinStreak: 0,
         bestMatchWinStreak: 0
       },
+      achievements: {
+        unlocked: {}
+      },
+      miniStickers: [],
       rulesets: {},
       playerRecords: {},
       lastMatch: null
@@ -407,11 +489,54 @@
     nextProfile.opponents.opponentSetRounds = Number(opponents.opponentSetRounds) || 0;
     nextProfile.streaks.currentMatchWinStreak = Number(streaks.currentMatchWinStreak) || 0;
     nextProfile.streaks.bestMatchWinStreak = Number(streaks.bestMatchWinStreak) || 0;
+    nextProfile.achievements = normalizeAchievementProgress(raw && raw.achievements);
+    nextProfile.miniStickers = normalizeMiniStickers(raw && raw.miniStickers);
     nextProfile.rulesets = normalizeRulesetRecords(raw && raw.rulesets);
     nextProfile.playerRecords = normalizePlayerRecords(raw && raw.playerRecords);
     nextProfile.lastMatch = raw && raw.lastMatch ? raw.lastMatch : null;
 
     return nextProfile;
+  }
+
+  function normalizeAchievementProgress(raw) {
+    var next = {
+      unlocked: {}
+    };
+
+    if (!raw || typeof raw !== "object" || !raw.unlocked || typeof raw.unlocked !== "object") {
+      return next;
+    }
+
+    Object.keys(raw.unlocked).forEach(function (id) {
+      var item = raw.unlocked[id] || {};
+      next.unlocked[id] = {
+        unlockedAt: item.unlockedAt || null,
+        stickerAsset: item.stickerAsset || null,
+        tilt: typeof item.tilt === "number" ? item.tilt : 0
+      };
+    });
+
+    return next;
+  }
+
+  function normalizeMiniStickers(raw) {
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+
+    return raw.reduce(function (items, item) {
+      if (!item || typeof item !== "object" || !item.id) {
+        return items;
+      }
+      items.push({
+        id: item.id,
+        earnedAt: item.earnedAt || null,
+        asset: item.asset || null,
+        tilt: typeof item.tilt === "number" ? item.tilt : 0,
+        matchId: item.matchId || null
+      });
+      return items;
+    }, []);
   }
 
   function normalizeRulesetRecords(raw) {
@@ -454,7 +579,14 @@
   }
 
   function loadProfile() {
+    var beforeCount;
+
     profile = normalizeProfile(parseStoredJson(PROFILE_STORAGE_KEY));
+    beforeCount = unlockedAchievementCount();
+    evaluateAchievements();
+    if (unlockedAchievementCount() !== beforeCount) {
+      saveProfile();
+    }
   }
 
   function saveProfile() {
@@ -511,6 +643,96 @@
 
   function createMatchId() {
     return "match-" + Date.now();
+  }
+
+  function totalAchievementCount() {
+    return ACHIEVEMENT_DEFS.length;
+  }
+
+  function unlockedAchievementCount() {
+    return Object.keys(profile.achievements.unlocked).length;
+  }
+
+  function achievementById(id) {
+    var index;
+
+    for (index = 0; index < ACHIEVEMENT_DEFS.length; index += 1) {
+      if (ACHIEVEMENT_DEFS[index].id === id) {
+        return ACHIEVEMENT_DEFS[index];
+      }
+    }
+
+    return null;
+  }
+
+  function stickerAssetFromPool(pool) {
+    if (!pool || !pool.length) {
+      return null;
+    }
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function randomStickerTilt() {
+    return Math.floor(Math.random() * 11) - 5;
+  }
+
+  function isAchievementUnlocked(id) {
+    return !!profile.achievements.unlocked[id];
+  }
+
+  function unlockAchievement(id) {
+    var def = achievementById(id);
+
+    if (!def || isAchievementUnlocked(id)) {
+      return false;
+    }
+
+    profile.achievements.unlocked[id] = {
+      unlockedAt: new Date().toISOString(),
+      stickerAsset: stickerAssetFromPool(def.stickerPool),
+      tilt: randomStickerTilt()
+    };
+    return true;
+  }
+
+  function evaluateAchievements() {
+    unlockAchievementIf("first_match_win", profile.totals.matchesWon >= 1);
+    unlockAchievementIf("bid_caller", profile.human.bidsWon >= 5);
+    unlockAchievementIf("contract_clutch", profile.human.bidsMade >= 3);
+    unlockAchievementIf("set_em_up", profile.opponents.opponentSetRounds >= 3);
+    unlockAchievementIf("big_round", profile.human.bestRoundPoints >= 100);
+    unlockAchievementIf("perfect_200", profile.human.perfectBid200Made >= 1);
+    unlockAchievementIf("close_shave", profile.performance.closeWins >= 1);
+    unlockAchievementIf("comeback_kid", profile.performance.comebackWins >= 1);
+  }
+
+  function unlockAchievementIf(id, condition) {
+    if (condition) {
+      unlockAchievement(id);
+    }
+  }
+
+  function hasMiniSticker(type, matchId) {
+    return profile.miniStickers.some(function (item) {
+      return item.id === type && item.matchId === matchId;
+    });
+  }
+
+  function awardMiniSticker(type, matchId) {
+    var def = MINI_STICKER_DEFS[type];
+
+    if (!def || hasMiniSticker(type, matchId)) {
+      return false;
+    }
+
+    profile.miniStickers.push({
+      id: type,
+      earnedAt: new Date().toISOString(),
+      asset: stickerAssetFromPool(def.assetPool),
+      tilt: randomStickerTilt(),
+      matchId: matchId || null
+    });
+    return true;
   }
 
   function summarizeSavedMatch(savedState) {
@@ -732,6 +954,7 @@
         profile.human.bidsMade += 1;
         if (state.winningBid === getRuleConfig().maxBid) {
           profile.human.perfectBid200Made += 1;
+          awardMiniSticker("perfect_200", state.matchId);
         }
       } else {
         profile.human.bidsSet += 1;
@@ -740,11 +963,13 @@
       profile.opponents.opponentBidRounds += 1;
       if (!bidMade) {
         profile.opponents.opponentSetRounds += 1;
+        awardMiniSticker("opponent_set", state.matchId + "-round-" + state.roundNumber);
       }
     }
 
     profile.human.bestRoundPoints = Math.max(profile.human.bestRoundPoints, state.roundPoints[0]);
     state.profileRoundsTracked = state.roundHistory.length;
+    evaluateAchievements();
     saveProfile();
   }
 
@@ -764,18 +989,26 @@
     profile.performance.bestMatchScore = Math.max(profile.performance.bestMatchScore, state.matchPoints[0]);
     if (won) {
       profile.totals.matchesWon += 1;
+      if (profile.totals.matchesWon === 1) {
+        awardMiniSticker("first_match_win", state.matchId);
+      }
       profile.performance.biggestWinMargin = Math.max(profile.performance.biggestWinMargin, margin);
       if (state.matchMaxDeficit > 0) {
         profile.performance.comebackWins += 1;
+        awardMiniSticker("comeback_win", state.matchId);
       }
       if (margin <= CLOSE_WIN_MARGIN) {
         profile.performance.closeWins += 1;
+        awardMiniSticker("close_win", state.matchId);
       }
       profile.streaks.currentMatchWinStreak += 1;
       profile.streaks.bestMatchWinStreak = Math.max(
         profile.streaks.bestMatchWinStreak,
         profile.streaks.currentMatchWinStreak
       );
+      if (profile.streaks.currentMatchWinStreak >= 3) {
+        awardMiniSticker("streak_3", state.matchId);
+      }
     } else {
       profile.totals.matchesLost += 1;
       profile.performance.biggestLossMargin = Math.max(profile.performance.biggestLossMargin, margin);
@@ -816,6 +1049,7 @@
       rulesetId: state.rulesetId
     };
     state.profileMatchCompleteRecorded = true;
+    evaluateAchievements();
     saveProfile();
   }
 
@@ -893,6 +1127,11 @@
     ui.menuFullThemPoints = document.getElementById("menuFullThemPoints");
     ui.menuFullCurrentStreak = document.getElementById("menuFullCurrentStreak");
     ui.menuFullBestStreak = document.getElementById("menuFullBestStreak");
+    ui.menuStickerBookStatus = document.getElementById("menuStickerBookStatus");
+    ui.showAchievementBook = document.getElementById("showAchievementBook");
+    ui.showCollectorSheet = document.getElementById("showCollectorSheet");
+    ui.menuStickerAchievements = document.getElementById("menuStickerAchievements");
+    ui.menuStickerCollector = document.getElementById("menuStickerCollector");
     ui.welcomeTitle = document.getElementById("welcomeTitle");
     ui.welcomeMessage = document.getElementById("welcomeMessage");
     ui.savedMatchPanel = document.getElementById("savedMatchPanel");
@@ -1040,6 +1279,16 @@
     ui.menuProfileBack.addEventListener("click", function () {
       state.menuView = "hub";
       renderMenuSheet();
+    });
+
+    ui.showAchievementBook.addEventListener("click", function () {
+      state.stickerBookPage = "achievements";
+      renderStickerBook();
+    });
+
+    ui.showCollectorSheet.addEventListener("click", function () {
+      state.stickerBookPage = "collector";
+      renderStickerBook();
     });
 
     ui.startNewGame.addEventListener("click", function () {
@@ -1247,6 +1496,7 @@
     var avgWinningBid = profile.human.winningBidCount
       ? formatAverage(profile.human.winningBidTotal / profile.human.winningBidCount)
       : 0;
+    var unlockedCount = unlockedAchievementCount();
 
     ui.menuFullProfileStatus.textContent = profileWinRateText();
     ui.menuFullMatchesStarted.textContent = String(profile.totals.matchesStarted);
@@ -1282,8 +1532,10 @@
     ui.menuFullThemPoints.textContent = String(profile.totals.themPointsEarned);
     ui.menuFullCurrentStreak.textContent = String(profile.streaks.currentMatchWinStreak);
     ui.menuFullBestStreak.textContent = String(profile.streaks.bestMatchWinStreak);
+    ui.menuStickerBookStatus.textContent = unlockedCount + " of " + totalAchievementCount() + " unlocked";
     renderRulesetRecords();
     renderPlayerRecords();
+    renderStickerBook();
   }
 
   function renderRulesetRecords() {
@@ -1329,6 +1581,99 @@
       row.appendChild(detail);
       ui.menuPlayerRecords.appendChild(row);
     });
+  }
+
+  function renderStickerBook() {
+    var achievementsPageActive = state.stickerBookPage !== "collector";
+
+    ui.showAchievementBook.classList.toggle("active", achievementsPageActive);
+    ui.showAchievementBook.setAttribute("aria-selected", achievementsPageActive ? "true" : "false");
+    ui.showCollectorSheet.classList.toggle("active", !achievementsPageActive);
+    ui.showCollectorSheet.setAttribute("aria-selected", !achievementsPageActive ? "true" : "false");
+    ui.menuStickerAchievements.classList.toggle("hidden", !achievementsPageActive);
+    ui.menuStickerCollector.classList.toggle("hidden", achievementsPageActive);
+    renderAchievementBook();
+    renderCollectorSheet();
+  }
+
+  function renderAchievementBook() {
+    ui.menuStickerAchievements.innerHTML = "";
+
+    ACHIEVEMENT_DEFS.forEach(function (def) {
+      var unlocked = profile.achievements.unlocked[def.id];
+      var card = document.createElement("article");
+      var copy = document.createElement("div");
+      var title = document.createElement("strong");
+      var description = document.createElement("p");
+      var status = document.createElement("span");
+      var well = document.createElement("div");
+      var helper;
+      var image;
+
+      card.className = "achievement-card" + (unlocked ? " is-unlocked" : "");
+      copy.className = "achievement-copy";
+      title.textContent = def.title;
+      description.className = "support-text";
+      description.textContent = def.description;
+      status.className = "achievement-status";
+      status.textContent = unlocked ? "Unlocked" : "Locked";
+      well.className = "achievement-sticker-well" + (unlocked ? " is-filled" : "");
+
+      if (unlocked) {
+        image = document.createElement("img");
+        image.className = "achievement-sticker";
+        image.src = unlocked.stickerAsset || stickerAssetFromPool(def.stickerPool);
+        image.alt = "";
+        image.decoding = "async";
+        image.setAttribute("aria-hidden", "true");
+        image.style.transform = "rotate(" + (unlocked.tilt || 0) + "deg)";
+        well.appendChild(image);
+      } else {
+        helper = document.createElement("span");
+        helper.textContent = "Sticker spot";
+        well.appendChild(helper);
+      }
+
+      copy.appendChild(title);
+      copy.appendChild(description);
+      copy.appendChild(status);
+      card.appendChild(copy);
+      card.appendChild(well);
+      ui.menuStickerAchievements.appendChild(card);
+    });
+  }
+
+  function renderCollectorSheet() {
+    var stickers = profile.miniStickers.slice(-COLLECTOR_SHEET_SLOT_COUNT);
+    var slotCount = Math.max(COLLECTOR_SHEET_SLOT_COUNT, stickers.length);
+    var index;
+
+    ui.menuStickerCollector.innerHTML = "";
+    ui.menuStickerCollector.classList.add("collector-sheet");
+
+    for (index = 0; index < slotCount; index += 1) {
+      var slot = document.createElement("div");
+      var item = stickers[index];
+      var helper;
+      var image;
+
+      slot.className = "collector-slot" + (item ? " is-filled" : "");
+      if (item) {
+        image = document.createElement("img");
+        image.className = "collector-sticker";
+        image.src = item.asset || stickerAssetFromPool((MINI_STICKER_DEFS[item.id] || {}).assetPool);
+        image.alt = "";
+        image.decoding = "async";
+        image.setAttribute("aria-hidden", "true");
+        image.style.transform = "rotate(" + (item.tilt || 0) + "deg)";
+        slot.appendChild(image);
+      } else {
+        helper = document.createElement("span");
+        helper.textContent = "Open spot";
+        slot.appendChild(helper);
+      }
+      ui.menuStickerCollector.appendChild(slot);
+    }
   }
 
   function renderMenuSheet() {
@@ -1788,29 +2133,68 @@
     };
   }
 
+  function evaluateCloserCandidate(card, player, hand, trump) {
+    var suit = effectiveSuit(card, trump);
+    var higherUnknown = countHigherUnknownCards(card, player, trump, hand);
+    var score = cardControlScore(card, trump) * 1.9;
+
+    if (suit === trump) {
+      score += 4.5;
+    }
+    if (card.isRook) {
+      score += 5;
+    } else if (card.rank === 1) {
+      score += 2.8;
+    }
+    if (higherUnknown === 0) {
+      score += 2;
+    }
+    score += cardPoints(card) * 0.15;
+    score -= higherUnknown * 2.1;
+
+    return {
+      id: card.id,
+      score: score,
+      higherUnknown: higherUnknown,
+      isTrump: suit === trump
+    };
+  }
+
   function estimateCloserStrength(player, hand, trump) {
     if (!hand || !hand.length || !trump) {
       return 0;
     }
 
     return hand.reduce(function (best, card) {
-      var suit = effectiveSuit(card, trump);
-      var higherUnknown = countHigherUnknownCards(card, player, trump, hand);
-      var score = cardControlScore(card, trump) * 1.7;
-
-      if (suit === trump) {
-        score += 3.5;
-      }
-      if (card.isRook) {
-        score += 4;
-      } else if (card.rank === 1) {
-        score += 2.4;
-      }
-      score += cardPoints(card) * 0.2;
-      score -= higherUnknown * 1.8;
-
-      return Math.max(best, score);
+      return Math.max(best, evaluateCloserCandidate(card, player, hand, trump).score);
     }, 0);
+  }
+
+  function findReservedCloser(player, hand, trump, round) {
+    var candidates;
+    var threshold;
+    var best;
+
+    if (!hand || hand.length <= 1 || !trump || !round || round.remainingCards > 5) {
+      return null;
+    }
+
+    candidates = hand.map(function (card) {
+      return evaluateCloserCandidate(card, player, hand, trump);
+    }).sort(function (a, b) {
+      return b.score - a.score;
+    });
+    best = candidates[0];
+    threshold = round.remainingCards <= 3 ? 4.5 : 6.2;
+
+    if (!best || best.score < threshold) {
+      return null;
+    }
+    if (best.higherUnknown > Math.max(1, round.remainingCards - 2) && !best.isTrump) {
+      return null;
+    }
+
+    return best;
   }
 
   function deriveAiTacticalMode(player, profile, match, round) {
@@ -2199,6 +2583,53 @@
     return keepScore * weight * swingScale * modeBias;
   }
 
+  function reservedCloserPenalty(card, context) {
+    var urgencyRelief;
+    var timingMultiplier;
+
+    if (!context.reservedCloser || context.round.remainingCards <= 1 || card.id !== context.reservedCloser.id) {
+      return 0;
+    }
+
+    urgencyRelief =
+      context.mode.pushToMake * 5 +
+      context.mode.setTheBid * 4.5 +
+      context.mode.denyPoints * 2.5;
+    timingMultiplier = context.round.remainingCards === 5
+      ? 0.65
+      : context.round.remainingCards === 4
+        ? 0.9
+        : 1.2;
+
+    return Math.max(0, (13 + context.reservedCloser.score * 1.8) * timingMultiplier - urgencyRelief);
+  }
+
+  function shouldReleaseReservedCloser(context, reservedScore, alternativeScore) {
+    var gain;
+    var urgency;
+    var protection;
+
+    if (!context.reservedCloser || context.round.remainingCards <= 1) {
+      return true;
+    }
+
+    gain = reservedScore - alternativeScore;
+    urgency =
+      context.mode.pushToMake * 9 +
+      context.mode.setTheBid * 8 +
+      context.mode.denyPoints * 4 +
+      Math.min(8, context.trickPoints * 0.35) +
+      (context.isLastToAct ? 2 : 0);
+    protection =
+      12 +
+      context.mode.protectLead * 8 +
+      context.mode.preserveCloser * 10 +
+      context.round.closerPressure * 8 +
+      (context.round.remainingCards <= 3 ? 4 : 0);
+
+    return gain >= protection - urgency;
+  }
+
   function estimateVisibleWinnerConfidence(winningPlay, player, playersAfter) {
     var higherUnknown;
 
@@ -2228,6 +2659,7 @@
     var teammateWinning = false;
     var teammateWinConfidence = 0;
     var mode;
+    var reservedCloser;
 
     if (state.trick.length) {
       winningPlay = state.trick[determineTrickWinner(state.trick, state.leadSuit, state.trump)];
@@ -2239,6 +2671,7 @@
     }
 
     mode = deriveAiTacticalMode(player, profile, match, round);
+    reservedCloser = findReservedCloser(player, state.hands[player], state.trump, round);
 
     return {
       player: player,
@@ -2249,6 +2682,7 @@
       match: match,
       round: round,
       mode: mode,
+      reservedCloser: reservedCloser,
       trickPoints: currentTrickPoints(),
       lastTrickSwing: round.lastTrickSwing || (getRuleConfig().lastTrickBonus + buriedKittyPoints()),
       playersAfter: playersAfter,
@@ -2280,6 +2714,7 @@
     var isTrump = suit === state.trump;
     var control = Math.max(0, 3 - higherUnknown);
     var preservePenalty = endgameRetentionPenalty(card, context);
+    var reservePenalty = reservedCloserPenalty(card, context);
     var score = 0;
 
     if (!isTrump) {
@@ -2313,6 +2748,7 @@
       score += 1.5;
     }
     score -= preservePenalty;
+    score -= reservePenalty;
 
     return score;
   }
@@ -2323,6 +2759,7 @@
     var suit = effectiveSuit(card, state.trump);
     var suitCount = countSuitInHand(context.hand, suit, state.trump);
     var preservePenalty = endgameRetentionPenalty(card, context);
+    var reservePenalty = reservedCloserPenalty(card, context);
     var score = 0;
 
     score += suit === state.trump ? -6 : 3;
@@ -2349,6 +2786,7 @@
       score -= mode.preserveCloser * 2.5;
     }
     score -= preservePenalty;
+    score -= reservePenalty;
 
     return score;
   }
@@ -2401,6 +2839,7 @@
       if (effectiveSuit(card, state.trump) === state.trump) {
         score -= mode.preserveCloser * 2.8;
       }
+      score -= reservedCloserPenalty(card, context);
     } else {
       score += scoreAiSlough(card, context);
     }
@@ -2565,23 +3004,38 @@
   function chooseAiPlay(player) {
     var context = buildAiPlayContext(player);
     var legal = getLegalCards(player);
-    var preferred = legal[0];
-    var bestScore = state.trick.length === 0
-      ? scoreAiLeadChoice(preferred, context)
-      : scoreAiFollowChoice(preferred, context);
+    var scored = legal.map(function (card) {
+      return {
+        card: card,
+        score: state.trick.length === 0
+          ? scoreAiLeadChoice(card, context)
+          : scoreAiFollowChoice(card, context)
+      };
+    });
+    var preferred = scored[0];
+    var fallback = null;
 
-    legal.slice(1).forEach(function (card) {
-      var score = state.trick.length === 0
-        ? scoreAiLeadChoice(card, context)
-        : scoreAiFollowChoice(card, context);
-
-      if (score > bestScore) {
-        bestScore = score;
-        preferred = card;
+    scored.slice(1).forEach(function (entry) {
+      if (entry.score > preferred.score) {
+        preferred = entry;
       }
     });
 
-    return preferred;
+    if (context.reservedCloser && legal.length > 1 && preferred.card.id === context.reservedCloser.id) {
+      scored.forEach(function (entry) {
+        if (entry.card.id === context.reservedCloser.id) {
+          return;
+        }
+        if (!fallback || entry.score > fallback.score) {
+          fallback = entry;
+        }
+      });
+      if (fallback && !shouldReleaseReservedCloser(context, preferred.score, fallback.score)) {
+        preferred = fallback;
+      }
+    }
+
+    return preferred.card;
   }
 
   function canBeatCurrentWinner(card) {
@@ -3257,7 +3711,9 @@
     ui.summaryUs.textContent = state.summary.us;
     ui.summaryThem.textContent = state.summary.them;
     ui.summaryBid.textContent = state.summary.bid;
-    ui.summaryResult.textContent = state.summary.result;
+    if (ui.summaryResult) {
+      ui.summaryResult.textContent = state.summary.result;
+    }
     ui.nextRound.disabled = state.busy;
     ui.nextRound.textContent = summaryButtonLabel();
     ui.summaryGrid.classList.toggle("hidden", state.summaryStep === 2);

@@ -262,7 +262,6 @@
 
       <section id="phaseSummary" class="phase-panel hidden">
         <div class="panel-card">
-          <div id="summaryStorySticker" class="summary-story-sticker hidden" aria-hidden="true"></div>
           <p id="summaryPhaseLabel" class="phase-label">Round Summary</p>
           <h2 id="summaryTitle">Round Complete</h2>
           <div id="summaryStory" class="summary-story hidden">
@@ -271,6 +270,7 @@
               <strong id="summaryStoryHeadline">You needed 140 and scored 165.</strong>
             </div>
             <p id="summaryStoryMood" class="support-text">Made it by 25 points. Comfortable finish.</p>
+            <div id="summaryStorySticker" class="summary-story-sticker hidden" aria-hidden="true"></div>
           </div>
           <div id="summaryGrid" class="summary-grid">
             <div class="summary-box">
@@ -284,10 +284,6 @@
             <div class="summary-box">
               <span>Winning bid</span>
               <strong id="summaryBid">-</strong>
-            </div>
-            <div class="summary-box">
-              <span>Bid result</span>
-              <strong id="summaryResult">-</strong>
             </div>
           </div>
           <p id="summaryDetail" class="support-text"></p>
@@ -579,6 +575,18 @@
                 <strong id="menuFullBestStreak">0</strong>
               </div>
             </div>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Sticker Book</span>
+              <strong id="menuStickerBookStatus">0 of 8 unlocked</strong>
+            </div>
+            <div class="sticker-book-toggle" role="tablist" aria-label="Sticker book pages">
+              <button id="showAchievementBook" class="sticker-book-tab active" type="button" role="tab" aria-selected="true">Achievements</button>
+              <button id="showCollectorSheet" class="sticker-book-tab" type="button" role="tab" aria-selected="false">Collector Sheet</button>
+            </div>
+            <div id="menuStickerAchievements" class="sticker-book-page"></div>
+            <div id="menuStickerCollector" class="sticker-book-page hidden"></div>
           </section>
         </div>
       </div>
