@@ -67,9 +67,59 @@
     }
   };
   var AI_STYLE_BY_PLAYER = [null, "steady", "bold", "disruptor"];
+  var STORAGE_SCHEMA_VERSION = 1;
+  var PROFILE_STORAGE_KEY = "kentucky-rook.profile";
+  var ACTIVE_MATCH_STORAGE_KEY = "kentucky-rook.active-match";
+  var PERSISTED_STATE_KEYS = [
+    "phase",
+    "dealer",
+    "roundNumber",
+    "bidder",
+    "winningBid",
+    "trump",
+    "selectedTrump",
+    "selectedBid",
+    "currentBid",
+    "currentBidHolder",
+    "currentBidTurn",
+    "bidEntries",
+    "bidStatuses",
+    "passed",
+    "initialHands",
+    "kitty",
+    "buriedKitty",
+    "kittyReviewHand",
+    "selectedDiscards",
+    "hands",
+    "trick",
+    "leadSuit",
+    "currentPlayer",
+    "winningCardPlayer",
+    "playerPoints",
+    "roundPoints",
+    "matchPoints",
+    "trickCounts",
+    "roundMessage",
+    "summary",
+    "summaryStep",
+    "summaryScoringOpen",
+    "aiTrumpReady",
+    "biddingComplete",
+    "biddingStarted",
+    "roundHistory",
+    "completedTricks",
+    "previousTrick",
+    "gameOver",
+    "matchId",
+    "matchStartedAt",
+    "profileRoundsTracked",
+    "profileMatchCompleteRecorded"
+  ];
 
   var ui = {};
   var state = createState();
+  var profile = createProfile();
+  var savedMatchMeta = null;
 
   function createState() {
     return {
@@ -119,10 +169,376 @@
       completedTricks: [],
       previousTrick: null,
       gameOver: false,
+      matchId: null,
+      matchStartedAt: null,
+      profileRoundsTracked: 0,
+      profileMatchCompleteRecorded: false,
       busy: false,
       timeoutId: null,
       rookStickerCleanupId: null
     };
+  }
+
+  function createProfile() {
+    return {
+      version: STORAGE_SCHEMA_VERSION,
+      createdAt: null,
+      lastPlayedAt: null,
+      totals: {
+        matchesStarted: 0,
+        matchesCompleted: 0,
+        matchesWon: 0,
+        matchesLost: 0,
+        roundsCompleted: 0,
+        usPointsEarned: 0,
+        themPointsEarned: 0
+      },
+      human: {
+        bidsWon: 0,
+        bidsMade: 0,
+        bidsSet: 0,
+        bestRoundPoints: 0
+      },
+      streaks: {
+        currentMatchWinStreak: 0,
+        bestMatchWinStreak: 0
+      },
+      lastMatch: null
+    };
+  }
+
+  function safeStorageGet(key) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function safeStorageSet(key, value) {
+    try {
+      window.localStorage.setItem(key, value);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function safeStorageRemove(key) {
+    try {
+      window.localStorage.removeItem(key);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function parseStoredJson(key) {
+    var raw = safeStorageGet(key);
+
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(raw);
+    } catch (error) {
+      safeStorageRemove(key);
+      return null;
+    }
+  }
+
+  function normalizeProfile(raw) {
+    var nextProfile = createProfile();
+    var totals = raw && raw.totals ? raw.totals : {};
+    var human = raw && raw.human ? raw.human : {};
+    var streaks = raw && raw.streaks ? raw.streaks : {};
+
+    nextProfile.version = STORAGE_SCHEMA_VERSION;
+    nextProfile.createdAt = raw && raw.createdAt ? raw.createdAt : null;
+    nextProfile.lastPlayedAt = raw && raw.lastPlayedAt ? raw.lastPlayedAt : null;
+    nextProfile.totals.matchesStarted = Number(totals.matchesStarted) || 0;
+    nextProfile.totals.matchesCompleted = Number(totals.matchesCompleted) || 0;
+    nextProfile.totals.matchesWon = Number(totals.matchesWon) || 0;
+    nextProfile.totals.matchesLost = Number(totals.matchesLost) || 0;
+    nextProfile.totals.roundsCompleted = Number(totals.roundsCompleted) || 0;
+    nextProfile.totals.usPointsEarned = Number(totals.usPointsEarned) || 0;
+    nextProfile.totals.themPointsEarned = Number(totals.themPointsEarned) || 0;
+    nextProfile.human.bidsWon = Number(human.bidsWon) || 0;
+    nextProfile.human.bidsMade = Number(human.bidsMade) || 0;
+    nextProfile.human.bidsSet = Number(human.bidsSet) || 0;
+    nextProfile.human.bestRoundPoints = Number(human.bestRoundPoints) || 0;
+    nextProfile.streaks.currentMatchWinStreak = Number(streaks.currentMatchWinStreak) || 0;
+    nextProfile.streaks.bestMatchWinStreak = Number(streaks.bestMatchWinStreak) || 0;
+    nextProfile.lastMatch = raw && raw.lastMatch ? raw.lastMatch : null;
+
+    return nextProfile;
+  }
+
+  function loadProfile() {
+    profile = normalizeProfile(parseStoredJson(PROFILE_STORAGE_KEY));
+  }
+
+  function saveProfile() {
+    profile.version = STORAGE_SCHEMA_VERSION;
+    safeStorageSet(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+  }
+
+  function updateProfileTimestamp() {
+    var now = new Date().toISOString();
+
+    if (!profile.createdAt) {
+      profile.createdAt = now;
+    }
+    profile.lastPlayedAt = now;
+  }
+
+  function createMatchId() {
+    return "match-" + Date.now();
+  }
+
+  function summarizeSavedMatch(savedState) {
+    if (!savedState || !savedState.phase || savedState.phase === "welcome") {
+      return null;
+    }
+
+    return {
+      phaseLabel: savedPhaseLabel(savedState),
+      roundLabel: savedRoundLabel(savedState),
+      scoreLabel: "Us " + savedState.matchPoints[0] + " • Them " + savedState.matchPoints[1],
+      detail: savedMatchDetail(savedState)
+    };
+  }
+
+  function savedPhaseLabel(savedState) {
+    if (savedState.phase === "bidding") {
+      return savedState.biddingComplete ? "Bid Locked In" : "Bidding";
+    }
+    if (savedState.phase === "trump") {
+      return "Trump Setup";
+    }
+    if (savedState.phase === "play") {
+      return "In Play";
+    }
+    if (savedState.phase === "summary") {
+      return savedState.gameOver ? "Final Score Saved" : "Round Summary";
+    }
+    return "Saved Match";
+  }
+
+  function savedRoundLabel(savedState) {
+    if (savedState.phase === "summary") {
+      return "Round " + Math.max(1, savedState.roundNumber - 1);
+    }
+    return "Round " + savedState.roundNumber;
+  }
+
+  function savedMatchDetail(savedState) {
+    if (savedState.phase === "play") {
+      return PLAYER_NAMES[savedState.currentPlayer] + " to act in trick play.";
+    }
+    if (savedState.phase === "trump") {
+      return PLAYER_NAMES[savedState.bidder] + " won the bid at " + savedState.winningBid + ".";
+    }
+    if (savedState.phase === "summary" && savedState.summary) {
+      return savedState.summary.bid + " • " + savedState.summary.result + ".";
+    }
+    if (savedState.phase === "bidding") {
+      return savedState.biddingStarted ? "Bidding is underway." : "Cards are dealt and ready.";
+    }
+    return "Saved on this device for future sessions.";
+  }
+
+  function sanitizeStateForStorage(sourceState) {
+    var snapshot = {};
+
+    PERSISTED_STATE_KEYS.forEach(function (key) {
+      snapshot[key] = JSON.parse(JSON.stringify(sourceState[key]));
+    });
+
+    return snapshot;
+  }
+
+  function saveActiveMatch() {
+    var payload;
+
+    if (state.phase === "welcome") {
+      return;
+    }
+
+    updateProfileTimestamp();
+    saveProfile();
+
+    payload = {
+      version: STORAGE_SCHEMA_VERSION,
+      savedAt: new Date().toISOString(),
+      state: sanitizeStateForStorage(state)
+    };
+
+    if (safeStorageSet(ACTIVE_MATCH_STORAGE_KEY, JSON.stringify(payload))) {
+      savedMatchMeta = summarizeSavedMatch(payload.state);
+    }
+  }
+
+  function clearActiveMatch() {
+    safeStorageRemove(ACTIVE_MATCH_STORAGE_KEY);
+    savedMatchMeta = null;
+  }
+
+  function loadSavedMatchPayload() {
+    var payload = parseStoredJson(ACTIVE_MATCH_STORAGE_KEY);
+
+    if (!payload) {
+      return null;
+    }
+    if (!payload.state || payload.version !== STORAGE_SCHEMA_VERSION) {
+      safeStorageRemove(ACTIVE_MATCH_STORAGE_KEY);
+      return null;
+    }
+
+    return payload;
+  }
+
+  function refreshSavedMatchMeta() {
+    var payload = loadSavedMatchPayload();
+
+    savedMatchMeta = payload ? summarizeSavedMatch(payload.state) : null;
+  }
+
+  function assignState(nextState) {
+    Object.keys(state).forEach(function (key) {
+      delete state[key];
+    });
+    Object.keys(nextState).forEach(function (key) {
+      state[key] = nextState[key];
+    });
+  }
+
+  function hydrateStateFromSnapshot(snapshot) {
+    var nextState = createState();
+
+    PERSISTED_STATE_KEYS.forEach(function (key) {
+      if (snapshot.hasOwnProperty(key)) {
+        nextState[key] = snapshot[key];
+      }
+    });
+
+    nextState.phase = snapshot.phase || "welcome";
+    nextState.historyOpen = false;
+    nextState.busy = false;
+    nextState.timeoutId = null;
+    nextState.rookStickerCleanupId = null;
+    nextState.aiTrumpMeterStarted = false;
+    nextState.dealAnimating = false;
+    nextState.dealVisibleCount = 13;
+    nextState.dealSeatCounts = [13, 13, 13];
+    nextState.dealRevealed = true;
+    nextState.dealRevealAnimating = false;
+
+    if (!nextState.matchId) {
+      nextState.matchId = createMatchId();
+    }
+    if (!nextState.matchStartedAt) {
+      nextState.matchStartedAt = new Date().toISOString();
+    }
+    if (nextState.phase === "trump" && nextState.bidder !== 0) {
+      nextState.aiTrumpReady = true;
+    }
+
+    assignState(nextState);
+  }
+
+  function continueSavedMatch() {
+    var payload = loadSavedMatchPayload();
+
+    if (!payload) {
+      refreshSavedMatchMeta();
+      render();
+      return;
+    }
+
+    clearPendingTimeout();
+    clearRookSticker();
+    hydrateStateFromSnapshot(payload.state);
+    updateProfileTimestamp();
+    saveProfile();
+    render();
+
+    if (state.phase === "bidding" && state.biddingStarted && !state.biddingComplete && state.currentBidTurn !== 0) {
+      continueBidding();
+    } else if (state.phase === "play") {
+      maybeRunAiTurn();
+    }
+  }
+
+  function beginNewMatch() {
+    var nextState = createState();
+
+    clearPendingTimeout();
+    clearRookSticker();
+    clearActiveMatch();
+    nextState.matchId = createMatchId();
+    nextState.matchStartedAt = new Date().toISOString();
+    assignState(nextState);
+    updateProfileTimestamp();
+    profile.totals.matchesStarted += 1;
+    saveProfile();
+    startRound();
+  }
+
+  function recordRoundStats(bidMade) {
+    if (state.profileRoundsTracked >= state.roundHistory.length) {
+      return;
+    }
+
+    updateProfileTimestamp();
+    profile.totals.roundsCompleted += 1;
+    profile.totals.usPointsEarned += state.roundPoints[0];
+    profile.totals.themPointsEarned += state.roundPoints[1];
+
+    if (state.bidder === 0) {
+      profile.human.bidsWon += 1;
+      if (bidMade) {
+        profile.human.bidsMade += 1;
+      } else {
+        profile.human.bidsSet += 1;
+      }
+    }
+
+    profile.human.bestRoundPoints = Math.max(profile.human.bestRoundPoints, state.roundPoints[0]);
+    state.profileRoundsTracked = state.roundHistory.length;
+    saveProfile();
+  }
+
+  function recordMatchCompletion() {
+    var won;
+
+    if (!state.gameOver || state.profileMatchCompleteRecorded) {
+      return;
+    }
+
+    won = state.matchPoints[0] > state.matchPoints[1];
+    updateProfileTimestamp();
+    profile.totals.matchesCompleted += 1;
+    if (won) {
+      profile.totals.matchesWon += 1;
+      profile.streaks.currentMatchWinStreak += 1;
+      profile.streaks.bestMatchWinStreak = Math.max(
+        profile.streaks.bestMatchWinStreak,
+        profile.streaks.currentMatchWinStreak
+      );
+    } else {
+      profile.totals.matchesLost += 1;
+      profile.streaks.currentMatchWinStreak = 0;
+    }
+    profile.lastMatch = {
+      completedAt: new Date().toISOString(),
+      won: won,
+      usScore: state.matchPoints[0],
+      themScore: state.matchPoints[1]
+    };
+    state.profileMatchCompleteRecorded = true;
+    saveProfile();
   }
 
   function cacheDom() {
@@ -131,6 +547,20 @@
     ui.phaseTrump = document.getElementById("phaseTrump");
     ui.phasePlay = document.getElementById("phasePlay");
     ui.phaseSummary = document.getElementById("phaseSummary");
+    ui.welcomeTitle = document.getElementById("welcomeTitle");
+    ui.welcomeMessage = document.getElementById("welcomeMessage");
+    ui.savedMatchPanel = document.getElementById("savedMatchPanel");
+    ui.savedMatchPhase = document.getElementById("savedMatchPhase");
+    ui.savedMatchRound = document.getElementById("savedMatchRound");
+    ui.savedMatchScore = document.getElementById("savedMatchScore");
+    ui.savedMatchDetail = document.getElementById("savedMatchDetail");
+    ui.continueSavedGame = document.getElementById("continueSavedGame");
+    ui.profileStatus = document.getElementById("profileStatus");
+    ui.profileMatches = document.getElementById("profileMatches");
+    ui.profileRecord = document.getElementById("profileRecord");
+    ui.profileRounds = document.getElementById("profileRounds");
+    ui.profileBids = document.getElementById("profileBids");
+    ui.profileDetail = document.getElementById("profileDetail");
     ui.usScoreText = document.getElementById("usScoreText");
     ui.themScoreText = document.getElementById("themScoreText");
     ui.usScoreBar = document.getElementById("usScoreBar");
@@ -230,7 +660,14 @@
       if (state.phase !== "welcome") {
         return;
       }
-      startRound();
+      beginNewMatch();
+    });
+
+    ui.continueSavedGame.addEventListener("click", function () {
+      if (state.phase !== "welcome") {
+        return;
+      }
+      continueSavedMatch();
     });
 
     ui.decreaseBid.addEventListener("click", function () {
@@ -319,6 +756,10 @@
       if (state.summaryStep === 1) {
         state.summaryStep = 2;
         render();
+        return;
+      }
+      if (state.gameOver) {
+        beginNewMatch();
         return;
       }
       startRound();
@@ -1676,6 +2117,7 @@
     state.roundHistory.slice(1).forEach(function (row) {
       row.isLatest = false;
     });
+    recordRoundStats(bidMade);
 
     state.phase = "summary";
     state.summaryStep = 1;
@@ -1688,6 +2130,7 @@
     if (state.matchPoints[0] >= 500 || state.matchPoints[1] >= 500) {
       state.gameOver = true;
     }
+    recordMatchCompletion();
 
     schedule(function () {
       state.busy = false;
@@ -1874,7 +2317,9 @@
     ui.usScoreBar.style.width = scoreProgressWidth(state.matchPoints[0]);
     ui.themScoreBar.style.width = scoreProgressWidth(state.matchPoints[1]);
 
-    if (state.phase === "bidding") {
+    if (state.phase === "welcome") {
+      renderWelcomePhase();
+    } else if (state.phase === "bidding") {
       renderBiddingPhase();
     } else if (state.phase === "trump") {
       renderTrumpPhase();
@@ -1884,6 +2329,42 @@
       renderSummaryPhase();
     }
     renderHistoryDrawer();
+    saveActiveMatch();
+  }
+
+  function renderWelcomePhase() {
+    var matchesPlayed = profile.totals.matchesCompleted;
+    var humanBidAttempts = profile.human.bidsMade + profile.human.bidsSet;
+    var savedExists = !!savedMatchMeta;
+    var winRate = matchesPlayed ? Math.round((profile.totals.matchesWon / matchesPlayed) * 100) : 0;
+
+    ui.welcomeTitle.textContent = savedExists ? "Welcome Back" : "Welcome";
+    ui.welcomeMessage.textContent = savedExists
+      ? "Your last match is waiting for you, or you can start a fresh run without losing your profile."
+      : "Start a new match and this device will keep both your active game and long-term player profile.";
+    ui.savedMatchPanel.classList.toggle("hidden", !savedExists);
+    ui.continueSavedGame.classList.toggle("hidden", !savedExists);
+    ui.startNewGame.className = savedExists ? "ghost-button" : "primary-button";
+    ui.startNewGame.textContent = savedExists ? "Start New Match" : "Start Your First Match";
+
+    if (savedExists) {
+      ui.savedMatchPhase.textContent = savedMatchMeta.phaseLabel;
+      ui.savedMatchRound.textContent = savedMatchMeta.roundLabel;
+      ui.savedMatchScore.textContent = savedMatchMeta.scoreLabel;
+      ui.savedMatchDetail.textContent = savedMatchMeta.detail;
+    }
+
+    ui.profileMatches.textContent = String(matchesPlayed);
+    ui.profileRecord.textContent = profile.totals.matchesWon + "-" + profile.totals.matchesLost;
+    ui.profileRounds.textContent = String(profile.totals.roundsCompleted);
+    ui.profileBids.textContent = profile.human.bidsMade + "/" + humanBidAttempts;
+    ui.profileStatus.textContent = matchesPlayed
+      ? winRate + "% match win rate"
+      : "Fresh profile";
+    ui.profileDetail.textContent = matchesPlayed
+      ? "Best team round: " + profile.human.bestRoundPoints + " points. Current win streak: " +
+        profile.streaks.currentMatchWinStreak + "."
+      : "Stats build up over time across matches on this device, including your bids, rounds, and match record.";
   }
 
   function renderBiddingPhase() {
@@ -2706,6 +3187,8 @@
     });
   }
 
+  loadProfile();
+  refreshSavedMatchMeta();
   cacheDom();
   bindEvents();
   render();

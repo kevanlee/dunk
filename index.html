@@ -40,8 +40,54 @@
         <div class="panel-card welcome-card">
           <div class="welcome-content">
             <p class="phase-label">Kentucky Rook</p>
-            <h2>Welcome</h2>
-            <button id="startNewGame" class="primary-button" type="button">Start New Game</button>
+            <h2 id="welcomeTitle">Welcome</h2>
+            <p id="welcomeMessage" class="support-text welcome-message">Start a new match or pick up where you left off.</p>
+            <section id="savedMatchPanel" class="welcome-panel hidden" aria-live="polite">
+              <div class="welcome-panel-header">
+                <span>Saved Match</span>
+                <strong id="savedMatchPhase">No saved match</strong>
+              </div>
+              <div class="welcome-stat-grid">
+                <div class="summary-box welcome-stat-box">
+                  <span>Round</span>
+                  <strong id="savedMatchRound">-</strong>
+                </div>
+                <div class="summary-box welcome-stat-box">
+                  <span>Score</span>
+                  <strong id="savedMatchScore">-</strong>
+                </div>
+              </div>
+              <p id="savedMatchDetail" class="support-text welcome-panel-detail"></p>
+            </section>
+            <div class="welcome-actions">
+              <button id="continueSavedGame" class="primary-button hidden" type="button">Continue Match</button>
+              <button id="startNewGame" class="primary-button" type="button">Start New Match</button>
+            </div>
+            <section class="welcome-panel" aria-live="polite">
+              <div class="welcome-panel-header">
+                <span>Player Profile</span>
+                <strong id="profileStatus">Fresh profile</strong>
+              </div>
+              <div class="welcome-stat-grid">
+                <div class="summary-box welcome-stat-box">
+                  <span>Matches</span>
+                  <strong id="profileMatches">0</strong>
+                </div>
+                <div class="summary-box welcome-stat-box">
+                  <span>Record</span>
+                  <strong id="profileRecord">0-0</strong>
+                </div>
+                <div class="summary-box welcome-stat-box">
+                  <span>Rounds</span>
+                  <strong id="profileRounds">0</strong>
+                </div>
+                <div class="summary-box welcome-stat-box">
+                  <span>Your Bids</span>
+                  <strong id="profileBids">0/0</strong>
+                </div>
+              </div>
+              <p id="profileDetail" class="support-text welcome-panel-detail"></p>
+            </section>
           </div>
         </div>
       </section>
