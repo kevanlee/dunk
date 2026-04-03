@@ -185,10 +185,48 @@ Inspired by arcade energy (e.g. NBA Jam):
 
 ---
 
-### 🌐 Multiplayer (Future)
-- Local pass-and-play
-- Online multiplayer
-- Private games with friends
+### 🌐 Multiplayer (Future / Out of Scope for Current Build)
+- The current focus is single-player only for advanced/personal play.
+- Multiplayer ideas are preserved as long-term possibilities, not near-term roadmap work.
+
+---
+
+## 🗺️ Development Roadmap
+
+Ordered loosely from foundation work to later expansion:
+
+1. **Build a ruleset/config engine (foundation first)**  
+   Centralize bid floor, scoring values, win target, penalties, and mode toggles so all future tuning is clean and fast.
+
+2. **Upgrade deterministic trick-play AI (non-learning)**  
+   Improve tactical decisions with better void tracking, partner protection, trump timing, point denial, and endgame card management.
+
+3. **Add computer player matching + team-vs setup**  
+   Add a pre-game lineup screen where the human chooses a preferred AI partner profile and selected opponent profiles.
+
+4. **Expand AI archetypes and personality depth**  
+   Push each computer player toward a distinct identity such as steady/control, aggressive pressure, disruptor/chaos, and other future profiles that create unique match dynamics.
+
+5. **Add deep persistent stats for advanced solo play**  
+   Track metrics like set rate, contract margin, trump conversion, point leakage, matchup performance by archetype, and other long-term player trends.
+
+6. **Round replay + forensic breakdown**  
+   Build post-round analysis that explains what decided the hand: swing trick, missed points, and contract turning moments.
+
+7. **Achievements + unlocks (lightweight, skill-focused)**  
+   Add expert-oriented achievements and optional cosmetic progression to support replayability without diluting core strategy.
+
+8. **Power-user UX pass (speed + control)**  
+   Add fast mode, reduced animation delays, tighter transitions, and a streamlined round flow for high-volume play sessions.
+
+9. **5-player hidden partner variant (later milestone)**  
+   Keep this as a later expansion after the 4-player single-player experience is deep, stable, and polished.
+
+10. **Visual juice pass (micro-animations/sfx)**  
+    Add feedback polish after gameplay systems are stable and tuned.
+
+11. **PWA/session polish for personal daily play**  
+    Improve save/resume behavior, session continuity, and install/offline reliability for frequent solo play usage.
 
 ---
 

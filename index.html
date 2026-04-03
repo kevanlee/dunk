@@ -13,12 +13,20 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" sizes="180x180" href="img/App-icon-180.png">
   <link rel="icon" type="image/png" sizes="180x180" href="img/App-icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="app">
     <header class="topbar">
-      <h1 class="app-title">Kentucky Rook</h1>
+      <div class="topbar-brand">
+        <h1 class="app-title">
+          <img class="app-title-logo" src="img/rook-wordmark.svg" alt="Rook">
+        </h1>
+        <button id="menuToggle" class="app-menu-button" type="button" aria-label="Open game menu" aria-expanded="false" aria-controls="menuSheet"><span class="app-menu-glyph" aria-hidden="true"></span></button>
+      </div>
       <div class="scoreline">
         <div class="scoregroup">
           <div id="usScoreText" class="scoretext">Us 0</div>
@@ -39,7 +47,7 @@
       <section id="phaseWelcome" class="phase-panel">
         <div class="panel-card welcome-card">
           <div class="welcome-content">
-            <p class="phase-label">Kentucky Rook</p>
+            <img class="welcome-logo" src="img/rook-logo.png" alt="Rook">
             <h2 id="welcomeTitle">Welcome</h2>
             <p id="welcomeMessage" class="support-text welcome-message">Start a new match or pick up where you left off.</p>
             <section id="savedMatchPanel" class="welcome-panel hidden" aria-live="polite">
@@ -60,8 +68,8 @@
               <p id="savedMatchDetail" class="support-text welcome-panel-detail"></p>
             </section>
             <div class="welcome-actions">
-              <button id="continueSavedGame" class="primary-button hidden" type="button">Continue Match</button>
-              <button id="startNewGame" class="primary-button" type="button">Start New Match</button>
+              <button id="continueSavedGame" class="primary-button hidden" type="button">Continue</button>
+              <button id="startNewGame" class="primary-button" type="button">Start Match</button>
             </div>
             <section class="welcome-panel" aria-live="polite">
               <div class="welcome-panel-header">
@@ -112,7 +120,7 @@
             <button id="decreaseBid" class="step-button" type="button" aria-label="Lower bid">-</button>
             <div class="bid-value">
               <span>Selected bid</span>
-              <strong id="selectedBid">80</strong>
+              <strong id="selectedBid">100</strong>
             </div>
             <button id="increaseBid" class="step-button" type="button" aria-label="Raise bid">+</button>
           </div>
@@ -167,7 +175,7 @@
             <button class="trump-button" data-trump="red" type="button">Red</button>
             <button class="trump-button" data-trump="green" type="button">Green</button>
             <button class="trump-button" data-trump="yellow" type="button">Yellow</button>
-            <button class="trump-button" data-trump="black" type="button">Black</button>
+            <button class="trump-button" data-trump="orange" type="button">Orange</button>
           </div>
           <div id="trumpProcessing" class="trump-processing hidden">
             <span id="trumpProcessingText">Looking through kitty, discarding, choosing trump.</span>
@@ -237,7 +245,6 @@
                 <div id="slotRight" class="table-slot"></div>
                 <div id="slotBottom" class="table-slot"></div>
               </div>
-              <div id="rookStickerOverlay" class="sticker-overlay" aria-hidden="true"></div>
             </div>
 
             <p id="playMessage" class="play-message">Play a card.</p>
@@ -255,6 +262,7 @@
 
       <section id="phaseSummary" class="phase-panel hidden">
         <div class="panel-card">
+          <div id="summaryStorySticker" class="summary-story-sticker hidden" aria-hidden="true"></div>
           <p id="summaryPhaseLabel" class="phase-label">Round Summary</p>
           <h2 id="summaryTitle">Round Complete</h2>
           <div id="summaryStory" class="summary-story hidden">
@@ -305,7 +313,32 @@
                 <strong id="summaryMatchThem">0</strong>
               </div>
             </div>
-            <p id="summaryMatchNote" class="support-text summary-match-note">First to 500 wins.</p>
+            <p id="summaryMatchNote" class="support-text summary-match-note">First to <span id="summaryMatchTarget">500</span> wins.</p>
+            <section id="summaryProfileCard" class="summary-profile-card hidden" aria-live="polite">
+              <div class="welcome-panel-header">
+                <span>Profile Updated</span>
+                <strong id="summaryProfileStatus">Fresh profile</strong>
+              </div>
+              <div class="welcome-stat-grid">
+                <div class="summary-box welcome-stat-box">
+                  <span>Record</span>
+                  <strong id="summaryProfileRecord">0-0</strong>
+                </div>
+                <div class="summary-box welcome-stat-box">
+                  <span>Bid Rate</span>
+                  <strong id="summaryProfileBidRate">0%</strong>
+                </div>
+                <div class="summary-box welcome-stat-box">
+                  <span>Best Round</span>
+                  <strong id="summaryProfileBestRound">0</strong>
+                </div>
+                <div class="summary-box welcome-stat-box">
+                  <span>Streak</span>
+                  <strong id="summaryProfileStreak">0</strong>
+                </div>
+              </div>
+              <p id="summaryProfileDetail" class="support-text welcome-panel-detail"></p>
+            </section>
             <div id="summaryHistoryNav" class="hidden"></div>
             <p class="phase-label summary-history-label">Round history</p>
             <div class="round-table-wrap">
@@ -327,6 +360,230 @@
       </section>
     </main>
 
+    <div id="stickerOverlay" class="sticker-overlay" aria-hidden="true"></div>
+
+    <aside id="menuSheet" class="menu-sheet" aria-hidden="true">
+        <div class="menu-sheet-scroll">
+          <div class="menu-sheet-handle" aria-hidden="true"></div>
+          <div class="menu-sheet-header">
+            <div>
+              <h2 id="menuTitle">Menu</h2>
+            </div>
+            <button id="menuClose" class="ghost-button" type="button">Close</button>
+          </div>
+        <p id="menuContext" class="support-text hidden">Manage your match, profile, and rules without leaving the table.</p>
+        <div id="menuHubView">
+          <div class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Actions</span>
+              <strong id="menuActionStatus">Ready</strong>
+            </div>
+            <div class="menu-actions">
+              <button id="menuPrimaryAction" class="primary-button" type="button">Start New Match</button>
+              <button id="menuSecondaryAction" class="ghost-button" type="button">Close Menu</button>
+            </div>
+          </div>
+          <section class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Profile Snapshot</span>
+              <strong id="menuProfileStatus">Fresh profile</strong>
+            </div>
+            <div class="welcome-stat-grid">
+              <div class="summary-box welcome-stat-box">
+                <span>Matches</span>
+                <strong id="menuProfileMatches">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Record</span>
+                <strong id="menuProfileRecord">0-0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Bid Rate</span>
+                <strong id="menuProfileBidRate">0%</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Best Round</span>
+                <strong id="menuProfileBestRound">0</strong>
+              </div>
+            </div>
+            <p id="menuProfileDetail" class="support-text welcome-panel-detail hidden"></p>
+            <button id="menuViewProfile" class="ghost-button" type="button">View Full Profile</button>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Progress</span>
+              <strong id="menuProgressStatus">Just getting started</strong>
+            </div>
+            <div class="welcome-stat-grid">
+              <div class="summary-box welcome-stat-box">
+                <span>Rounds</span>
+                <strong id="menuProgressRounds">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Bids Made</span>
+                <strong id="menuProgressBidsMade">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Bids Won</span>
+                <strong id="menuProgressBidsWon">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Streak</span>
+                <strong id="menuProgressStreak">0</strong>
+              </div>
+            </div>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Rules &amp; Ruleset</span>
+              <strong id="menuRulesetName">Kentucky House Rules</strong>
+            </div>
+            <p id="menuRulesDetail" class="support-text welcome-panel-detail"></p>
+          </section>
+        </div>
+        <div id="menuProfileView" class="hidden">
+          <div class="menu-profile-topbar">
+            <button id="menuProfileBack" class="menu-back-button" type="button" aria-label="Back to menu">←</button>
+          </div>
+          <section class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Lifetime Profile</span>
+              <strong id="menuFullProfileStatus">Fresh profile</strong>
+            </div>
+            <div class="welcome-stat-grid">
+              <div class="summary-box welcome-stat-box">
+                <span>Matches Started</span>
+                <strong id="menuFullMatchesStarted">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Matches Finished</span>
+                <strong id="menuFullMatchesCompleted">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Wins</span>
+                <strong id="menuFullWins">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Losses</span>
+                <strong id="menuFullLosses">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Rounds Played</span>
+                <strong id="menuFullRounds">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Best Round</span>
+                <strong id="menuFullBestRound">0</strong>
+              </div>
+            </div>
+            <p id="menuFullProfileDetail" class="support-text welcome-panel-detail"></p>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Performance</span>
+              <strong id="menuFullPerformanceStatus">0 avg</strong>
+            </div>
+            <div class="welcome-stat-grid">
+              <div class="summary-box welcome-stat-box">
+                <span>Avg / Round</span>
+                <strong id="menuFullAvgRoundPoints">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Best Match</span>
+                <strong id="menuFullBestMatchScore">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Biggest Win</span>
+                <strong id="menuFullBiggestWinMargin">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Biggest Loss</span>
+                <strong id="menuFullBiggestLossMargin">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Comeback Wins</span>
+                <strong id="menuFullComebackWins">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Close Wins</span>
+                <strong id="menuFullCloseWins">0</strong>
+              </div>
+            </div>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Human Bidding</span>
+              <strong id="menuFullBidStatus">0%</strong>
+            </div>
+            <div class="welcome-stat-grid">
+              <div class="summary-box welcome-stat-box">
+                <span>Avg Winning Bid</span>
+                <strong id="menuFullAvgWinningBid">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Made at 200</span>
+                <strong id="menuFullPerfect200">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Opp. Set Rate</span>
+                <strong id="menuFullOpponentSetRate">0%</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Opp. Set Rounds</span>
+                <strong id="menuFullOpponentSetRaw">0/0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Bids Won</span>
+                <strong id="menuFullBidsWon">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Bid Attempts</span>
+                <strong id="menuFullBidAttempts">0</strong>
+              </div>
+            </div>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Per-Ruleset Record</span>
+              <strong id="menuFullRulesetStatus">Current ruleset</strong>
+            </div>
+            <div id="menuRulesetRecords" class="profile-list"></div>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Teammates &amp; Rivals</span>
+              <strong id="menuFullPlayerStatus">Table records</strong>
+            </div>
+            <div id="menuPlayerRecords" class="profile-list"></div>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Progress Totals</span>
+              <strong id="menuFullProgressStatus">On this device</strong>
+            </div>
+            <div class="welcome-stat-grid">
+              <div class="summary-box welcome-stat-box">
+                <span>Us Points</span>
+                <strong id="menuFullUsPoints">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Them Points</span>
+                <strong id="menuFullThemPoints">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Current Streak</span>
+                <strong id="menuFullCurrentStreak">0</strong>
+              </div>
+              <div class="summary-box welcome-stat-box">
+                <span>Best Streak</span>
+                <strong id="menuFullBestStreak">0</strong>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </aside>
+    <div id="menuBackdrop" class="menu-backdrop hidden"></div>
     <aside id="historyDrawer" class="history-drawer">
       <div class="history-header">
         <h2>Previous Trick</h2>

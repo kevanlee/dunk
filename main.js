@@ -1,23 +1,121 @@
 (function () {
-  var SUITS = ["red", "green", "yellow", "black"];
+  var SUITS = ["red", "green", "yellow", "orange"];
   var SUIT_LABEL = {
     red: "Red",
     green: "Green",
     yellow: "Yellow",
-    black: "Black"
+    orange: "Orange"
   };
   var PLAYER_NAMES = ["You", "Bea", "Mae", "Cal"];
-  var MIN_BID = 100;
-  var MAX_BID = 200;
-  var BID_STEP = 5;
-  var MATCH_TARGET = 500;
-  var TOTAL_CARD_POINTS = 180;
-  var LAST_TRICK_BONUS = 20;
+  var RULESETS = {
+    kentuckyHouse: {
+      id: "kentuckyHouse",
+      label: "Kentucky House Rules",
+      minBid: 100,
+      maxBid: 200,
+      bidStep: 5,
+      matchTarget: 500,
+      lastTrickBonus: 20,
+      scoring: {
+        rook: 20,
+        rank1: 15,
+        rank14: 10,
+        rank10: 10,
+        rank5: 5
+      }
+    }
+  };
+  var DEFAULT_RULESET_ID = "kentuckyHouse";
   var PLAYERS = [0, 1, 2, 3];
   var BID_DELAY = 1200;
   var AI_DELAY = 700;
   var TRICK_DELAY = 1200;
+  var TRICK_WINNER_REVEAL_DELAY = 140;
   var SUMMARY_DELAY = 900;
+  var CLOSE_WIN_MARGIN = 50;
+  var SUMMARY_CLOSE_CALL_MARGIN = 10;
+  var STICKER_COOLDOWN = 260;
+  var BIG_TRICK_THRESHOLD = 30;
+  var MATCH_SUMMARY_GIF_CONFIG = {
+    win: [
+      "img/gifs/bg-gif-winning-liz.gif",
+      "img/gifs/bg-gif-winning.gif"
+    ],
+    loss: [
+      "img/gifs/bg-gif-losing-homer.gif",
+      "img/gifs/bg-gif-losing-ohno.gif"
+    ]
+  };
+  var STICKER_CONFIG = {
+    rook: {
+      assets: [
+        "img/stickers/rook-caw.png"
+      ],
+      size: "large",
+      intensity: "strong",
+      duration: 700,
+      impact: "strong"
+    },
+    big_trick: {
+      assets: [
+        "img/stickers/big-trick-cool.png",
+        "img/stickers/big-trick-dance.png",
+        "img/stickers/big-trick-parrot.png",
+        "img/stickers/big-trick-pop-tart.png"
+      ],
+      size: "medium",
+      intensity: "medium",
+      duration: 560
+    },
+    bid_set: {
+      assets: [
+        "img/stickers/bid-set-britney.png",
+        "img/stickers/bid-set-pain.png",
+        "img/stickers/bid-set-suffering.png",
+        "img/stickers/bid-set-tears.png"
+      ],
+      size: "large",
+      intensity: "strong",
+      duration: 640
+    },
+    bid_made: {
+      assets: [
+        "img/stickers/bid-made-bday-dog.png",
+        "img/stickers/bid-made-doge.png",
+        "img/stickers/bid-made-my-day.png",
+        "img/stickers/bid-made-shaq.png"
+      ],
+      size: "medium",
+      intensity: "medium",
+      duration: 560
+    },
+    game_win: {
+      assets: [
+        "img/stickers/game-win-fire.png",
+        "img/stickers/game-win-jonah.png",
+        "img/stickers/game-win-yaas.png"
+      ],
+      size: "xlarge",
+      intensity: "strong",
+      duration: 820
+    }
+  };
+  var SUMMARY_STICKER_CONFIG = {
+    summary_win: [
+      "img/stickers/summary-win.png",
+      "img/stickers/summary-win-lsp.png"
+    ],
+    summary_close_call: [
+      "img/stickers/summary-close-call.png"
+    ],
+    summary_self_loss: [
+      "img/stickers/summary-self-loss.png"
+    ],
+    summary_team_loss: [
+      "img/stickers/summary-team-loss.png",
+      "img/stickers/summary-team-loss-facepalm.png"
+    ]
+  };
   // AI weights are profile-driven so we can swap personalities without rewriting decisions.
   var AI_PROFILES = {
     steady: {
@@ -72,6 +170,7 @@
   var ACTIVE_MATCH_STORAGE_KEY = "kentucky-rook.active-match";
   var PERSISTED_STATE_KEYS = [
     "phase",
+    "rulesetId",
     "dealer",
     "roundNumber",
     "bidder",
@@ -102,6 +201,7 @@
     "roundMessage",
     "summary",
     "summaryStep",
+    "summaryMatchGif",
     "summaryScoringOpen",
     "aiTrumpReady",
     "biddingComplete",
@@ -112,6 +212,7 @@
     "gameOver",
     "matchId",
     "matchStartedAt",
+    "matchMaxDeficit",
     "profileRoundsTracked",
     "profileMatchCompleteRecorded"
   ];
@@ -124,13 +225,14 @@
   function createState() {
     return {
       phase: "welcome",
+      rulesetId: DEFAULT_RULESET_ID,
       dealer: 0,
       roundNumber: 1,
       bidder: null,
       winningBid: null,
       trump: null,
       selectedTrump: null,
-      selectedBid: MIN_BID,
+      selectedBid: RULESETS[DEFAULT_RULESET_ID].minBid,
       currentBid: null,
       currentBidHolder: null,
       currentBidTurn: 0,
@@ -154,6 +256,7 @@
       roundMessage: "",
       summary: null,
       summaryStep: 1,
+      summaryMatchGif: null,
       summaryScoringOpen: false,
       aiTrumpReady: false,
       aiTrumpMeterStarted: false,
@@ -164,6 +267,8 @@
       dealRevealAnimating: false,
       biddingComplete: false,
       biddingStarted: false,
+      menuOpen: false,
+      menuView: "hub",
       historyOpen: false,
       roundHistory: [],
       completedTricks: [],
@@ -171,11 +276,15 @@
       gameOver: false,
       matchId: null,
       matchStartedAt: null,
+      matchMaxDeficit: 0,
       profileRoundsTracked: 0,
       profileMatchCompleteRecorded: false,
       busy: false,
       timeoutId: null,
-      rookStickerCleanupId: null
+      winnerRevealId: null,
+      stickerCleanupId: null,
+      stickerActive: false,
+      stickerLastShownAt: 0
     };
   }
 
@@ -197,12 +306,28 @@
         bidsWon: 0,
         bidsMade: 0,
         bidsSet: 0,
-        bestRoundPoints: 0
+        bestRoundPoints: 0,
+        winningBidTotal: 0,
+        winningBidCount: 0,
+        perfectBid200Made: 0
+      },
+      performance: {
+        bestMatchScore: 0,
+        biggestWinMargin: 0,
+        biggestLossMargin: 0,
+        comebackWins: 0,
+        closeWins: 0
+      },
+      opponents: {
+        opponentBidRounds: 0,
+        opponentSetRounds: 0
       },
       streaks: {
         currentMatchWinStreak: 0,
         bestMatchWinStreak: 0
       },
+      rulesets: {},
+      playerRecords: {},
       lastMatch: null
     };
   }
@@ -252,6 +377,8 @@
     var nextProfile = createProfile();
     var totals = raw && raw.totals ? raw.totals : {};
     var human = raw && raw.human ? raw.human : {};
+    var performance = raw && raw.performance ? raw.performance : {};
+    var opponents = raw && raw.opponents ? raw.opponents : {};
     var streaks = raw && raw.streaks ? raw.streaks : {};
 
     nextProfile.version = STORAGE_SCHEMA_VERSION;
@@ -268,11 +395,62 @@
     nextProfile.human.bidsMade = Number(human.bidsMade) || 0;
     nextProfile.human.bidsSet = Number(human.bidsSet) || 0;
     nextProfile.human.bestRoundPoints = Number(human.bestRoundPoints) || 0;
+    nextProfile.human.winningBidTotal = Number(human.winningBidTotal) || 0;
+    nextProfile.human.winningBidCount = Number(human.winningBidCount) || 0;
+    nextProfile.human.perfectBid200Made = Number(human.perfectBid200Made) || 0;
+    nextProfile.performance.bestMatchScore = Number(performance.bestMatchScore) || 0;
+    nextProfile.performance.biggestWinMargin = Number(performance.biggestWinMargin) || 0;
+    nextProfile.performance.biggestLossMargin = Number(performance.biggestLossMargin) || 0;
+    nextProfile.performance.comebackWins = Number(performance.comebackWins) || 0;
+    nextProfile.performance.closeWins = Number(performance.closeWins) || 0;
+    nextProfile.opponents.opponentBidRounds = Number(opponents.opponentBidRounds) || 0;
+    nextProfile.opponents.opponentSetRounds = Number(opponents.opponentSetRounds) || 0;
     nextProfile.streaks.currentMatchWinStreak = Number(streaks.currentMatchWinStreak) || 0;
     nextProfile.streaks.bestMatchWinStreak = Number(streaks.bestMatchWinStreak) || 0;
+    nextProfile.rulesets = normalizeRulesetRecords(raw && raw.rulesets);
+    nextProfile.playerRecords = normalizePlayerRecords(raw && raw.playerRecords);
     nextProfile.lastMatch = raw && raw.lastMatch ? raw.lastMatch : null;
 
     return nextProfile;
+  }
+
+  function normalizeRulesetRecords(raw) {
+    var records = {};
+
+    if (!raw || typeof raw !== "object") {
+      return records;
+    }
+
+    Object.keys(raw).forEach(function (rulesetId) {
+      var item = raw[rulesetId] || {};
+      records[rulesetId] = {
+        matchesCompleted: Number(item.matchesCompleted) || 0,
+        wins: Number(item.wins) || 0,
+        losses: Number(item.losses) || 0
+      };
+    });
+
+    return records;
+  }
+
+  function normalizePlayerRecords(raw) {
+    var records = {};
+
+    if (!raw || typeof raw !== "object") {
+      return records;
+    }
+
+    Object.keys(raw).forEach(function (name) {
+      var item = raw[name] || {};
+      records[name] = {
+        teammateWins: Number(item.teammateWins) || 0,
+        teammateLosses: Number(item.teammateLosses) || 0,
+        opponentWins: Number(item.opponentWins) || 0,
+        opponentLosses: Number(item.opponentLosses) || 0
+      };
+    });
+
+    return records;
   }
 
   function loadProfile() {
@@ -282,6 +460,44 @@
   function saveProfile() {
     profile.version = STORAGE_SCHEMA_VERSION;
     safeStorageSet(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+  }
+
+  function ensureRulesetRecord(rulesetId) {
+    if (!profile.rulesets[rulesetId]) {
+      profile.rulesets[rulesetId] = {
+        matchesCompleted: 0,
+        wins: 0,
+        losses: 0
+      };
+    }
+    return profile.rulesets[rulesetId];
+  }
+
+  function ensurePlayerRecord(name) {
+    if (!profile.playerRecords[name]) {
+      profile.playerRecords[name] = {
+        teammateWins: 0,
+        teammateLosses: 0,
+        opponentWins: 0,
+        opponentLosses: 0
+      };
+    }
+    return profile.playerRecords[name];
+  }
+
+  function formatRecord(wins, losses) {
+    return wins + "-" + losses;
+  }
+
+  function formatRate(numerator, denominator) {
+    if (!denominator) {
+      return "0%";
+    }
+    return Math.round((numerator / denominator) * 100) + "%";
+  }
+
+  function formatAverage(value) {
+    return Math.round(value * 10) / 10;
   }
 
   function updateProfileTimestamp() {
@@ -335,18 +551,18 @@
 
   function savedMatchDetail(savedState) {
     if (savedState.phase === "play") {
-      return PLAYER_NAMES[savedState.currentPlayer] + " to act in trick play.";
+      return PLAYER_NAMES[savedState.currentPlayer] + " to play.";
     }
     if (savedState.phase === "trump") {
-      return PLAYER_NAMES[savedState.bidder] + " won the bid at " + savedState.winningBid + ".";
+      return PLAYER_NAMES[savedState.bidder] + " won " + savedState.winningBid + ".";
     }
     if (savedState.phase === "summary" && savedState.summary) {
       return savedState.summary.bid + " • " + savedState.summary.result + ".";
     }
     if (savedState.phase === "bidding") {
-      return savedState.biddingStarted ? "Bidding is underway." : "Cards are dealt and ready.";
+      return savedState.biddingStarted ? "Bidding in progress." : "Ready to bid.";
     }
-    return "Saved on this device for future sessions.";
+    return "Saved on this device.";
   }
 
   function sanitizeStateForStorage(sourceState) {
@@ -416,6 +632,7 @@
 
   function hydrateStateFromSnapshot(snapshot) {
     var nextState = createState();
+    snapshot = migrateLegacyBlackSuit(snapshot);
 
     PERSISTED_STATE_KEYS.forEach(function (key) {
       if (snapshot.hasOwnProperty(key)) {
@@ -427,7 +644,10 @@
     nextState.historyOpen = false;
     nextState.busy = false;
     nextState.timeoutId = null;
-    nextState.rookStickerCleanupId = null;
+    nextState.winnerRevealId = null;
+    nextState.stickerCleanupId = null;
+    nextState.stickerActive = false;
+    nextState.stickerLastShownAt = 0;
     nextState.aiTrumpMeterStarted = false;
     nextState.dealAnimating = false;
     nextState.dealVisibleCount = 13;
@@ -458,8 +678,10 @@
     }
 
     clearPendingTimeout();
-    clearRookSticker();
+    clearSticker();
     hydrateStateFromSnapshot(payload.state);
+    state.menuOpen = false;
+    state.menuView = "hub";
     updateProfileTimestamp();
     saveProfile();
     render();
@@ -475,11 +697,13 @@
     var nextState = createState();
 
     clearPendingTimeout();
-    clearRookSticker();
+    clearSticker();
     clearActiveMatch();
     nextState.matchId = createMatchId();
     nextState.matchStartedAt = new Date().toISOString();
     assignState(nextState);
+    state.menuOpen = false;
+    state.menuView = "hub";
     updateProfileTimestamp();
     profile.totals.matchesStarted += 1;
     saveProfile();
@@ -487,6 +711,8 @@
   }
 
   function recordRoundStats(bidMade) {
+    var bidderTeam;
+
     if (state.profileRoundsTracked >= state.roundHistory.length) {
       return;
     }
@@ -496,12 +722,24 @@
     profile.totals.usPointsEarned += state.roundPoints[0];
     profile.totals.themPointsEarned += state.roundPoints[1];
 
+    bidderTeam = teamForPlayer(state.bidder);
+
     if (state.bidder === 0) {
       profile.human.bidsWon += 1;
+      profile.human.winningBidTotal += state.winningBid;
+      profile.human.winningBidCount += 1;
       if (bidMade) {
         profile.human.bidsMade += 1;
+        if (state.winningBid === getRuleConfig().maxBid) {
+          profile.human.perfectBid200Made += 1;
+        }
       } else {
         profile.human.bidsSet += 1;
+      }
+    } else if (bidderTeam === 1) {
+      profile.opponents.opponentBidRounds += 1;
+      if (!bidMade) {
+        profile.opponents.opponentSetRounds += 1;
       }
     }
 
@@ -511,6 +749,8 @@
   }
 
   function recordMatchCompletion() {
+    var margin;
+    var rulesetRecord;
     var won;
 
     if (!state.gameOver || state.profileMatchCompleteRecorded) {
@@ -518,10 +758,19 @@
     }
 
     won = state.matchPoints[0] > state.matchPoints[1];
+    margin = Math.abs(state.matchPoints[0] - state.matchPoints[1]);
     updateProfileTimestamp();
     profile.totals.matchesCompleted += 1;
+    profile.performance.bestMatchScore = Math.max(profile.performance.bestMatchScore, state.matchPoints[0]);
     if (won) {
       profile.totals.matchesWon += 1;
+      profile.performance.biggestWinMargin = Math.max(profile.performance.biggestWinMargin, margin);
+      if (state.matchMaxDeficit > 0) {
+        profile.performance.comebackWins += 1;
+      }
+      if (margin <= CLOSE_WIN_MARGIN) {
+        profile.performance.closeWins += 1;
+      }
       profile.streaks.currentMatchWinStreak += 1;
       profile.streaks.bestMatchWinStreak = Math.max(
         profile.streaks.bestMatchWinStreak,
@@ -529,16 +778,54 @@
       );
     } else {
       profile.totals.matchesLost += 1;
+      profile.performance.biggestLossMargin = Math.max(profile.performance.biggestLossMargin, margin);
       profile.streaks.currentMatchWinStreak = 0;
     }
+
+    rulesetRecord = ensureRulesetRecord(state.rulesetId);
+    rulesetRecord.matchesCompleted += 1;
+    if (won) {
+      rulesetRecord.wins += 1;
+    } else {
+      rulesetRecord.losses += 1;
+    }
+
+    PLAYER_NAMES.slice(1).forEach(function (name, index) {
+      var player = index + 1;
+      var record = ensurePlayerRecord(name);
+
+      if (teamForPlayer(player) === teamForPlayer(0)) {
+        if (won) {
+          record.teammateWins += 1;
+        } else {
+          record.teammateLosses += 1;
+        }
+      } else if (won) {
+        record.opponentWins += 1;
+      } else {
+        record.opponentLosses += 1;
+      }
+    });
+
     profile.lastMatch = {
       completedAt: new Date().toISOString(),
       won: won,
       usScore: state.matchPoints[0],
-      themScore: state.matchPoints[1]
+      themScore: state.matchPoints[1],
+      margin: margin,
+      rulesetId: state.rulesetId
     };
     state.profileMatchCompleteRecorded = true;
     saveProfile();
+  }
+
+  function getRuleConfig() {
+    return RULESETS[state.rulesetId] || RULESETS[DEFAULT_RULESET_ID];
+  }
+
+  function scoringTotalPoints() {
+    var scoring = getRuleConfig().scoring;
+    return (scoring.rank1 * 4) + scoring.rank14 * 4 + scoring.rank10 * 4 + scoring.rank5 * 4 + scoring.rook;
   }
 
   function cacheDom() {
@@ -547,6 +834,65 @@
     ui.phaseTrump = document.getElementById("phaseTrump");
     ui.phasePlay = document.getElementById("phasePlay");
     ui.phaseSummary = document.getElementById("phaseSummary");
+    ui.summaryPanel = ui.phaseSummary ? ui.phaseSummary.querySelector(".panel-card") : null;
+    ui.menuToggle = document.getElementById("menuToggle");
+    ui.menuSheet = document.getElementById("menuSheet");
+    ui.menuClose = document.getElementById("menuClose");
+    ui.menuBackdrop = document.getElementById("menuBackdrop");
+    ui.menuTitle = document.getElementById("menuTitle");
+    ui.menuContext = document.getElementById("menuContext");
+    ui.menuHubView = document.getElementById("menuHubView");
+    ui.menuProfileView = document.getElementById("menuProfileView");
+    ui.menuProfileBack = document.getElementById("menuProfileBack");
+    ui.menuActionStatus = document.getElementById("menuActionStatus");
+    ui.menuPrimaryAction = document.getElementById("menuPrimaryAction");
+    ui.menuSecondaryAction = document.getElementById("menuSecondaryAction");
+    ui.menuViewProfile = document.getElementById("menuViewProfile");
+    ui.menuProfileStatus = document.getElementById("menuProfileStatus");
+    ui.menuProfileMatches = document.getElementById("menuProfileMatches");
+    ui.menuProfileRecord = document.getElementById("menuProfileRecord");
+    ui.menuProfileBidRate = document.getElementById("menuProfileBidRate");
+    ui.menuProfileBestRound = document.getElementById("menuProfileBestRound");
+    ui.menuProfileDetail = document.getElementById("menuProfileDetail");
+    ui.menuProgressStatus = document.getElementById("menuProgressStatus");
+    ui.menuProgressRounds = document.getElementById("menuProgressRounds");
+    ui.menuProgressBidsMade = document.getElementById("menuProgressBidsMade");
+    ui.menuProgressBidsWon = document.getElementById("menuProgressBidsWon");
+    ui.menuProgressStreak = document.getElementById("menuProgressStreak");
+    ui.menuRulesetName = document.getElementById("menuRulesetName");
+    ui.menuRulesDetail = document.getElementById("menuRulesDetail");
+    ui.menuHelpDetail = document.getElementById("menuHelpDetail");
+    ui.menuFullProfileStatus = document.getElementById("menuFullProfileStatus");
+    ui.menuFullMatchesStarted = document.getElementById("menuFullMatchesStarted");
+    ui.menuFullMatchesCompleted = document.getElementById("menuFullMatchesCompleted");
+    ui.menuFullWins = document.getElementById("menuFullWins");
+    ui.menuFullLosses = document.getElementById("menuFullLosses");
+    ui.menuFullRounds = document.getElementById("menuFullRounds");
+    ui.menuFullBestRound = document.getElementById("menuFullBestRound");
+    ui.menuFullProfileDetail = document.getElementById("menuFullProfileDetail");
+    ui.menuFullPerformanceStatus = document.getElementById("menuFullPerformanceStatus");
+    ui.menuFullAvgRoundPoints = document.getElementById("menuFullAvgRoundPoints");
+    ui.menuFullBestMatchScore = document.getElementById("menuFullBestMatchScore");
+    ui.menuFullBiggestWinMargin = document.getElementById("menuFullBiggestWinMargin");
+    ui.menuFullBiggestLossMargin = document.getElementById("menuFullBiggestLossMargin");
+    ui.menuFullComebackWins = document.getElementById("menuFullComebackWins");
+    ui.menuFullCloseWins = document.getElementById("menuFullCloseWins");
+    ui.menuFullBidStatus = document.getElementById("menuFullBidStatus");
+    ui.menuFullBidsWon = document.getElementById("menuFullBidsWon");
+    ui.menuFullAvgWinningBid = document.getElementById("menuFullAvgWinningBid");
+    ui.menuFullPerfect200 = document.getElementById("menuFullPerfect200");
+    ui.menuFullOpponentSetRate = document.getElementById("menuFullOpponentSetRate");
+    ui.menuFullOpponentSetRaw = document.getElementById("menuFullOpponentSetRaw");
+    ui.menuFullBidAttempts = document.getElementById("menuFullBidAttempts");
+    ui.menuFullRulesetStatus = document.getElementById("menuFullRulesetStatus");
+    ui.menuRulesetRecords = document.getElementById("menuRulesetRecords");
+    ui.menuFullPlayerStatus = document.getElementById("menuFullPlayerStatus");
+    ui.menuPlayerRecords = document.getElementById("menuPlayerRecords");
+    ui.menuFullProgressStatus = document.getElementById("menuFullProgressStatus");
+    ui.menuFullUsPoints = document.getElementById("menuFullUsPoints");
+    ui.menuFullThemPoints = document.getElementById("menuFullThemPoints");
+    ui.menuFullCurrentStreak = document.getElementById("menuFullCurrentStreak");
+    ui.menuFullBestStreak = document.getElementById("menuFullBestStreak");
     ui.welcomeTitle = document.getElementById("welcomeTitle");
     ui.welcomeMessage = document.getElementById("welcomeMessage");
     ui.savedMatchPanel = document.getElementById("savedMatchPanel");
@@ -610,7 +956,7 @@
     ui.playMessage = document.getElementById("playMessage");
     ui.handHint = document.getElementById("handHint");
     ui.playerHand = document.getElementById("playerHand");
-    ui.rookStickerOverlay = document.getElementById("rookStickerOverlay");
+    ui.stickerOverlay = document.getElementById("stickerOverlay");
     ui.tableArea = document.querySelector(".table-area");
     ui.seatTopCount = document.getElementById("seatTopCount");
     ui.seatLeftCount = document.getElementById("seatLeftCount");
@@ -627,6 +973,7 @@
     ui.summaryTitle = document.getElementById("summaryTitle");
     ui.summaryPhaseLabel = document.getElementById("summaryPhaseLabel");
     ui.summaryStory = document.getElementById("summaryStory");
+    ui.summaryStorySticker = document.getElementById("summaryStorySticker");
     ui.summaryStoryLabel = document.getElementById("summaryStoryLabel");
     ui.summaryStoryHeadline = document.getElementById("summaryStoryHeadline");
     ui.summaryStoryMood = document.getElementById("summaryStoryMood");
@@ -645,6 +992,14 @@
     ui.summaryMatchUs = document.getElementById("summaryMatchUs");
     ui.summaryMatchThem = document.getElementById("summaryMatchThem");
     ui.summaryMatchNote = document.getElementById("summaryMatchNote");
+    ui.summaryMatchTarget = document.getElementById("summaryMatchTarget");
+    ui.summaryProfileCard = document.getElementById("summaryProfileCard");
+    ui.summaryProfileStatus = document.getElementById("summaryProfileStatus");
+    ui.summaryProfileRecord = document.getElementById("summaryProfileRecord");
+    ui.summaryProfileBidRate = document.getElementById("summaryProfileBidRate");
+    ui.summaryProfileBestRound = document.getElementById("summaryProfileBestRound");
+    ui.summaryProfileStreak = document.getElementById("summaryProfileStreak");
+    ui.summaryProfileDetail = document.getElementById("summaryProfileDetail");
     ui.summaryTableBody = document.getElementById("summaryTableBody");
     ui.nextRound = document.getElementById("nextRound");
     ui.backToRoundSummary = document.getElementById("backToRoundSummary");
@@ -656,6 +1011,37 @@
   }
 
   function bindEvents() {
+    ui.menuToggle.addEventListener("click", function () {
+      state.menuOpen = true;
+      renderMenuSheet();
+    });
+
+    ui.menuClose.addEventListener("click", function () {
+      closeMenuSheet();
+    });
+
+    ui.menuBackdrop.addEventListener("click", function () {
+      closeMenuSheet();
+    });
+
+    ui.menuPrimaryAction.addEventListener("click", function () {
+      handleMenuAction(ui.menuPrimaryAction.getAttribute("data-action"));
+    });
+
+    ui.menuSecondaryAction.addEventListener("click", function () {
+      handleMenuAction(ui.menuSecondaryAction.getAttribute("data-action"));
+    });
+
+    ui.menuViewProfile.addEventListener("click", function () {
+      state.menuView = "profile";
+      renderMenuSheet();
+    });
+
+    ui.menuProfileBack.addEventListener("click", function () {
+      state.menuView = "hub";
+      renderMenuSheet();
+    });
+
     ui.startNewGame.addEventListener("click", function () {
       if (state.phase !== "welcome") {
         return;
@@ -674,7 +1060,7 @@
       if (state.phase !== "bidding" || state.busy || state.biddingComplete) {
         return;
       }
-      state.selectedBid = Math.max(getMinimumBid(), state.selectedBid - BID_STEP);
+      state.selectedBid = Math.max(getMinimumBid(), state.selectedBid - getRuleConfig().bidStep);
       render();
     });
 
@@ -682,7 +1068,7 @@
       if (state.phase !== "bidding" || state.busy || state.biddingComplete) {
         return;
       }
-      state.selectedBid = Math.min(MAX_BID, state.selectedBid + BID_STEP);
+      state.selectedBid = Math.min(getRuleConfig().maxBid, state.selectedBid + getRuleConfig().bidStep);
       render();
     });
 
@@ -797,6 +1183,231 @@
     });
   }
 
+  function closeMenuSheet() {
+    state.menuOpen = false;
+    state.menuView = "hub";
+    renderMenuSheet();
+  }
+
+  function handleMenuAction(action) {
+    if (action === "view_profile") {
+      state.menuView = "profile";
+      renderMenuSheet();
+      return;
+    }
+    if (action === "back_to_hub") {
+      state.menuView = "hub";
+      renderMenuSheet();
+      return;
+    }
+    if (action === "continue_saved") {
+      closeMenuSheet();
+      continueSavedMatch();
+      return;
+    }
+    if (action === "start_new") {
+      closeMenuSheet();
+      beginNewMatch();
+      return;
+    }
+    closeMenuSheet();
+  }
+
+  function profileBidAttemptCount() {
+    return profile.human.bidsMade + profile.human.bidsSet;
+  }
+
+  function profileBidRateText() {
+    var attempts = profileBidAttemptCount();
+
+    if (!attempts) {
+      return "0%";
+    }
+    return Math.round((profile.human.bidsMade / attempts) * 100) + "%";
+  }
+
+  function profileWinRateText() {
+    var matches = profile.totals.matchesCompleted;
+
+    if (!matches) {
+      return "Fresh profile";
+    }
+    return Math.round((profile.totals.matchesWon / matches) * 100) + "% match win rate";
+  }
+
+  function menuContextText() {
+    return "";
+  }
+
+  function renderFullProfileView() {
+    var bidAttempts = profileBidAttemptCount();
+    var avgRoundPoints = profile.totals.roundsCompleted
+      ? formatAverage(profile.totals.usPointsEarned / profile.totals.roundsCompleted)
+      : 0;
+    var avgWinningBid = profile.human.winningBidCount
+      ? formatAverage(profile.human.winningBidTotal / profile.human.winningBidCount)
+      : 0;
+
+    ui.menuFullProfileStatus.textContent = profileWinRateText();
+    ui.menuFullMatchesStarted.textContent = String(profile.totals.matchesStarted);
+    ui.menuFullMatchesCompleted.textContent = String(profile.totals.matchesCompleted);
+    ui.menuFullWins.textContent = String(profile.totals.matchesWon);
+    ui.menuFullLosses.textContent = String(profile.totals.matchesLost);
+    ui.menuFullRounds.textContent = String(profile.totals.roundsCompleted);
+    ui.menuFullBestRound.textContent = String(profile.human.bestRoundPoints);
+    ui.menuFullProfileDetail.textContent = profile.lastMatch
+      ? "Last recorded match finished " + (profile.lastMatch.won ? "with a win" : "with a loss") +
+        " at Us " + profile.lastMatch.usScore + " / Them " + profile.lastMatch.themScore + "."
+      : "No completed match yet. As you play, this screen will build a long-term picture of your style and results.";
+    ui.menuFullPerformanceStatus.textContent = avgRoundPoints + " avg";
+    ui.menuFullAvgRoundPoints.textContent = String(avgRoundPoints);
+    ui.menuFullBestMatchScore.textContent = String(profile.performance.bestMatchScore);
+    ui.menuFullBiggestWinMargin.textContent = String(profile.performance.biggestWinMargin);
+    ui.menuFullBiggestLossMargin.textContent = String(profile.performance.biggestLossMargin);
+    ui.menuFullComebackWins.textContent = String(profile.performance.comebackWins);
+    ui.menuFullCloseWins.textContent = String(profile.performance.closeWins);
+    ui.menuFullBidStatus.textContent = profileBidRateText();
+    ui.menuFullBidsWon.textContent = String(profile.human.bidsWon);
+    ui.menuFullAvgWinningBid.textContent = String(avgWinningBid);
+    ui.menuFullPerfect200.textContent = String(profile.human.perfectBid200Made);
+    ui.menuFullOpponentSetRate.textContent = formatRate(
+      profile.opponents.opponentSetRounds,
+      profile.opponents.opponentBidRounds
+    );
+    ui.menuFullOpponentSetRaw.textContent =
+      profile.opponents.opponentSetRounds + "/" + profile.opponents.opponentBidRounds;
+    ui.menuFullBidAttempts.textContent = String(bidAttempts);
+    ui.menuFullProgressStatus.textContent = "Tracking " + getRuleConfig().label;
+    ui.menuFullUsPoints.textContent = String(profile.totals.usPointsEarned);
+    ui.menuFullThemPoints.textContent = String(profile.totals.themPointsEarned);
+    ui.menuFullCurrentStreak.textContent = String(profile.streaks.currentMatchWinStreak);
+    ui.menuFullBestStreak.textContent = String(profile.streaks.bestMatchWinStreak);
+    renderRulesetRecords();
+    renderPlayerRecords();
+  }
+
+  function renderRulesetRecords() {
+    var rulesetIds = Object.keys(RULESETS);
+
+    ui.menuFullRulesetStatus.textContent = getRuleConfig().label;
+    ui.menuRulesetRecords.innerHTML = "";
+
+    rulesetIds.forEach(function (rulesetId) {
+      var config = RULESETS[rulesetId];
+      var record = ensureRulesetRecord(rulesetId);
+      var row = document.createElement("div");
+      var title = document.createElement("strong");
+      var detail = document.createElement("span");
+
+      row.className = "profile-list-row";
+      title.textContent = config.label;
+      detail.textContent = formatRecord(record.wins, record.losses) + " record • " +
+        record.matchesCompleted + " matches";
+      row.appendChild(title);
+      row.appendChild(detail);
+      ui.menuRulesetRecords.appendChild(row);
+    });
+  }
+
+  function renderPlayerRecords() {
+    ui.menuFullPlayerStatus.textContent = "Across completed matches";
+    ui.menuPlayerRecords.innerHTML = "";
+
+    PLAYER_NAMES.slice(1).forEach(function (name) {
+      var record = ensurePlayerRecord(name);
+      var row = document.createElement("div");
+      var title = document.createElement("strong");
+      var detail = document.createElement("span");
+
+      row.className = "profile-list-row";
+      title.textContent = name;
+      detail.textContent = "With " + name + ": " +
+        formatRecord(record.teammateWins, record.teammateLosses) +
+        " • Vs. " + name + ": " +
+        formatRecord(record.opponentWins, record.opponentLosses);
+      row.appendChild(title);
+      row.appendChild(detail);
+      ui.menuPlayerRecords.appendChild(row);
+    });
+  }
+
+  function renderMenuSheet() {
+    var primaryAction = "close";
+    var secondaryAction = "close";
+    var primaryLabel = "Close Menu";
+    var secondaryLabel = "Back";
+    var bidAttempts = profileBidAttemptCount();
+    var rules = getRuleConfig();
+
+    ui.menuToggle.setAttribute("aria-expanded", state.menuOpen ? "true" : "false");
+    ui.menuSheet.classList.toggle("open", state.menuOpen);
+    ui.menuSheet.setAttribute("aria-hidden", state.menuOpen ? "false" : "true");
+    ui.menuBackdrop.classList.toggle("hidden", !state.menuOpen);
+
+    ui.menuHubView.classList.toggle("hidden", state.menuView !== "hub");
+    ui.menuProfileView.classList.toggle("hidden", state.menuView !== "profile");
+    ui.menuTitle.textContent = state.menuView === "profile"
+      ? "Player Profile"
+      : "Menu";
+    ui.menuContext.textContent = menuContextText();
+    ui.menuContext.classList.toggle("hidden", !ui.menuContext.textContent);
+
+    if (state.menuView === "profile") {
+      primaryAction = "back_to_hub";
+      secondaryAction = "close";
+      primaryLabel = "Back to Menu";
+      secondaryLabel = "Close Menu";
+      ui.menuActionStatus.textContent = "Full profile";
+    } else if (state.phase === "welcome" && savedMatchMeta) {
+      primaryAction = "continue_saved";
+      secondaryAction = "start_new";
+      primaryLabel = "Continue Match";
+      secondaryLabel = "Start New Match";
+      ui.menuActionStatus.textContent = savedMatchMeta.phaseLabel;
+    } else if (state.phase === "welcome") {
+      primaryAction = "start_new";
+      primaryLabel = "Start New Match";
+      secondaryLabel = "Close Menu";
+      ui.menuActionStatus.textContent = "No active match";
+    } else if (state.phase === "summary" && state.gameOver) {
+      primaryAction = "start_new";
+      primaryLabel = "Start New Match";
+      secondaryLabel = "Close Menu";
+      ui.menuActionStatus.textContent = "Match complete";
+    } else {
+      primaryAction = "close";
+      primaryLabel = "Back to Match";
+      secondaryLabel = "Close Menu";
+      ui.menuActionStatus.textContent = state.phase === "play" ? "Match in progress" : "Quick access";
+    }
+
+    ui.menuPrimaryAction.textContent = primaryLabel;
+    ui.menuPrimaryAction.setAttribute("data-action", primaryAction);
+    ui.menuSecondaryAction.textContent = secondaryLabel;
+    ui.menuSecondaryAction.setAttribute("data-action", secondaryAction);
+
+    ui.menuProfileStatus.textContent = profileWinRateText();
+    ui.menuProfileMatches.textContent = String(profile.totals.matchesCompleted);
+    ui.menuProfileRecord.textContent = profile.totals.matchesWon + "-" + profile.totals.matchesLost;
+    ui.menuProfileBidRate.textContent = profileBidRateText();
+    ui.menuProfileBestRound.textContent = String(profile.human.bestRoundPoints);
+
+    ui.menuProgressStatus.textContent = bidAttempts
+      ? "Bid success " + profileBidRateText()
+      : "Just getting started";
+    ui.menuProgressRounds.textContent = String(profile.totals.roundsCompleted);
+    ui.menuProgressBidsMade.textContent = String(profile.human.bidsMade);
+    ui.menuProgressBidsWon.textContent = String(profile.human.bidsWon);
+    ui.menuProgressStreak.textContent = String(profile.streaks.currentMatchWinStreak);
+
+    ui.menuRulesetName.textContent = rules.label;
+    ui.menuRulesDetail.textContent =
+      "Current ruleset uses bids from " + rules.minBid + " to " + rules.maxBid + " in steps of " +
+      rules.bidStep + ", last trick bonus " + rules.lastTrickBonus + ", and first to " +
+      rules.matchTarget + " wins.";
+    renderFullProfileView();
+  }
+
   function startRound() {
     clearPendingTimeout();
 
@@ -809,7 +1420,7 @@
     state.winningBid = null;
     state.trump = null;
     state.selectedTrump = null;
-    state.selectedBid = MIN_BID;
+    state.selectedBid = getRuleConfig().minBid;
     state.currentBid = null;
     state.currentBidHolder = null;
     state.currentBidTurn = (state.dealer + 1) % 4;
@@ -830,6 +1441,7 @@
     state.roundMessage = "";
     state.summary = null;
     state.summaryStep = 1;
+    state.summaryMatchGif = null;
     state.summaryScoringOpen = false;
     state.aiTrumpReady = false;
     state.aiTrumpMeterStarted = false;
@@ -844,7 +1456,7 @@
     state.previousTrick = null;
     state.completedTricks = [];
     state.busy = false;
-    clearRookSticker();
+    clearSticker();
 
     dealInitialHands();
     state.hands = cloneHands(state.initialHands);
@@ -900,7 +1512,7 @@
   }
 
   function biddingIsOver() {
-    if (state.currentBid === MAX_BID) {
+    if (state.currentBid === getRuleConfig().maxBid) {
       return true;
     }
     if (state.currentBid !== null && everyoneElsePassed()) {
@@ -957,7 +1569,7 @@
       if (match.shouldReduceVariance > 0.8 && conservativeHand && bid > floor) {
         bid -= 5;
       }
-      return Math.min(MAX_BID, Math.max(floor, Math.min(target, bid)));
+      return Math.min(getRuleConfig().maxBid, Math.max(floor, Math.min(target, bid)));
     }
 
     if (teammateHolding) {
@@ -979,7 +1591,7 @@
         bid += 5;
       }
 
-      return Math.min(MAX_BID, Math.min(target, bid));
+      return Math.min(getRuleConfig().maxBid, Math.min(target, bid));
     }
 
     bid = floor;
@@ -1003,7 +1615,7 @@
       bid -= 5;
     }
 
-    return Math.min(MAX_BID, Math.min(target, bid));
+    return Math.min(getRuleConfig().maxBid, Math.min(target, bid));
   }
 
   function countActiveOpponents(player) {
@@ -1049,7 +1661,7 @@
   }
 
   function roundToBidStep(value) {
-    return Math.round(value / BID_STEP) * BID_STEP;
+    return Math.round(value / getRuleConfig().bidStep) * getRuleConfig().bidStep;
   }
 
   function teammateForPlayer(player) {
@@ -1062,8 +1674,8 @@
     var ourScore = state.matchPoints[team];
     var theirScore = state.matchPoints[opponentTeam];
     var deficit = theirScore - ourScore;
-    var ourDistanceToWin = Math.max(0, MATCH_TARGET - ourScore);
-    var theirDistanceToWin = Math.max(0, MATCH_TARGET - theirScore);
+    var ourDistanceToWin = Math.max(0, getRuleConfig().matchTarget - ourScore);
+    var theirDistanceToWin = Math.max(0, getRuleConfig().matchTarget - theirScore);
     var trailingPressure = clamp(deficit / 150, 0, 1) * profile.riskBias;
     var closingPressure = clamp((ourScore - 430) / 70, 0, 1) * profile.safetyBias;
     var disruptionPressure = clamp((theirScore - 430) / 70, 0, 1) * profile.disruptionBias;
@@ -1106,9 +1718,9 @@
     var hand = state.hands[player] || state.initialHands[player] || [];
     var remainingCards = hand ? hand.length : 13;
     var awardedPoints = state.roundPoints[0] + state.roundPoints[1];
-    var remainingCardPoints = Math.max(0, TOTAL_CARD_POINTS - awardedPoints);
-    var lastTrickSwing = remainingCards > 0 ? LAST_TRICK_BONUS + buriedKittyPoints() : 0;
-    var totalSwingRemaining = remainingCardPoints + (remainingCards > 0 ? LAST_TRICK_BONUS : 0);
+    var remainingCardPoints = Math.max(0, scoringTotalPoints() - awardedPoints);
+    var lastTrickSwing = remainingCards > 0 ? getRuleConfig().lastTrickBonus + buriedKittyPoints() : 0;
+    var totalSwingRemaining = remainingCardPoints + (remainingCards > 0 ? getRuleConfig().lastTrickBonus : 0);
     var bidderPoints = bidderTeam === null ? 0 : state.roundPoints[bidderTeam];
     var contractPressure = 0;
     var disruptionPressure = 0;
@@ -1313,7 +1925,7 @@
   }
 
   function buildEffectiveSuitCounts(cards, trump) {
-    var counts = { red: 0, green: 0, yellow: 0, black: 0 };
+    var counts = { red: 0, green: 0, yellow: 0, orange: 0 };
 
     cards.forEach(function (card) {
       counts[effectiveSuit(card, trump)] += 1;
@@ -1509,7 +2121,7 @@
     return {
       score: score,
       bestTrump: best.trump,
-      targetBid: clamp(MIN_BID + bidOffset, MIN_BID, MAX_BID)
+      targetBid: clamp(getRuleConfig().minBid + bidOffset, getRuleConfig().minBid, getRuleConfig().maxBid)
     };
   }
 
@@ -1638,7 +2250,7 @@
       round: round,
       mode: mode,
       trickPoints: currentTrickPoints(),
-      lastTrickSwing: round.lastTrickSwing || (LAST_TRICK_BONUS + buriedKittyPoints()),
+      lastTrickSwing: round.lastTrickSwing || (getRuleConfig().lastTrickBonus + buriedKittyPoints()),
       playersAfter: playersAfter,
       isLastToAct: state.trick.length === 3,
       remainingTrumpElsewhere: countRemainingTrumpOutsidePlayer(player),
@@ -1830,16 +2442,18 @@
   }
 
   function getMinimumBid() {
-    return state.currentBid === null ? MIN_BID : Math.min(MAX_BID, state.currentBid + BID_STEP);
+    return state.currentBid === null
+      ? getRuleConfig().minBid
+      : Math.min(getRuleConfig().maxBid, state.currentBid + getRuleConfig().bidStep);
   }
 
   function syncSelectedBid() {
-    state.selectedBid = Math.min(MAX_BID, Math.max(getMinimumBid(), state.selectedBid));
+    state.selectedBid = Math.min(getRuleConfig().maxBid, Math.max(getMinimumBid(), state.selectedBid));
   }
 
   function finishBidding() {
     state.bidder = state.currentBidHolder === null ? 0 : state.currentBidHolder;
-    state.winningBid = state.currentBid === null ? MIN_BID : state.currentBid;
+    state.winningBid = state.currentBid === null ? getRuleConfig().minBid : state.currentBid;
     addBidFeed(biddingPlayerName(state.bidder) + " wins the bid at " + state.winningBid + ".");
     state.biddingComplete = true;
     state.busy = false;
@@ -2001,7 +2615,7 @@
     hand.splice(index, 1);
     state.trick.push({ player: player, card: card });
     if (card.isRook) {
-      showRookSticker();
+      showSticker("rook");
     }
 
     if (state.trick.length === 1) {
@@ -2040,13 +2654,13 @@
       pointsWon += state.buriedKitty.reduce(function (sum, card) {
         return sum + cardPoints(card);
       }, 0);
-      pointsWon += 20;
+      pointsWon += getRuleConfig().lastTrickBonus;
     }
 
     state.roundPoints[team] += pointsWon;
     state.playerPoints[winner] += pointsWon;
     state.trickCounts[team] += 1;
-    state.winningCardPlayer = winner;
+    state.winningCardPlayer = null;
     state.previousTrick = {
       cards: completedTrick,
       leader: completedTrick[0].player,
@@ -2057,9 +2671,19 @@
     state.completedTricks.push(state.previousTrick);
     state.roundMessage = trickWinMessage(winner, pointsWon);
     state.busy = true;
+    if (!isLastTrick && pointsWon >= BIG_TRICK_THRESHOLD) {
+      showSticker("big_trick");
+    }
     render();
 
+    state.winnerRevealId = window.setTimeout(function () {
+      state.winnerRevealId = null;
+      state.winningCardPlayer = winner;
+      render();
+    }, TRICK_WINNER_REVEAL_DELAY);
+
     schedule(function () {
+      clearWinnerReveal();
       state.trick = [];
       state.leadSuit = null;
       state.currentPlayer = winner;
@@ -2093,13 +2717,16 @@
       state.matchPoints[bidderTeam] -= state.winningBid;
       state.matchPoints[otherTeam] += state.roundPoints[otherTeam];
     }
+    state.matchMaxDeficit = Math.max(state.matchMaxDeficit, Math.max(0, state.matchPoints[1] - state.matchPoints[0]));
 
     state.summary = {
       us: summaryUs,
       them: summaryThem,
       bid: PLAYER_NAMES[state.bidder] + " bid " + state.winningBid,
       bidMade: bidMade,
+      bidderTeam: bidderTeam,
       result: bidMade ? "Made" : "Set",
+      bidMargin: bidMargin,
       margin: (bidMade ? "Made it by " : "Missed it by ") + bidMargin + " points",
       storyLabel: story.label,
       storyHeadline: story.headline,
@@ -2127,8 +2754,13 @@
     state.dealer = (state.dealer + 1) % 4;
     state.roundNumber += 1;
 
-    if (state.matchPoints[0] >= 500 || state.matchPoints[1] >= 500) {
+    if (state.matchPoints[0] >= getRuleConfig().matchTarget || state.matchPoints[1] >= getRuleConfig().matchTarget) {
       state.gameOver = true;
+    }
+    if (state.gameOver) {
+      showSticker("game_win", { bypassCooldown: true });
+    } else {
+      showSticker(bidMade ? "bid_made" : "bid_set", { bypassCooldown: true });
     }
     recordMatchCompletion();
 
@@ -2195,17 +2827,21 @@
   }
 
   function cardPoints(card) {
+    var scoring = getRuleConfig().scoring;
     if (card.isRook) {
-      return 20;
+      return scoring.rook;
     }
     if (card.rank === 1) {
-      return 15;
+      return scoring.rank1;
     }
-    if (card.rank === 14 || card.rank === 10) {
-      return 10;
+    if (card.rank === 14) {
+      return scoring.rank14;
+    }
+    if (card.rank === 10) {
+      return scoring.rank10;
     }
     if (card.rank === 5) {
-      return 5;
+      return scoring.rank5;
     }
     return 0;
   }
@@ -2316,6 +2952,9 @@
     ui.themScoreText.textContent = "Them " + state.matchPoints[1];
     ui.usScoreBar.style.width = scoreProgressWidth(state.matchPoints[0]);
     ui.themScoreBar.style.width = scoreProgressWidth(state.matchPoints[1]);
+    if (ui.summaryMatchTarget) {
+      ui.summaryMatchTarget.textContent = String(getRuleConfig().matchTarget);
+    }
 
     if (state.phase === "welcome") {
       renderWelcomePhase();
@@ -2329,6 +2968,7 @@
       renderSummaryPhase();
     }
     renderHistoryDrawer();
+    renderMenuSheet();
     saveActiveMatch();
   }
 
@@ -2340,12 +2980,12 @@
 
     ui.welcomeTitle.textContent = savedExists ? "Welcome Back" : "Welcome";
     ui.welcomeMessage.textContent = savedExists
-      ? "Your last match is waiting for you, or you can start a fresh run without losing your profile."
-      : "Start a new match and this device will keep both your active game and long-term player profile.";
+      ? "Pick up your last match or start fresh."
+      : "Start a match. Your progress and stats stay on this device.";
     ui.savedMatchPanel.classList.toggle("hidden", !savedExists);
     ui.continueSavedGame.classList.toggle("hidden", !savedExists);
     ui.startNewGame.className = savedExists ? "ghost-button" : "primary-button";
-    ui.startNewGame.textContent = savedExists ? "Start New Match" : "Start Your First Match";
+    ui.startNewGame.textContent = savedExists ? "Start Match" : "Start Match";
 
     if (savedExists) {
       ui.savedMatchPhase.textContent = savedMatchMeta.phaseLabel;
@@ -2360,11 +3000,10 @@
     ui.profileBids.textContent = profile.human.bidsMade + "/" + humanBidAttempts;
     ui.profileStatus.textContent = matchesPlayed
       ? winRate + "% match win rate"
-      : "Fresh profile";
+      : "No matches yet";
     ui.profileDetail.textContent = matchesPlayed
-      ? "Best team round: " + profile.human.bestRoundPoints + " points. Current win streak: " +
-        profile.streaks.currentMatchWinStreak + "."
-      : "Stats build up over time across matches on this device, including your bids, rounds, and match record.";
+      ? "Best round " + profile.human.bestRoundPoints + ". Streak " + profile.streaks.currentMatchWinStreak + "."
+      : "Stats build as you play.";
   }
 
   function renderBiddingPhase() {
@@ -2372,7 +3011,9 @@
     var dealDone = !state.dealAnimating && state.dealRevealed;
 
     ui.biddingPhaseLabel.textContent = preBid ? "Dealing" : "Bidding";
-    ui.biddingTitle.textContent = preBid ? (dealDone ? "Deal Complete" : "Dealing") : "Choose Your Bid";
+    ui.biddingTitle.textContent = preBid
+      ? (dealDone ? "Deal Complete" : "Dealing")
+      : (state.biddingComplete ? "Bid Winner" : "Choose Your Bid");
     ui.biddingTitle.classList.toggle("is-dealing", preBid && !dealDone);
     ui.currentHighLabel.textContent = state.biddingComplete ? "Bid winner" : "Current high bid";
     ui.currentHighBid.textContent = !state.biddingStarted || state.currentBid === null
@@ -2385,7 +3026,7 @@
     ui.currentTurn.textContent = biddingPlayerName(state.currentBidTurn);
     ui.selectedBid.textContent = String(state.selectedBid);
     ui.decreaseBid.disabled = state.selectedBid <= getMinimumBid() || state.busy || state.biddingComplete || !state.biddingStarted;
-    ui.increaseBid.disabled = state.selectedBid >= MAX_BID || state.busy || state.biddingComplete || !state.biddingStarted;
+    ui.increaseBid.disabled = state.selectedBid >= getRuleConfig().maxBid || state.busy || state.biddingComplete || !state.biddingStarted;
     ui.placeBid.disabled = state.currentBidTurn !== 0 || state.busy || state.biddingComplete || !state.biddingStarted;
     ui.passBid.disabled = state.currentBidTurn !== 0 || state.busy || state.biddingComplete || !state.biddingStarted;
     ui.handStrengthHint.textContent = biddingStrengthHint(state.initialHands[0]);
@@ -2487,10 +3128,10 @@
     ui.playMessage.textContent = state.roundMessage || "";
     ui.playMessage.classList.toggle("is-turn", state.currentPlayer === 0 && !state.busy);
     ui.handHint.textContent = state.currentPlayer === 0 && !state.busy ? "Your turn to play" : PLAYER_NAMES[state.currentPlayer] + " to play";
-    ui.seatTopCount.textContent = state.playerPoints[2] + " points";
-    ui.seatLeftCount.textContent = state.playerPoints[1] + " points";
-    ui.seatRightCount.textContent = state.playerPoints[3] + " points";
-    ui.seatBottomCount.textContent = state.playerPoints[0] + " points";
+    ui.seatTopCount.textContent = state.playerPoints[2] + " pts";
+    ui.seatLeftCount.textContent = state.playerPoints[1] + " pts";
+    ui.seatRightCount.textContent = state.playerPoints[3] + " pts";
+    ui.seatBottomCount.textContent = state.playerPoints[0] + " pts";
     syncSeatHighlight();
 
     renderSlot(ui.slotTop, playForSeat(2), state.winningCardPlayer === 2);
@@ -2500,50 +3141,90 @@
     renderHandGrid(ui.playerHand, state.hands[0], state.currentPlayer === 0 && !state.busy ? playHumanCard : null, "play");
   }
 
-  function showRookSticker() {
+  function showSticker(type, options) {
+    var config = STICKER_CONFIG[type];
+    var now = Date.now();
+    var asset;
     var sticker;
+    var optionsData = options || {};
 
-    if (!ui.rookStickerOverlay || !ui.tableArea) {
-      return;
+    if (!config || !ui.stickerOverlay) {
+      return false;
+    }
+    if (state.stickerActive) {
+      return false;
+    }
+    if (!optionsData.bypassCooldown && now - state.stickerLastShownAt < STICKER_COOLDOWN) {
+      return false;
     }
 
-    clearRookSticker();
+    clearSticker();
+    state.stickerActive = true;
+    state.stickerLastShownAt = now;
 
-    sticker = document.createElement("img");
-    sticker.className = "rook-sticker";
-    sticker.src = "img/rook-sticker.png";
-    sticker.alt = "";
-    sticker.decoding = "async";
-    sticker.setAttribute("aria-hidden", "true");
-    ui.rookStickerOverlay.appendChild(sticker);
+    sticker = document.createElement("div");
+    sticker.className = "sticker-burst sticker-size-" + config.size + " sticker-intensity-" + config.intensity;
+    sticker.style.setProperty("--sticker-duration", config.duration + "ms");
+    asset = randomStickerAsset(config);
 
-    ui.tableArea.classList.remove("rook-impact");
-    void ui.tableArea.offsetWidth;
-    ui.tableArea.classList.add("rook-impact");
+    if (asset) {
+      var image = document.createElement("img");
+      image.className = "sticker-image";
+      image.src = asset;
+      image.alt = "";
+      image.decoding = "async";
+      image.setAttribute("aria-hidden", "true");
+      sticker.appendChild(image);
+    } else {
+      var placeholder = document.createElement("div");
+      placeholder.className = "sticker-placeholder tone-" + (config.tone || "neutral");
+      placeholder.textContent = config.label;
+      sticker.appendChild(placeholder);
+    }
+
+    ui.stickerOverlay.appendChild(sticker);
+    applyStickerImpact(config.impact);
 
     sticker.addEventListener("animationend", function () {
-      if (sticker.parentNode === ui.rookStickerOverlay) {
-        ui.rookStickerOverlay.removeChild(sticker);
-      }
+      clearSticker();
     }, { once: true });
 
-    state.rookStickerCleanupId = window.setTimeout(function () {
-      state.rookStickerCleanupId = null;
-      ui.tableArea.classList.remove("rook-impact");
-      clearRookSticker();
-    }, 700);
+    state.stickerCleanupId = window.setTimeout(function () {
+      clearSticker();
+    }, config.duration + 120);
+
+    return true;
   }
 
-  function clearRookSticker() {
-    if (state.rookStickerCleanupId !== null) {
-      window.clearTimeout(state.rookStickerCleanupId);
-      state.rookStickerCleanupId = null;
+  function randomStickerAsset(config) {
+    if (!config.assets || !config.assets.length) {
+      return config.asset || null;
     }
-    if (ui.rookStickerOverlay) {
-      ui.rookStickerOverlay.innerHTML = "";
+    return config.assets[Math.floor(Math.random() * config.assets.length)];
+  }
+
+  function applyStickerImpact(impact) {
+    if (!ui.tableArea || !impact) {
+      return;
+    }
+    ui.tableArea.classList.remove("sticker-impact-medium");
+    ui.tableArea.classList.remove("sticker-impact-strong");
+    void ui.tableArea.offsetWidth;
+    ui.tableArea.classList.add("sticker-impact-" + impact);
+  }
+
+  function clearSticker() {
+    if (state.stickerCleanupId !== null) {
+      window.clearTimeout(state.stickerCleanupId);
+      state.stickerCleanupId = null;
+    }
+    state.stickerActive = false;
+    if (ui.stickerOverlay) {
+      ui.stickerOverlay.innerHTML = "";
     }
     if (ui.tableArea) {
-      ui.tableArea.classList.remove("rook-impact");
+      ui.tableArea.classList.remove("sticker-impact-medium");
+      ui.tableArea.classList.remove("sticker-impact-strong");
     }
   }
 
@@ -2588,6 +3269,7 @@
     ui.summaryScoring.classList.toggle("hidden", state.summaryStep !== 1 || !state.summaryScoringOpen);
     ui.summaryHistory.classList.toggle("hidden", state.summaryStep !== 2);
     ui.summaryStory.classList.toggle("hidden", state.summaryStep !== 1);
+    ui.summaryProfileCard.classList.toggle("hidden", !(state.summaryStep === 2 && state.gameOver));
 
     if (state.summaryStep === 1) {
       if (ui.summaryNav.parentNode !== ui.phaseSummary.querySelector(".panel-card")) {
@@ -2597,12 +3279,14 @@
       ui.summaryStoryHeadline.textContent = state.summary.storyHeadline;
       ui.summaryStoryMood.textContent = state.summary.storyMood;
       ui.summaryDetail.textContent = state.summary.margin || "";
+      renderSummaryStorySticker();
       if (state.summaryScoringOpen) {
         renderSummaryScoring();
       } else {
         ui.summaryScoringGrid.innerHTML = "";
       }
       ui.summaryTableBody.innerHTML = "";
+      applyMatchSummaryBackground();
       return;
     }
 
@@ -2610,10 +3294,145 @@
       ui.summaryHistoryNav.appendChild(ui.summaryNav);
     }
     ui.summaryDetail.textContent = "";
+    clearSummaryStorySticker();
     ui.summaryMatchUs.textContent = state.matchPoints[0];
     ui.summaryMatchThem.textContent = state.matchPoints[1];
     ui.summaryMatchNote.textContent = matchSummaryNote();
+    applyMatchSummaryBackground();
+    if (state.gameOver) {
+      renderSummaryProfileCard();
+    }
     renderSummaryTable();
+  }
+
+  function applyMatchSummaryBackground() {
+    var asset = null;
+
+    if (!ui.summaryPanel) {
+      return;
+    }
+
+    if (state.summaryStep === 2 && state.gameOver) {
+      asset = getMatchSummaryGifAsset();
+    }
+
+    ui.summaryPanel.classList.toggle("match-summary-gif", Boolean(asset));
+
+    if (asset) {
+      ui.summaryPanel.style.setProperty("--match-summary-gif", 'url("' + asset + '")');
+      ui.summaryPanel.classList.toggle("is-win", state.matchPoints[0] > state.matchPoints[1]);
+      ui.summaryPanel.classList.toggle("is-loss", state.matchPoints[0] < state.matchPoints[1]);
+      return;
+    }
+
+    ui.summaryPanel.style.removeProperty("--match-summary-gif");
+    ui.summaryPanel.classList.remove("is-win");
+    ui.summaryPanel.classList.remove("is-loss");
+  }
+
+  function getMatchSummaryGifAsset() {
+    var outcome;
+    var assets;
+
+    if (state.summaryMatchGif) {
+      return state.summaryMatchGif;
+    }
+
+    outcome = state.matchPoints[0] > state.matchPoints[1] ? "win" : "loss";
+    assets = MATCH_SUMMARY_GIF_CONFIG[outcome];
+
+    if (!assets || !assets.length) {
+      return null;
+    }
+
+    state.summaryMatchGif = assets[Math.floor(Math.random() * assets.length)];
+    return state.summaryMatchGif;
+  }
+
+  function renderSummaryProfileCard() {
+    ui.summaryProfileStatus.textContent = profileWinRateText();
+    ui.summaryProfileRecord.textContent = profile.totals.matchesWon + "-" + profile.totals.matchesLost;
+    ui.summaryProfileBidRate.textContent = profileBidRateText();
+    ui.summaryProfileBestRound.textContent = String(profile.human.bestRoundPoints);
+    ui.summaryProfileStreak.textContent = String(profile.streaks.currentMatchWinStreak);
+    ui.summaryProfileDetail.textContent =
+      "Rounds logged: " + profile.totals.roundsCompleted + ". Human bids won: " +
+      profile.human.bidsWon + ". Current ruleset: " + getRuleConfig().label + ".";
+  }
+
+  function renderSummaryStorySticker() {
+    var stickerType;
+    var asset;
+    var image;
+
+    if (!ui.summaryStorySticker || !state.summary) {
+      return;
+    }
+
+    stickerType = getSummaryStoryStickerType();
+    asset = stickerType ? randomSummaryStickerAsset(stickerType) : null;
+
+    if (!asset) {
+      clearSummaryStorySticker();
+      return;
+    }
+
+    ui.summaryStorySticker.innerHTML = "";
+    ui.summaryStorySticker.classList.remove("hidden");
+    ui.summaryStorySticker.classList.toggle("is-landscape", asset.indexOf("lsp") !== -1 || asset.indexOf("facepalm") !== -1);
+
+    image = document.createElement("img");
+    image.src = asset;
+    image.alt = "";
+    image.decoding = "async";
+    image.setAttribute("aria-hidden", "true");
+    ui.summaryStorySticker.appendChild(image);
+  }
+
+  function clearSummaryStorySticker() {
+    if (!ui.summaryStorySticker) {
+      return;
+    }
+    ui.summaryStorySticker.innerHTML = "";
+    ui.summaryStorySticker.classList.add("hidden");
+    ui.summaryStorySticker.classList.remove("is-landscape");
+  }
+
+  function getSummaryStoryStickerType() {
+    var bidderTeam;
+    var bidMade;
+    var bidMargin;
+
+    if (!state.summary) {
+      return null;
+    }
+
+    bidderTeam = state.summary.bidderTeam;
+    bidMade = state.summary.bidMade;
+    bidMargin = state.summary.bidMargin;
+
+    if (bidMade) {
+      if (bidderTeam === 0) {
+        return bidMargin <= SUMMARY_CLOSE_CALL_MARGIN ? "summary_close_call" : "summary_win";
+      }
+      return "summary_team_loss";
+    }
+
+    if (bidderTeam === 0) {
+      return state.bidder === 0 ? "summary_self_loss" : "summary_team_loss";
+    }
+
+    return "summary_win";
+  }
+
+  function randomSummaryStickerAsset(type) {
+    var assets = SUMMARY_STICKER_CONFIG[type];
+
+    if (!assets || !assets.length) {
+      return null;
+    }
+
+    return assets[Math.floor(Math.random() * assets.length)];
   }
 
   function summaryHeading() {
@@ -2639,9 +3458,9 @@
 
   function matchSummaryNote() {
     if (state.gameOver) {
-      return matchWinnerLabel() + " got to 500 first.";
+      return matchWinnerLabel() + " got to " + getRuleConfig().matchTarget + " first.";
     }
-    return "First to 500 wins.";
+    return "First to " + getRuleConfig().matchTarget + " wins.";
   }
 
   function matchWinnerLabel() {
@@ -2784,6 +3603,7 @@
       var isKittyCard = mode === "kitty" && isCardFromKitty(card.id);
       button.className = "card" +
         (card.isRook ? " rook-card" : "") +
+        " " + cardFaceClass(card) +
         (isReference ? " reference-card" : "") +
         (mode === "kitty" ? " selectable-reference" : "") +
         (mode === "play" && clickHandler && legal ? " playable-card" : "") +
@@ -2812,6 +3632,9 @@
       rank.className = "card-rank";
       rank.textContent = cardLabel(card);
       suit.className = "card-suit " + suitClass(card);
+      if (mode === "play" && card.isRook && state.trump) {
+        button.className += " show-rook-trump rook-trump-" + state.trump;
+      }
       button.appendChild(rank);
       button.appendChild(suit);
       container.appendChild(button);
@@ -2922,6 +3745,13 @@
     return "suit-" + card.suit;
   }
 
+  function cardFaceClass(card) {
+    if (card.isRook) {
+      return "face-rook";
+    }
+    return "face-" + card.suit;
+  }
+
   function cloneHands(hands) {
     return hands.map(function (hand) {
       return hand.slice();
@@ -2934,11 +3764,13 @@
     state.roundNumber = 1;
     state.dealer = 0;
     state.gameOver = false;
+    state.summaryMatchGif = null;
   }
 
   function scoreProgressWidth(score) {
-    var clamped = Math.max(0, Math.min(500, score));
-    return (clamped / 500) * 100 + "%";
+    var matchTarget = getRuleConfig().matchTarget;
+    var clamped = Math.max(0, Math.min(matchTarget, score));
+    return (clamped / matchTarget) * 100 + "%";
   }
 
   function schedule(fn, delay) {
@@ -2953,6 +3785,14 @@
     if (state.timeoutId !== null) {
       window.clearTimeout(state.timeoutId);
       state.timeoutId = null;
+    }
+    clearWinnerReveal();
+  }
+
+  function clearWinnerReveal() {
+    if (state.winnerRevealId !== null) {
+      window.clearTimeout(state.winnerRevealId);
+      state.winnerRevealId = null;
     }
   }
 
@@ -3023,7 +3863,13 @@
     var rank;
     var suit;
 
-    card.className = "played-card" + (isWinner ? " winner" : "") + (cardData.isRook ? " rook-card" : "");
+    card.className = "played-card" +
+      (isWinner ? " winner" : "") +
+      (cardData.isRook ? " rook-card" : "") +
+      " " + cardFaceClass(cardData);
+    if (cardData.isRook && state.phase === "play" && state.trump) {
+      card.className += " show-rook-trump rook-trump-" + state.trump;
+    }
     rank = document.createElement("div");
     suit = document.createElement("div");
     rank.className = "played-rank";
@@ -3147,7 +3993,7 @@
   function handStrengthProfile(cards) {
     var rawStrength = estimateHandStrength(cards);
     var scoringCount = 0;
-    var suitCounts = { red: 0, green: 0, yellow: 0, black: 0 };
+    var suitCounts = { red: 0, green: 0, yellow: 0, orange: 0 };
     var bestSuit = 0;
 
     cards.forEach(function (card) {
@@ -3173,6 +4019,28 @@
       return { label: "Medium hand" };
     }
     return { label: "Weak hand" };
+  }
+
+  function migrateLegacyBlackSuit(value) {
+    if (Array.isArray(value)) {
+      return value.map(migrateLegacyBlackSuit);
+    }
+    if (value && typeof value === "object") {
+      var next = {};
+      Object.keys(value).forEach(function (key) {
+        next[key] = migrateLegacyBlackSuit(value[key]);
+      });
+      return next;
+    }
+    if (typeof value === "string") {
+      return value
+        .replace(/\bBlack\b/g, "Orange")
+        .replace(/\bblack\b/g, "orange");
+    }
+    if (value === "black") {
+      return "orange";
+    }
+    return value;
   }
 
   function registerServiceWorker() {
