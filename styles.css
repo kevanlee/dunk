@@ -174,13 +174,64 @@ body {
 .welcome-content {
   display: grid;
   gap: 14px;
-  justify-items: center;
   text-align: center;
 }
 
-.welcome-content .primary-button {
+.welcome-message,
+.welcome-panel-detail {
+  margin: 0;
+}
+
+.welcome-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.welcome-actions .primary-button,
+.welcome-actions .ghost-button {
   width: 100%;
-  max-width: 280px;
+}
+
+.welcome-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.62);
+  text-align: left;
+}
+
+.welcome-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.welcome-panel-header span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.welcome-panel-header strong {
+  font-size: 1rem;
+}
+
+.welcome-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.welcome-stat-box {
+  padding: 12px;
+}
+
+.welcome-stat-box strong {
+  font-size: 1rem;
 }
 
 .bid-main {
@@ -528,6 +579,12 @@ h2.is-dealing::after {
   margin: 0;
   color: var(--muted);
   line-height: 1.5;
+}
+
+@media (min-width: 560px) {
+  .welcome-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .trump-grid {
