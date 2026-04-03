@@ -192,6 +192,42 @@ Inspired by arcade energy (e.g. NBA Jam):
 
 ---
 
+## 🗺️ Recommended Next Steps (Advanced Single-Player Focus)
+
+Ordered by implementation priority:
+
+1. **Ruleset/config engine**  
+   Centralize bid floor, bid step, scoring values, win target, and round bonuses so tuning and future modes are easy.
+
+2. **Deterministic trick-play AI upgrade**  
+   Improve tactical depth with better void tracking, point protection, trump timing, and endgame trick management.
+
+3. **Computer lineup + team-vs setup**  
+   Let the player choose partner and opponent AI profiles before each match so matchups feel intentionally different.
+
+4. **Deep persistent stats**  
+   Track metrics advanced players care about (set rate, contract margin, trump efficiency, matchup stats by archetype).
+
+5. **Round replay + forensic analysis**  
+   Highlight swing tricks, contract turning points, and missed point-capture opportunities after each round.
+
+6. **Achievements + unlocks (lightweight)**  
+   Add skill-based milestones and optional cosmetics to keep repeat play sessions engaging.
+
+7. **Power-user UX pass**  
+   Add speed controls and lower-friction flow for players running many games in a row.
+
+8. **5-player hidden partner variant**  
+   Add the social/hidden-information variant once the core 4-player solo experience is fully polished.
+
+9. **Visual feedback polish**  
+   Add punchier micro-animations and trick-win celebration moments.
+
+10. **PWA/session polish**  
+   Improve save/resume reliability and daily-play quality for personal single-player sessions.
+
+---
+
 ## 🧪 Development Approach
 
 This project is built iteratively:

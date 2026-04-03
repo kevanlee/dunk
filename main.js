@@ -7,12 +7,25 @@
     black: "Black"
   };
   var PLAYER_NAMES = ["You", "Bea", "Mae", "Cal"];
-  var MIN_BID = 100;
-  var MAX_BID = 200;
-  var BID_STEP = 5;
-  var MATCH_TARGET = 500;
-  var TOTAL_CARD_POINTS = 180;
-  var LAST_TRICK_BONUS = 20;
+  var RULESETS = {
+    kentuckyHouse: {
+      id: "kentuckyHouse",
+      label: "Kentucky House Rules",
+      minBid: 80,
+      maxBid: 200,
+      bidStep: 5,
+      matchTarget: 500,
+      lastTrickBonus: 20,
+      scoring: {
+        rook: 20,
+        rank1: 15,
+        rank14: 10,
+        rank10: 10,
+        rank5: 5
+      }
+    }
+  };
+  var DEFAULT_RULESET_ID = "kentuckyHouse";
   var PLAYERS = [0, 1, 2, 3];
   var BID_DELAY = 1200;
   var AI_DELAY = 700;
@@ -74,13 +87,14 @@
   function createState() {
     return {
       phase: "welcome",
+      rulesetId: DEFAULT_RULESET_ID,
       dealer: 0,
       roundNumber: 1,
       bidder: null,
       winningBid: null,
       trump: null,
       selectedTrump: null,
-      selectedBid: MIN_BID,
+      selectedBid: RULESETS[DEFAULT_RULESET_ID].minBid,
       currentBid: null,
       currentBidHolder: null,
       currentBidTurn: 0,
@@ -123,6 +137,15 @@
       timeoutId: null,
       rookStickerCleanupId: null
     };
+  }
+
+  function getRuleConfig() {
+    return RULESETS[state.rulesetId] || RULESETS[DEFAULT_RULESET_ID];
+  }
+
+  function scoringTotalPoints() {
+    var scoring = getRuleConfig().scoring;
+    return (scoring.rank1 * 4) + scoring.rank14 * 4 + scoring.rank10 * 4 + scoring.rank5 * 4 + scoring.rook;
   }
 
   function cacheDom() {
@@ -237,7 +260,7 @@
       if (state.phase !== "bidding" || state.busy || state.biddingComplete) {
         return;
       }
-      state.selectedBid = Math.max(getMinimumBid(), state.selectedBid - BID_STEP);
+      state.selectedBid = Math.max(getMinimumBid(), state.selectedBid - getRuleConfig().bidStep);
       render();
     });
 
@@ -245,7 +268,7 @@
       if (state.phase !== "bidding" || state.busy || state.biddingComplete) {
         return;
       }
-      state.selectedBid = Math.min(MAX_BID, state.selectedBid + BID_STEP);
+      state.selectedBid = Math.min(getRuleConfig().maxBid, state.selectedBid + getRuleConfig().bidStep);
       render();
     });
 
@@ -368,7 +391,7 @@
     state.winningBid = null;
     state.trump = null;
     state.selectedTrump = null;
-    state.selectedBid = MIN_BID;
+    state.selectedBid = getRuleConfig().minBid;
     state.currentBid = null;
     state.currentBidHolder = null;
     state.currentBidTurn = (state.dealer + 1) % 4;
@@ -459,7 +482,7 @@
   }
 
   function biddingIsOver() {
-    if (state.currentBid === MAX_BID) {
+    if (state.currentBid === getRuleConfig().maxBid) {
       return true;
     }
     if (state.currentBid !== null && everyoneElsePassed()) {
@@ -516,7 +539,7 @@
       if (match.shouldReduceVariance > 0.8 && conservativeHand && bid > floor) {
         bid -= 5;
       }
-      return Math.min(MAX_BID, Math.max(floor, Math.min(target, bid)));
+      return Math.min(getRuleConfig().maxBid, Math.max(floor, Math.min(target, bid)));
     }
 
     if (teammateHolding) {
@@ -538,7 +561,7 @@
         bid += 5;
       }
 
-      return Math.min(MAX_BID, Math.min(target, bid));
+      return Math.min(getRuleConfig().maxBid, Math.min(target, bid));
     }
 
     bid = floor;
@@ -562,7 +585,7 @@
       bid -= 5;
     }
 
-    return Math.min(MAX_BID, Math.min(target, bid));
+    return Math.min(getRuleConfig().maxBid, Math.min(target, bid));
   }
 
   function countActiveOpponents(player) {
@@ -608,7 +631,7 @@
   }
 
   function roundToBidStep(value) {
-    return Math.round(value / BID_STEP) * BID_STEP;
+    return Math.round(value / getRuleConfig().bidStep) * getRuleConfig().bidStep;
   }
 
   function teammateForPlayer(player) {
@@ -621,8 +644,8 @@
     var ourScore = state.matchPoints[team];
     var theirScore = state.matchPoints[opponentTeam];
     var deficit = theirScore - ourScore;
-    var ourDistanceToWin = Math.max(0, MATCH_TARGET - ourScore);
-    var theirDistanceToWin = Math.max(0, MATCH_TARGET - theirScore);
+    var ourDistanceToWin = Math.max(0, getRuleConfig().matchTarget - ourScore);
+    var theirDistanceToWin = Math.max(0, getRuleConfig().matchTarget - theirScore);
     var trailingPressure = clamp(deficit / 150, 0, 1) * profile.riskBias;
     var closingPressure = clamp((ourScore - 430) / 70, 0, 1) * profile.safetyBias;
     var disruptionPressure = clamp((theirScore - 430) / 70, 0, 1) * profile.disruptionBias;
@@ -665,9 +688,9 @@
     var hand = state.hands[player] || state.initialHands[player] || [];
     var remainingCards = hand ? hand.length : 13;
     var awardedPoints = state.roundPoints[0] + state.roundPoints[1];
-    var remainingCardPoints = Math.max(0, TOTAL_CARD_POINTS - awardedPoints);
-    var lastTrickSwing = remainingCards > 0 ? LAST_TRICK_BONUS + buriedKittyPoints() : 0;
-    var totalSwingRemaining = remainingCardPoints + (remainingCards > 0 ? LAST_TRICK_BONUS : 0);
+    var remainingCardPoints = Math.max(0, scoringTotalPoints() - awardedPoints);
+    var lastTrickSwing = remainingCards > 0 ? getRuleConfig().lastTrickBonus + buriedKittyPoints() : 0;
+    var totalSwingRemaining = remainingCardPoints + (remainingCards > 0 ? getRuleConfig().lastTrickBonus : 0);
     var bidderPoints = bidderTeam === null ? 0 : state.roundPoints[bidderTeam];
     var contractPressure = 0;
     var disruptionPressure = 0;
@@ -1068,7 +1091,7 @@
     return {
       score: score,
       bestTrump: best.trump,
-      targetBid: clamp(MIN_BID + bidOffset, MIN_BID, MAX_BID)
+      targetBid: clamp(getRuleConfig().minBid + bidOffset, getRuleConfig().minBid, getRuleConfig().maxBid)
     };
   }
 
@@ -1197,7 +1220,7 @@
       round: round,
       mode: mode,
       trickPoints: currentTrickPoints(),
-      lastTrickSwing: round.lastTrickSwing || (LAST_TRICK_BONUS + buriedKittyPoints()),
+      lastTrickSwing: round.lastTrickSwing || (getRuleConfig().lastTrickBonus + buriedKittyPoints()),
       playersAfter: playersAfter,
       isLastToAct: state.trick.length === 3,
       remainingTrumpElsewhere: countRemainingTrumpOutsidePlayer(player),
@@ -1389,16 +1412,18 @@
   }
 
   function getMinimumBid() {
-    return state.currentBid === null ? MIN_BID : Math.min(MAX_BID, state.currentBid + BID_STEP);
+    return state.currentBid === null
+      ? getRuleConfig().minBid
+      : Math.min(getRuleConfig().maxBid, state.currentBid + getRuleConfig().bidStep);
   }
 
   function syncSelectedBid() {
-    state.selectedBid = Math.min(MAX_BID, Math.max(getMinimumBid(), state.selectedBid));
+    state.selectedBid = Math.min(getRuleConfig().maxBid, Math.max(getMinimumBid(), state.selectedBid));
   }
 
   function finishBidding() {
     state.bidder = state.currentBidHolder === null ? 0 : state.currentBidHolder;
-    state.winningBid = state.currentBid === null ? MIN_BID : state.currentBid;
+    state.winningBid = state.currentBid === null ? getRuleConfig().minBid : state.currentBid;
     addBidFeed(biddingPlayerName(state.bidder) + " wins the bid at " + state.winningBid + ".");
     state.biddingComplete = true;
     state.busy = false;
@@ -1599,7 +1624,7 @@
       pointsWon += state.buriedKitty.reduce(function (sum, card) {
         return sum + cardPoints(card);
       }, 0);
-      pointsWon += 20;
+      pointsWon += getRuleConfig().lastTrickBonus;
     }
 
     state.roundPoints[team] += pointsWon;
@@ -1685,7 +1710,7 @@
     state.dealer = (state.dealer + 1) % 4;
     state.roundNumber += 1;
 
-    if (state.matchPoints[0] >= 500 || state.matchPoints[1] >= 500) {
+    if (state.matchPoints[0] >= getRuleConfig().matchTarget || state.matchPoints[1] >= getRuleConfig().matchTarget) {
       state.gameOver = true;
     }
 
@@ -1752,17 +1777,21 @@
   }
 
   function cardPoints(card) {
+    var scoring = getRuleConfig().scoring;
     if (card.isRook) {
-      return 20;
+      return scoring.rook;
     }
     if (card.rank === 1) {
-      return 15;
+      return scoring.rank1;
     }
-    if (card.rank === 14 || card.rank === 10) {
-      return 10;
+    if (card.rank === 14) {
+      return scoring.rank14;
+    }
+    if (card.rank === 10) {
+      return scoring.rank10;
     }
     if (card.rank === 5) {
-      return 5;
+      return scoring.rank5;
     }
     return 0;
   }
@@ -1904,7 +1933,7 @@
     ui.currentTurn.textContent = biddingPlayerName(state.currentBidTurn);
     ui.selectedBid.textContent = String(state.selectedBid);
     ui.decreaseBid.disabled = state.selectedBid <= getMinimumBid() || state.busy || state.biddingComplete || !state.biddingStarted;
-    ui.increaseBid.disabled = state.selectedBid >= MAX_BID || state.busy || state.biddingComplete || !state.biddingStarted;
+    ui.increaseBid.disabled = state.selectedBid >= getRuleConfig().maxBid || state.busy || state.biddingComplete || !state.biddingStarted;
     ui.placeBid.disabled = state.currentBidTurn !== 0 || state.busy || state.biddingComplete || !state.biddingStarted;
     ui.passBid.disabled = state.currentBidTurn !== 0 || state.busy || state.biddingComplete || !state.biddingStarted;
     ui.handStrengthHint.textContent = biddingStrengthHint(state.initialHands[0]);
@@ -2158,9 +2187,9 @@
 
   function matchSummaryNote() {
     if (state.gameOver) {
-      return matchWinnerLabel() + " got to 500 first.";
+      return matchWinnerLabel() + " got to " + getRuleConfig().matchTarget + " first.";
     }
-    return "First to 500 wins.";
+    return "First to " + getRuleConfig().matchTarget + " wins.";
   }
 
   function matchWinnerLabel() {
@@ -2456,8 +2485,9 @@
   }
 
   function scoreProgressWidth(score) {
-    var clamped = Math.max(0, Math.min(500, score));
-    return (clamped / 500) * 100 + "%";
+    var matchTarget = getRuleConfig().matchTarget;
+    var clamped = Math.max(0, Math.min(matchTarget, score));
+    return (clamped / matchTarget) * 100 + "%";
   }
 
   function schedule(fn, delay) {
