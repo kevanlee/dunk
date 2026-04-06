@@ -113,6 +113,10 @@
             <label class="setup-select-field" for="setupGameTypeSelect">
               <select id="setupGameTypeSelect" class="setup-select"></select>
             </label>
+            <p class="support-text welcome-panel-detail setup-rules-summary">
+              <span id="setupRulesSummaryText">57-card, big point team play.</span>
+              <button id="setupRulesLink" class="inline-link-button" type="button">See rules</button>
+            </p>
           </section>
 
           <section class="welcome-panel" aria-live="polite">
@@ -220,18 +224,19 @@
           </div>
           <section id="trumpKittyBlock" class="kitty-block">
             <div class="hand-header">
-              <span class="kitty-legend">Hand and kitty <span class="kitty-legend-icon" aria-hidden="true"></span></span>
+              <span id="trumpHandLabel" class="kitty-legend">Hand and kitty <span class="kitty-legend-icon" aria-hidden="true"></span></span>
             </div>
             <div id="trumpHand" class="hand-grid bidding-hand-grid hand-review-grid"></div>
             <div id="discardStatusRow" class="info-row hidden">
-              <span>Discard 5 cards</span>
+              <span id="discardStatusLabel">Discard 5 cards</span>
               <strong id="discardStatus">0/5</strong>
             </div>
           </section>
           <button id="confirmTrump" class="primary-button" type="button" disabled>Confirm Selection</button>
+          <button id="exchangeDone" class="ghost-button hidden" type="button">Done With Turn</button>
           <section id="trumpReferenceBlock" class="kitty-block hidden">
             <div class="hand-header">
-              <span>Your hand</span>
+              <span id="trumpReferenceLabel">Your hand</span>
             </div>
             <div id="trumpReferenceHand" class="hand-grid bidding-hand-grid hand-review-grid"></div>
           </section>
@@ -256,9 +261,17 @@
             </div>
 
             <div class="table-area">
+              <div class="seat seat-top-left hidden">
+                <div id="seatTopLeftName" class="seat-name">Mae</div>
+                <div id="seatTopLeftCount" class="seat-count">0 points</div>
+              </div>
               <div class="seat seat-top">
                 <div id="seatTopName" class="seat-name">Mae</div>
                 <div id="seatTopCount" class="seat-count">0 points</div>
+              </div>
+              <div class="seat seat-top-right hidden">
+                <div id="seatTopRightName" class="seat-name">Roy</div>
+                <div id="seatTopRightCount" class="seat-count">0 points</div>
               </div>
               <div class="seat seat-left">
                 <div id="seatLeftName" class="seat-name">Bea</div>
@@ -274,7 +287,9 @@
               </div>
 
               <div class="trick-grid">
+                <div id="slotTopLeft" class="table-slot hidden"></div>
                 <div id="slotTop" class="table-slot"></div>
+                <div id="slotTopRight" class="table-slot hidden"></div>
                 <div id="slotLeft" class="table-slot"></div>
                 <div id="slotRight" class="table-slot"></div>
                 <div id="slotBottom" class="table-slot"></div>
@@ -306,7 +321,7 @@
           <p id="scoringSubtitle" class="support-text">Every point matters...</p>
           <div class="score-meter-grid" aria-live="polite">
             <div class="score-meter-card">
-              <span class="score-meter-label">Us</span>
+              <span id="scoringLabelUs" class="score-meter-label">Us</span>
               <div class="score-meter-track">
                 <span id="scoringUsFill" class="score-meter-fill score-meter-fill-us"></span>
                 <span id="scoringUsBidMarker" class="score-meter-bid-marker hidden" aria-hidden="true"></span>
@@ -314,7 +329,7 @@
               <strong id="scoringUsPoints" class="score-meter-points">0</strong>
             </div>
             <div class="score-meter-card">
-              <span class="score-meter-label">Them</span>
+              <span id="scoringLabelThem" class="score-meter-label">Them</span>
               <div class="score-meter-track">
                 <span id="scoringThemFill" class="score-meter-fill score-meter-fill-them"></span>
                 <span id="scoringThemBidMarker" class="score-meter-bid-marker hidden" aria-hidden="true"></span>
@@ -341,11 +356,11 @@
           </div>
           <div id="summaryGrid" class="summary-grid">
             <div class="summary-box">
-              <span>Us this round</span>
+              <span id="summaryUsLabel">Us this round</span>
               <strong id="summaryUs">0</strong>
             </div>
             <div class="summary-box">
-              <span>Them this round</span>
+              <span id="summaryThemLabel">Them this round</span>
               <strong id="summaryThem">0</strong>
             </div>
             <div class="summary-box">
@@ -368,14 +383,15 @@
           <div id="summaryHistory" class="round-history hidden">
             <div class="match-scoreboard">
               <div class="match-score-card">
-                <span>Us</span>
+                <span id="summaryMatchLabelPrimary">Us</span>
                 <strong id="summaryMatchUs">0</strong>
               </div>
               <div class="match-score-card">
-                <span>Them</span>
+                <span id="summaryMatchLabelSecondary">Them</span>
                 <strong id="summaryMatchThem">0</strong>
               </div>
             </div>
+            <div id="summaryStandings" class="standings-board hidden"></div>
             <p id="summaryMatchNote" class="support-text summary-match-note">First to <span id="summaryMatchTarget">500</span> wins.</p>
             <section id="summaryProfileCard" class="summary-profile-card hidden" aria-live="polite">
               <div class="welcome-panel-header">
@@ -411,8 +427,8 @@
                     <th>R</th>
                     <th>Bid</th>
                     <th>Win</th>
-                    <th>Us</th>
-                    <th>Them</th>
+                    <th id="summaryTableLabelUs">Us</th>
+                    <th id="summaryTableLabelThem">Them</th>
                   </tr>
                 </thead>
                 <tbody id="summaryTableBody"></tbody>
@@ -430,7 +446,8 @@
           <div class="menu-sheet-handle" aria-hidden="true"></div>
           <div class="menu-sheet-header">
             <button id="menuBack" class="ghost-button hidden" type="button" aria-label="Back to menu">←</button>
-            <div>
+            <div class="menu-title-row">
+              <button id="menuHome" class="ghost-button menu-home-button" type="button" aria-label="Return to welcome screen">⌂</button>
               <h2 id="menuTitle">Menu</h2>
             </div>
             <button id="menuClose" class="ghost-button" type="button" aria-label="Close menu">✕</button>
@@ -700,6 +717,14 @@
     </aside>
     <div id="menuBackdrop" class="menu-backdrop hidden"></div>
     <div id="achievementToastLayer" class="achievement-toast-layer" aria-live="polite" aria-atomic="true"></div>
+    <aside id="setupRulesDrawer" class="history-drawer" aria-hidden="true">
+      <div class="history-header">
+        <h2 id="setupRulesTitle">Rules</h2>
+        <button id="setupRulesClose" class="ghost-button" type="button">Close</button>
+      </div>
+      <div id="setupRulesContent" class="history-content"></div>
+    </aside>
+    <div id="setupRulesBackdrop" class="history-backdrop hidden"></div>
     <aside id="historyDrawer" class="history-drawer">
       <div class="history-header">
         <h2>Previous Trick</h2>
