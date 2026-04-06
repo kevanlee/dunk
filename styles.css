@@ -729,6 +729,18 @@ h2.is-dealing::after {
   line-height: 1.42;
 }
 
+.mode-select {
+  margin-top: 8px;
+  width: 100%;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(17, 17, 17, 0.15);
+  background: rgba(255, 255, 255, 0.92);
+  padding: 0 10px;
+  font: inherit;
+  color: var(--ink);
+}
+
 .trump-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -982,6 +994,11 @@ h2.is-dealing::after {
   transform: translateY(-50%);
 }
 
+.seat-top-left {
+  top: 56px;
+  left: 68px;
+}
+
 .seat-right {
   right: 12px;
   top: 50%;
@@ -1181,6 +1198,11 @@ h2.is-dealing::after {
   left: 64px;
   top: 50%;
   transform: translateY(-50%);
+}
+
+#slotTopLeft {
+  top: 112px;
+  left: 118px;
 }
 
 #slotRight {
@@ -2494,4 +2516,9 @@ h2.is-dealing::after {
   .bidding-hand-grid {
     grid-template-columns: repeat(7, minmax(0, 1fr));
   }
+}
+
+#turnItStatus {
+  flex: 1;
+  text-align: right;
 }

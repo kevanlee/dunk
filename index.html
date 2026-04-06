@@ -50,6 +50,20 @@
             <img class="welcome-logo" src="img/rook-logo.png" alt="Rook">
             <h2 id="welcomeTitle">Welcome</h2>
             <p id="welcomeMessage" class="support-text welcome-message">Start a new match or pick up where you left off.</p>
+            <section class="welcome-panel" aria-live="polite">
+              <div class="welcome-panel-header">
+                <span>Game Mode</span>
+                <strong id="modeSummary">Kentucky House Rules</strong>
+              </div>
+              <label class="support-text" for="modeSelect">Mode</label>
+              <select id="modeSelect" class="mode-select">
+                <option value="kentuckyHouse">House Rules (Default)</option>
+                <option value="tournament">Tournament Rook</option>
+                <option value="westernKy">Western KY Rook</option>
+                <option value="woodsonPatrick">Poker Rook (Woodson Patrick)</option>
+                <option value="fivePlayer">5-Player Hidden Partner</option>
+              </select>
+            </section>
             <section id="savedMatchPanel" class="welcome-panel hidden" aria-live="polite">
               <div class="welcome-panel-header">
                 <span>Saved Match</span>
@@ -177,6 +191,10 @@
             <button class="trump-button" data-trump="yellow" type="button">Yellow</button>
             <button class="trump-button" data-trump="orange" type="button">Orange</button>
           </div>
+          <div class="info-row">
+            <button id="turnIt" class="ghost-button hidden" type="button">Turn It</button>
+            <span id="turnItStatus" class="support-text"></span>
+          </div>
           <div id="trumpProcessing" class="trump-processing hidden">
             <span id="trumpProcessingText">Looking through kitty, discarding, choosing trump.</span>
             <span class="trump-processing-track" aria-hidden="true">
@@ -204,6 +222,35 @@
         </div>
       </section>
 
+
+      <section id="phaseDraw" class="phase-panel hidden">
+        <div class="panel-card">
+          <p class="phase-label">Draw / Discard</p>
+          <h2 id="drawTitle">Draw / Discard</h2>
+          <div class="info-stack compact-stack">
+            <div class="info-row">
+              <span>Current player</span>
+              <strong id="drawStatus">-</strong>
+            </div>
+            <div class="info-row">
+              <span>Deck remaining</span>
+              <strong id="drawPileCount">0</strong>
+            </div>
+          </div>
+          <section class="inline-hand bidding-hand-strip">
+            <div class="hand-header">
+              <span>Your hand</span>
+              <strong id="drawHint" class="hand-strength-label">Select cards to replace</strong>
+            </div>
+            <div id="drawHand" class="hand-grid bidding-hand-grid"></div>
+            <div class="bid-actions">
+              <button id="drawPass" class="ghost-button" type="button">Keep Hand</button>
+              <button id="drawConfirm" class="primary-button" type="button">Draw Selected</button>
+            </div>
+          </section>
+        </div>
+      </section>
+
       <section id="phasePlay" class="phase-panel hidden">
         <div class="play-layout">
           <section class="table-card">
@@ -226,6 +273,10 @@
                 <div id="seatTopName" class="seat-name">Mae</div>
                 <div id="seatTopCount" class="seat-count">0 points</div>
               </div>
+              <div class="seat seat-top-left hidden" id="seatTopLeftWrap">
+                <div id="seatTopLeftName" class="seat-name">Nia</div>
+                <div id="seatTopLeftCount" class="seat-count">0 points</div>
+              </div>
               <div class="seat seat-left">
                 <div id="seatLeftName" class="seat-name">Bea</div>
                 <div id="seatLeftCount" class="seat-count">0 points</div>
@@ -241,6 +292,7 @@
 
               <div class="trick-grid">
                 <div id="slotTop" class="table-slot"></div>
+                <div id="slotTopLeft" class="table-slot hidden"></div>
                 <div id="slotLeft" class="table-slot"></div>
                 <div id="slotRight" class="table-slot"></div>
                 <div id="slotBottom" class="table-slot"></div>

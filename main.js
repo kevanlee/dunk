@@ -6,16 +6,143 @@
     yellow: "Yellow",
     orange: "Orange"
   };
-  var PLAYER_NAMES = ["You", "Bea", "Mae", "Cal"];
+  var HUMAN_PLAYER_NAME = "You";
+  var AI_ROSTER = [
+    { name: "Bea", style: "steady" },
+    { name: "Mae", style: "bold" },
+    { name: "Cal", style: "disruptor" },
+    { name: "Nia", style: "opportunist" },
+    { name: "Jax", style: "steady" },
+    { name: "Tess", style: "bold" }
+  ];
+  var PLAYER_NAMES = [HUMAN_PLAYER_NAME];
   var RULESETS = {
     kentuckyHouse: {
       id: "kentuckyHouse",
       label: "Kentucky House Rules",
+      modeId: "house4",
+      playerCount: 4,
       minBid: 100,
       maxBid: 200,
       bidStep: 5,
       matchTarget: 500,
       lastTrickBonus: 20,
+      kittySize: 5,
+      cardsPerPlayer: 13,
+      discardCount: 5,
+      teamModel: "fixed",
+      rookRankMode: "between10and11",
+      pointModel: "house",
+      scoring: {
+        rook: 20,
+        rank1: 15,
+        rank14: 10,
+        rank10: 10,
+        rank5: 5
+      }
+    },
+    tournament: {
+      id: "tournament",
+      label: "Tournament Rook",
+      modeId: "tournament4",
+      playerCount: 4,
+      minBid: 70,
+      maxBid: 120,
+      bidStep: 5,
+      matchTarget: 300,
+      lastTrickBonus: 0,
+      kittySize: 5,
+      cardsPerPlayer: 9,
+      discardCount: 5,
+      teamModel: "fixed",
+      rookRankMode: "high",
+      pointModel: "tournament",
+      scoring: {
+        rook: 20,
+        rank1: 0,
+        rank14: 10,
+        rank10: 10,
+        rank5: 5
+      },
+      deckFilter: function (card) {
+        return card.isRook || card.rank >= 5;
+      }
+    },
+    westernKy: {
+      id: "westernKy",
+      label: "Western KY Rook",
+      modeId: "western4",
+      playerCount: 4,
+      minBid: 80,
+      maxBid: 200,
+      bidStep: 5,
+      matchTarget: 500,
+      lastTrickBonus: 20,
+      kittySize: 5,
+      cardsPerPlayer: 10,
+      discardCount: 5,
+      teamModel: "fixed",
+      rookRankMode: "high",
+      pointModel: "western",
+      scoring: {
+        rook: 20,
+        rank1: 15,
+        rank14: 10,
+        rank10: 10,
+        rank5: 5,
+        red1: 30
+      },
+      deckFilter: function (card) {
+        return card.isRook || (card.rank !== 2 && card.rank !== 3 && card.rank !== 4);
+      }
+    },
+    woodsonPatrick: {
+      id: "woodsonPatrick",
+      label: "Poker Rook (Woodson Patrick)",
+      modeId: "woodson4",
+      playerCount: 4,
+      minBid: 65,
+      maxBid: 120,
+      bidStep: 5,
+      matchTarget: 300,
+      lastTrickBonus: 0,
+      kittySize: 3,
+      cardsPerPlayer: 6,
+      discardCount: 3,
+      teamModel: "fixed",
+      rookRankMode: "high",
+      pointModel: "tournament",
+      supportsTurnIt: true,
+      hasDrawPhase: true,
+      shootMoonBid: 120,
+      shootMoonAutoWin: true,
+      scoring: {
+        rook: 20,
+        rank1: 0,
+        rank14: 10,
+        rank10: 10,
+        rank5: 5
+      },
+      deckFilter: function (card) {
+        return card.isRook || card.rank >= 5;
+      }
+    },
+    fivePlayer: {
+      id: "fivePlayer",
+      label: "5-Player Hidden Partner",
+      modeId: "hiddenPartner5",
+      playerCount: 5,
+      minBid: 80,
+      maxBid: 200,
+      bidStep: 5,
+      matchTarget: 500,
+      lastTrickBonus: 20,
+      kittySize: 7,
+      cardsPerPlayer: 10,
+      discardCount: 7,
+      teamModel: "calledPartner",
+      rookRankMode: "between10and11",
+      pointModel: "house",
       scoring: {
         rook: 20,
         rank1: 15,
@@ -26,7 +153,6 @@
     }
   };
   var DEFAULT_RULESET_ID = "kentuckyHouse";
-  var PLAYERS = [0, 1, 2, 3];
   var BID_DELAY = 1200;
   var AI_DELAY = 700;
   var TRICK_DELAY = 1200;
@@ -239,9 +365,23 @@
       extraPointGreed: 1.0,
       denialBias: 1.25,
       closerBias: 1.0
+    },
+    opportunist: {
+      bidAggression: 1.08,
+      riskBias: 1.1,
+      safetyBias: 0.95,
+      partnerTrust: 1.15,
+      captureBias: 1.15,
+      disruptionBias: 1.1,
+      trumpPressure: 1.1,
+      scoringProtection: 1.0,
+      discardPragmatism: 1.05,
+      contractLockBias: 0.95,
+      extraPointGreed: 1.2,
+      denialBias: 1.0,
+      closerBias: 1.15
     }
   };
-  var AI_STYLE_BY_PLAYER = [null, "steady", "bold", "disruptor"];
   var STORAGE_SCHEMA_VERSION = 1;
   var PROFILE_STORAGE_KEY = "kentucky-rook.profile";
   var ACTIVE_MATCH_STORAGE_KEY = "kentucky-rook.active-match";
@@ -266,6 +406,12 @@
     "buriedKitty",
     "kittyReviewHand",
     "selectedDiscards",
+    "drawPile",
+    "drawCurrentPlayer",
+    "drawSelections",
+    "drawPasses",
+    "turnItCard",
+    "turnedTrump",
     "hands",
     "trick",
     "leadSuit",
@@ -298,11 +444,70 @@
   var state = createState();
   var profile = createProfile();
   var savedMatchMeta = null;
+  var currentAiRoster = [];
+
+  function rulesetById(id) {
+    return RULESETS[id] || RULESETS[DEFAULT_RULESET_ID];
+  }
+
+  function currentPlayerCount() {
+    return state && state.playerCount ? state.playerCount : rulesetById(DEFAULT_RULESET_ID).playerCount;
+  }
+
+  function playersList() {
+    var count = currentPlayerCount();
+    var items = [];
+    var index;
+    for (index = 0; index < count; index += 1) {
+      items.push(index);
+    }
+    return items;
+  }
+
+  function newPlayerArray(fillValue) {
+    var count = currentPlayerCount();
+    var values = [];
+    var index;
+    for (index = 0; index < count; index += 1) {
+      values.push(fillValue);
+    }
+    return values;
+  }
+
+  function shuffleInPlace(list) {
+    var index = list.length - 1;
+    while (index > 0) {
+      var swapIndex = Math.floor(Math.random() * (index + 1));
+      var temp = list[index];
+      list[index] = list[swapIndex];
+      list[swapIndex] = temp;
+      index -= 1;
+    }
+  }
+
+  function assignAiRosterForMatch() {
+    var needed = Math.max(0, currentPlayerCount() - 1);
+    var pool = AI_ROSTER.slice();
+    shuffleInPlace(pool);
+    currentAiRoster = pool.slice(0, needed);
+    PLAYER_NAMES = [HUMAN_PLAYER_NAME].concat(currentAiRoster.map(function (item) {
+      return item.name;
+    }));
+  }
+
+  function aiStyleForPlayer(player) {
+    if (player <= 0) {
+      return "steady";
+    }
+    return (currentAiRoster[player - 1] && currentAiRoster[player - 1].style) || "steady";
+  }
 
   function createState() {
+    var defaultRules = rulesetById(DEFAULT_RULESET_ID);
     return {
       phase: "welcome",
       rulesetId: DEFAULT_RULESET_ID,
+      playerCount: defaultRules.playerCount,
       dealer: 0,
       roundNumber: 1,
       bidder: null,
@@ -321,6 +526,12 @@
       buriedKitty: [],
       kittyReviewHand: [],
       selectedDiscards: [],
+      drawPile: [],
+      drawCurrentPlayer: null,
+      drawSelections: [],
+      drawPasses: [],
+      turnItCard: null,
+      turnedTrump: false,
       hands: [[], [], [], []],
       trick: [],
       leadSuit: null,
@@ -329,6 +540,7 @@
       playerPoints: [0, 0, 0, 0],
       roundPoints: [0, 0],
       matchPoints: [0, 0],
+      playerMatchPoints: [0, 0, 0, 0],
       trickCounts: [0, 0],
       roundMessage: "",
       summary: null,
@@ -357,6 +569,11 @@
       stickerBookPage: "achievements",
       profileRoundsTracked: 0,
       profileMatchCompleteRecorded: false,
+      calledPartnerCardId: null,
+      calledPartnerPlayer: null,
+      askPartnerToLead: false,
+      requestedPartnerLead: false,
+      revealedPartners: {},
       busy: false,
       timeoutId: null,
       winnerRevealId: null,
@@ -755,6 +972,9 @@
     if (savedState.phase === "trump") {
       return "Trump Setup";
     }
+    if (savedState.phase === "draw") {
+      return "Draw / Discard";
+    }
     if (savedState.phase === "play") {
       return "In Play";
     }
@@ -774,6 +994,9 @@
   function savedMatchDetail(savedState) {
     if (savedState.phase === "play") {
       return PLAYER_NAMES[savedState.currentPlayer] + " to play.";
+    }
+    if (savedState.phase === "draw") {
+      return PLAYER_NAMES[savedState.drawCurrentPlayer || 0] + " drawing/discarding.";
     }
     if (savedState.phase === "trump") {
       return PLAYER_NAMES[savedState.bidder] + " won " + savedState.winningBid + ".";
@@ -872,8 +1095,8 @@
     nextState.stickerLastShownAt = 0;
     nextState.aiTrumpMeterStarted = false;
     nextState.dealAnimating = false;
-    nextState.dealVisibleCount = 13;
-    nextState.dealSeatCounts = [13, 13, 13];
+    nextState.dealVisibleCount = getRuleConfig().cardsPerPlayer;
+    nextState.dealSeatCounts = [getRuleConfig().cardsPerPlayer, getRuleConfig().cardsPerPlayer, getRuleConfig().cardsPerPlayer];
     nextState.dealRevealed = true;
     nextState.dealRevealAnimating = false;
 
@@ -917,13 +1140,19 @@
 
   function beginNewMatch() {
     var nextState = createState();
+    var selectedRulesetId = ui.modeSelect ? ui.modeSelect.value : state.rulesetId;
+    var rules = rulesetById(selectedRulesetId);
 
     clearPendingTimeout();
     clearSticker();
     clearActiveMatch();
+    nextState.rulesetId = rules.id;
+    nextState.playerCount = rules.playerCount;
     nextState.matchId = createMatchId();
     nextState.matchStartedAt = new Date().toISOString();
     assignState(nextState);
+    assignAiRosterForMatch();
+    state.playerMatchPoints = newPlayerArray(0);
     state.menuOpen = false;
     state.menuView = "hub";
     updateProfileTimestamp();
@@ -982,11 +1211,22 @@
       return;
     }
 
-    won = state.matchPoints[0] > state.matchPoints[1];
-    margin = Math.abs(state.matchPoints[0] - state.matchPoints[1]);
+    if (getRuleConfig().teamModel === "calledPartner") {
+      var bestOpponent = state.playerMatchPoints.slice(1).reduce(function (best, score) {
+        return Math.max(best, score);
+      }, -Infinity);
+      won = state.playerMatchPoints[0] >= bestOpponent;
+      margin = Math.abs(state.playerMatchPoints[0] - bestOpponent);
+    } else {
+      won = state.matchPoints[0] > state.matchPoints[1];
+      margin = Math.abs(state.matchPoints[0] - state.matchPoints[1]);
+    }
     updateProfileTimestamp();
     profile.totals.matchesCompleted += 1;
-    profile.performance.bestMatchScore = Math.max(profile.performance.bestMatchScore, state.matchPoints[0]);
+    profile.performance.bestMatchScore = Math.max(
+      profile.performance.bestMatchScore,
+      getRuleConfig().teamModel === "calledPartner" ? state.playerMatchPoints[0] : state.matchPoints[0]
+    );
     if (won) {
       profile.totals.matchesWon += 1;
       if (profile.totals.matchesWon === 1) {
@@ -1043,8 +1283,10 @@
     profile.lastMatch = {
       completedAt: new Date().toISOString(),
       won: won,
-      usScore: state.matchPoints[0],
-      themScore: state.matchPoints[1],
+      usScore: getRuleConfig().teamModel === "calledPartner" ? state.playerMatchPoints[0] : state.matchPoints[0],
+      themScore: getRuleConfig().teamModel === "calledPartner"
+        ? state.playerMatchPoints.slice(1).reduce(function (best, score) { return Math.max(best, score); }, 0)
+        : state.matchPoints[1],
       margin: margin,
       rulesetId: state.rulesetId
     };
@@ -1058,14 +1300,16 @@
   }
 
   function scoringTotalPoints() {
-    var scoring = getRuleConfig().scoring;
-    return (scoring.rank1 * 4) + scoring.rank14 * 4 + scoring.rank10 * 4 + scoring.rank5 * 4 + scoring.rook;
+    return buildDeck().reduce(function (sum, card) {
+      return sum + cardPoints(card);
+    }, 0);
   }
 
   function cacheDom() {
     ui.phaseWelcome = document.getElementById("phaseWelcome");
     ui.phaseBidding = document.getElementById("phaseBidding");
     ui.phaseTrump = document.getElementById("phaseTrump");
+    ui.phaseDraw = document.getElementById("phaseDraw");
     ui.phasePlay = document.getElementById("phasePlay");
     ui.phaseSummary = document.getElementById("phaseSummary");
     ui.summaryPanel = ui.phaseSummary ? ui.phaseSummary.querySelector(".panel-card") : null;
@@ -1134,6 +1378,8 @@
     ui.menuStickerCollector = document.getElementById("menuStickerCollector");
     ui.welcomeTitle = document.getElementById("welcomeTitle");
     ui.welcomeMessage = document.getElementById("welcomeMessage");
+    ui.modeSelect = document.getElementById("modeSelect");
+    ui.modeSummary = document.getElementById("modeSummary");
     ui.savedMatchPanel = document.getElementById("savedMatchPanel");
     ui.savedMatchPhase = document.getElementById("savedMatchPhase");
     ui.savedMatchRound = document.getElementById("savedMatchRound");
@@ -1185,11 +1431,20 @@
     ui.discardStatusRow = document.getElementById("discardStatusRow");
     ui.discardStatus = document.getElementById("discardStatus");
     ui.confirmTrump = document.getElementById("confirmTrump");
+    ui.turnIt = document.getElementById("turnIt");
+    ui.turnItStatus = document.getElementById("turnItStatus");
     ui.trumpKittyBlock = document.getElementById("trumpKittyBlock");
     ui.trumpReferenceBlock = document.getElementById("trumpReferenceBlock");
     ui.trumpReferenceHand = document.getElementById("trumpReferenceHand");
     ui.trumpHand = document.getElementById("trumpHand");
     ui.trumpButtons = Array.prototype.slice.call(document.querySelectorAll(".trump-button"));
+    ui.drawTitle = document.getElementById("drawTitle");
+    ui.drawStatus = document.getElementById("drawStatus");
+    ui.drawPileCount = document.getElementById("drawPileCount");
+    ui.drawHint = document.getElementById("drawHint");
+    ui.drawHand = document.getElementById("drawHand");
+    ui.drawPass = document.getElementById("drawPass");
+    ui.drawConfirm = document.getElementById("drawConfirm");
     ui.playTrump = document.getElementById("playTrump");
     ui.playContract = document.getElementById("playContract");
     ui.playMessage = document.getElementById("playMessage");
@@ -1198,17 +1453,21 @@
     ui.stickerOverlay = document.getElementById("stickerOverlay");
     ui.tableArea = document.querySelector(".table-area");
     ui.seatTopCount = document.getElementById("seatTopCount");
+    ui.seatTopLeftCount = document.getElementById("seatTopLeftCount");
     ui.seatLeftCount = document.getElementById("seatLeftCount");
     ui.seatRightCount = document.getElementById("seatRightCount");
     ui.seatBottomCount = document.getElementById("seatBottomCount");
     ui.seatTopName = document.getElementById("seatTopName");
+    ui.seatTopLeftName = document.getElementById("seatTopLeftName");
     ui.seatLeftName = document.getElementById("seatLeftName");
     ui.seatRightName = document.getElementById("seatRightName");
     ui.seatBottomName = document.getElementById("seatBottomName");
     ui.slotTop = document.getElementById("slotTop");
+    ui.slotTopLeft = document.getElementById("slotTopLeft");
     ui.slotLeft = document.getElementById("slotLeft");
     ui.slotRight = document.getElementById("slotRight");
     ui.slotBottom = document.getElementById("slotBottom");
+    ui.seatTopLeftWrap = document.getElementById("seatTopLeftWrap");
     ui.summaryTitle = document.getElementById("summaryTitle");
     ui.summaryPhaseLabel = document.getElementById("summaryPhaseLabel");
     ui.summaryStory = document.getElementById("summaryStory");
@@ -1298,6 +1557,16 @@
       beginNewMatch();
     });
 
+    ui.modeSelect.addEventListener("change", function () {
+      if (state.phase !== "welcome") {
+        return;
+      }
+      state.rulesetId = ui.modeSelect.value;
+      state.playerCount = getRuleConfig().playerCount;
+      assignAiRosterForMatch();
+      render();
+    });
+
     ui.continueSavedGame.addEventListener("click", function () {
       if (state.phase !== "welcome") {
         return;
@@ -1363,6 +1632,14 @@
       });
     });
 
+    ui.turnIt.addEventListener("click", function () {
+      if (state.phase !== "trump" || state.bidder !== 0 || !getRuleConfig().supportsTurnIt || state.busy) {
+        return;
+      }
+      applyTurnItTrump();
+      renderTrumpPhase();
+    });
+
     ui.confirmTrump.addEventListener("click", function () {
       if (state.phase !== "trump" || !state.selectedTrump || state.busy) {
         return;
@@ -1373,7 +1650,7 @@
         return;
       }
       state.trump = state.selectedTrump;
-      dealForPlay();
+      finishTrumpSetupAndContinue();
     });
 
     ui.aiTrumpContinue.addEventListener("click", function () {
@@ -1381,7 +1658,21 @@
         return;
       }
       state.trump = state.selectedTrump;
-      dealForPlay();
+      finishTrumpSetupAndContinue();
+    });
+
+    ui.drawPass.addEventListener("click", function () {
+      if (state.phase !== "draw" || state.drawCurrentPlayer !== 0 || state.busy) {
+        return;
+      }
+      finalizeDrawTurn(0, []);
+    });
+
+    ui.drawConfirm.addEventListener("click", function () {
+      if (state.phase !== "draw" || state.drawCurrentPlayer !== 0 || state.busy) {
+        return;
+      }
+      finalizeDrawTurn(0, state.drawSelections.slice());
     });
 
     ui.nextRound.addEventListener("click", function () {
@@ -1768,19 +2059,32 @@
     state.selectedBid = getRuleConfig().minBid;
     state.currentBid = null;
     state.currentBidHolder = null;
-    state.currentBidTurn = (state.dealer + 1) % 4;
+    state.playerCount = getRuleConfig().playerCount;
+    assignAiRosterForMatch();
+    state.currentBidTurn = (state.dealer + 1) % currentPlayerCount();
     state.bidEntries = [];
-    state.bidStatuses = ["-", "-", "-", "-"];
-    state.passed = [false, false, false, false];
+    state.bidStatuses = newPlayerArray("-");
+    state.passed = newPlayerArray(false);
     state.buriedKitty = [];
     state.kittyReviewHand = [];
     state.selectedDiscards = [];
-    state.hands = [[], [], [], []];
+    state.drawPile = [];
+    state.drawCurrentPlayer = null;
+    state.drawSelections = [];
+    state.drawPasses = [];
+    state.turnItCard = null;
+    state.turnedTrump = false;
+    state.calledPartnerCardId = null;
+    state.calledPartnerPlayer = null;
+    state.askPartnerToLead = false;
+    state.requestedPartnerLead = false;
+    state.revealedPartners = {};
+    state.hands = newPlayerArray(null).map(function () { return []; });
     state.trick = [];
     state.leadSuit = null;
     state.currentPlayer = 0;
     state.winningCardPlayer = null;
-    state.playerPoints = [0, 0, 0, 0];
+    state.playerPoints = newPlayerArray(0);
     state.roundPoints = [0, 0];
     state.trickCounts = [0, 0];
     state.roundMessage = "";
@@ -1813,14 +2117,15 @@
   function dealInitialHands() {
     var deck = buildDeck();
     shuffle(deck, Date.now() % 100000 + state.dealer * 17);
-    state.initialHands = [[], [], [], []];
+    state.initialHands = newPlayerArray(null).map(function () { return []; });
 
-    PLAYERS.forEach(function (player) {
-      state.initialHands[player] = deck.splice(0, 13);
+    playersList().forEach(function (player) {
+      state.initialHands[player] = deck.splice(0, getRuleConfig().cardsPerPlayer);
       sortHand(state.initialHands[player], null);
     });
 
-    state.kitty = deck.splice(0, 5);
+    state.kitty = deck.splice(0, getRuleConfig().kittySize);
+    state.drawPile = deck;
   }
 
   function continueBidding() {
@@ -1868,7 +2173,7 @@
 
   function everyoneElsePassed() {
     var active = 0;
-    PLAYERS.forEach(function (player) {
+    playersList().forEach(function (player) {
       if (player !== state.currentBidHolder && !state.passed[player]) {
         active += 1;
       }
@@ -1967,7 +2272,7 @@
     var team = teamForPlayer(player);
     var active = 0;
 
-    PLAYERS.forEach(function (otherPlayer) {
+    playersList().forEach(function (otherPlayer) {
       if (teamForPlayer(otherPlayer) !== team && !state.passed[otherPlayer]) {
         active += 1;
       }
@@ -1998,7 +2303,7 @@
   }
 
   function getAiProfile(player) {
-    return AI_PROFILES[AI_STYLE_BY_PLAYER[player] || "steady"];
+    return AI_PROFILES[aiStyleForPlayer(player)] || AI_PROFILES.steady;
   }
 
   function clamp(value, min, max) {
@@ -2010,6 +2315,9 @@
   }
 
   function teammateForPlayer(player) {
+    if (currentPlayerCount() !== 4) {
+      return null;
+    }
     return (player + 2) % 4;
   }
 
@@ -2061,7 +2369,7 @@
     var opponentTeam = team === 0 ? 1 : 0;
     var bidderTeam = state.bidder === null ? null : teamForPlayer(state.bidder);
     var hand = state.hands[player] || state.initialHands[player] || [];
-    var remainingCards = hand ? hand.length : 13;
+    var remainingCards = hand ? hand.length : getRuleConfig().cardsPerPlayer;
     var awardedPoints = state.roundPoints[0] + state.roundPoints[1];
     var remainingCardPoints = Math.max(0, scoringTotalPoints() - awardedPoints);
     var lastTrickSwing = remainingCards > 0 ? getRuleConfig().lastTrickBonus + buriedKittyPoints() : 0;
@@ -2601,7 +2909,7 @@
         ? 0.9
         : 1.2;
 
-    return Math.max(0, (13 + context.reservedCloser.score * 1.8) * timingMultiplier - urgencyRelief);
+    return Math.max(0, (getRuleConfig().cardsPerPlayer + context.reservedCloser.score * 1.8) * timingMultiplier - urgencyRelief);
   }
 
   function shouldReleaseReservedCloser(context, reservedScore, alternativeScore) {
@@ -2655,7 +2963,7 @@
     var match = getAiMatchState(player, profile);
     var round = getAiRoundState(player);
     var winningPlay = null;
-    var playersAfter = 3 - state.trick.length;
+    var playersAfter = (currentPlayerCount() - 1) - state.trick.length;
     var teammateWinning = false;
     var teammateWinConfidence = 0;
     var mode;
@@ -2686,7 +2994,7 @@
       trickPoints: currentTrickPoints(),
       lastTrickSwing: round.lastTrickSwing || (getRuleConfig().lastTrickBonus + buriedKittyPoints()),
       playersAfter: playersAfter,
-      isLastToAct: state.trick.length === 3,
+      isLastToAct: state.trick.length === currentPlayerCount() - 1,
       remainingTrumpElsewhere: countRemainingTrumpOutsidePlayer(player),
       winningPlay: winningPlay,
       winningTeam: winningPlay ? teamForPlayer(winningPlay.player) : null,
@@ -2873,9 +3181,9 @@
     var tries = 0;
 
     do {
-      next = (next + 1) % 4;
+      next = (next + 1) % currentPlayerCount();
       tries += 1;
-    } while (tries < 4 && state.passed[next]);
+    } while (tries < currentPlayerCount() && state.passed[next]);
 
     state.currentBidTurn = next;
   }
@@ -2904,10 +3212,15 @@
     state.kittyReviewHand = state.initialHands[state.bidder].concat(state.kitty);
     state.selectedTrump = state.bidder === 0 ? null : chooseAiTrump(state.kittyReviewHand);
     state.selectedDiscards = [];
+    state.turnItCard = null;
+    state.turnedTrump = false;
     state.aiTrumpReady = false;
     state.aiTrumpMeterStarted = false;
 
     if (state.bidder !== 0) {
+      if (getRuleConfig().supportsTurnIt && shouldAiTurnIt(state.bidder, state.kittyReviewHand, state.selectedTrump)) {
+        applyTurnItTrump();
+      }
       state.selectedDiscards = chooseAiDiscards(state.kittyReviewHand, state.selectedTrump);
       finalizeBidderHand();
       state.busy = true;
@@ -2947,14 +3260,20 @@
     return plans[0].trump;
   }
 
-  function dealForPlay() {
-    state.hands = prepareRoundHands();
+  function dealForPlay(usePreparedHands) {
+    if (!usePreparedHands) {
+      state.hands = prepareRoundHands();
+    }
     state.phase = "play";
-    state.currentPlayer = state.bidder;
+    if (getRuleConfig().teamModel === "calledPartner" && state.requestedPartnerLead && state.calledPartnerPlayer !== null) {
+      state.currentPlayer = state.calledPartnerPlayer;
+    } else {
+      state.currentPlayer = state.bidder;
+    }
     state.trick = [];
     state.leadSuit = null;
     state.winningCardPlayer = null;
-    state.playerPoints = [0, 0, 0, 0];
+    state.playerPoints = newPlayerArray(0);
     state.roundPoints = [0, 0];
     state.trickCounts = [0, 0];
     state.roundMessage = openingPlayMessage();
@@ -2967,7 +3286,7 @@
     var hands = cloneHands(state.initialHands);
     hands[state.bidder] = state.kittyReviewHand.slice();
 
-    PLAYERS.forEach(function (player) {
+    playersList().forEach(function (player) {
       sortHand(hands[player], state.trump);
     });
 
@@ -2982,9 +3301,47 @@
       return aiKeepScore(a, cards, trump, player) - aiKeepScore(b, cards, trump, player);
     });
 
-    return sorted.slice(0, 5).map(function (card) {
+    return sorted.slice(0, getRuleConfig().discardCount).map(function (card) {
       return card.id;
     });
+  }
+
+  function chooseCalledPartnerCard(player) {
+    var held = {};
+    var candidates = [];
+
+    (state.kittyReviewHand || []).forEach(function (card) {
+      held[card.id] = true;
+    });
+    buildDeck().forEach(function (card) {
+      if (!held[card.id] && !card.isRook) {
+        candidates.push(card.id);
+      }
+    });
+    if (!candidates.length) {
+      return null;
+    }
+    if (player === 0) {
+      return candidates[0];
+    }
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  function findPlayerHoldingCard(cardId) {
+    var found = null;
+    var sourceHands = state.hands && state.hands.length ? state.hands : state.initialHands;
+    playersList().forEach(function (player) {
+      if (found !== null) {
+        return;
+      }
+      var cards = player === state.bidder && state.kittyReviewHand.length
+        ? state.kittyReviewHand
+        : (sourceHands[player] || []);
+      if (cards.some(function (card) { return card.id === cardId; })) {
+        found = player;
+      }
+    });
+    return found;
   }
 
   function maybeRunAiTurn() {
@@ -3068,6 +3425,11 @@
 
     hand.splice(index, 1);
     state.trick.push({ player: player, card: card });
+    if (getRuleConfig().teamModel === "calledPartner" && state.calledPartnerCardId && card.id === state.calledPartnerCardId) {
+      state.calledPartnerPlayer = player;
+      state.revealedPartners[player] = true;
+      state.roundMessage = PLAYER_NAMES[player] + " reveals as the hidden partner.";
+    }
     if (card.isRook) {
       showSticker("rook");
     }
@@ -3076,8 +3438,8 @@
       state.leadSuit = effectiveSuit(card, state.trump);
     }
 
-    if (state.trick.length < 4) {
-      state.currentPlayer = (player + 1) % 4;
+    if (state.trick.length < currentPlayerCount()) {
+      state.currentPlayer = (player + 1) % currentPlayerCount();
       state.roundMessage = PLAYER_NAMES[player] + " plays " + fullCardLabel(card, state.trump) + ".";
       state.busy = false;
       render();
@@ -3167,9 +3529,29 @@
     if (bidMade) {
       state.matchPoints[bidderTeam] += state.roundPoints[bidderTeam];
       state.matchPoints[otherTeam] += state.roundPoints[otherTeam];
+      if (getRuleConfig().shootMoonAutoWin && state.winningBid === getRuleConfig().shootMoonBid) {
+        state.matchPoints[bidderTeam] = Math.max(state.matchPoints[bidderTeam], getRuleConfig().matchTarget);
+      }
     } else {
       state.matchPoints[bidderTeam] -= state.winningBid;
       state.matchPoints[otherTeam] += state.roundPoints[otherTeam];
+    }
+    if (getRuleConfig().teamModel === "calledPartner") {
+      playersList().forEach(function (player) {
+        if (teamForPlayer(player) === bidderTeam) {
+          if (bidMade) {
+            state.playerMatchPoints[player] += Math.round(state.roundPoints[bidderTeam] / 2);
+          } else {
+            state.playerMatchPoints[player] -= Math.round(state.winningBid / 2);
+          }
+        } else {
+          state.playerMatchPoints[player] += Math.round(state.roundPoints[otherTeam] / Math.max(1, currentPlayerCount() - 2));
+        }
+      });
+    } else {
+      playersList().forEach(function (player) {
+        state.playerMatchPoints[player] = state.matchPoints[teamForPlayer(player)];
+      });
     }
     state.matchMaxDeficit = Math.max(state.matchMaxDeficit, Math.max(0, state.matchPoints[1] - state.matchPoints[0]));
 
@@ -3205,10 +3587,14 @@
     state.summaryScoringOpen = false;
     state.busy = true;
     state.roundMessage = "";
-    state.dealer = (state.dealer + 1) % 4;
+    state.dealer = (state.dealer + 1) % currentPlayerCount();
     state.roundNumber += 1;
 
-    if (state.matchPoints[0] >= getRuleConfig().matchTarget || state.matchPoints[1] >= getRuleConfig().matchTarget) {
+    if (getRuleConfig().teamModel === "calledPartner") {
+      state.gameOver = state.playerMatchPoints.some(function (score) {
+        return score >= getRuleConfig().matchTarget;
+      });
+    } else if (state.matchPoints[0] >= getRuleConfig().matchTarget || state.matchPoints[1] >= getRuleConfig().matchTarget) {
       state.gameOver = true;
     }
     if (state.gameOver) {
@@ -3261,8 +3647,12 @@
   }
 
   function trickRank(card, trump) {
+    var rookRankMode = getRuleConfig().rookRankMode;
     if (card.isRook) {
-      return 10.5;
+      return rookRankMode === "high" ? 16 : 10.5;
+    }
+    if (getRuleConfig().pointModel === "western" && card.rank === 1 && card.suit === "red") {
+      return 17;
     }
     if (card.rank === 1) {
       return 15;
@@ -3277,6 +3667,9 @@
   }
 
   function effectiveSuit(card, trump) {
+    if (getRuleConfig().pointModel === "western" && card.rank === 1 && card.suit === "red" && trump) {
+      return trump;
+    }
     return card.isRook ? trump : card.suit;
   }
 
@@ -3284,6 +3677,9 @@
     var scoring = getRuleConfig().scoring;
     if (card.isRook) {
       return scoring.rook;
+    }
+    if (card.rank === 1 && card.suit === "red" && scoring.red1) {
+      return scoring.red1;
     }
     if (card.rank === 1) {
       return scoring.rank1;
@@ -3322,11 +3718,22 @@
   }
 
   function teamForPlayer(player) {
+    var rules = getRuleConfig();
+    if (rules.teamModel === "calledPartner") {
+      if (state.bidder === null) {
+        return player === 0 ? 0 : 1;
+      }
+      if (player === state.bidder || player === state.calledPartnerPlayer) {
+        return 0;
+      }
+      return 1;
+    }
     return player % 2 === 0 ? 0 : 1;
   }
 
   function buildDeck() {
     var deck = [];
+    var rules = getRuleConfig();
     SUITS.forEach(function (suit) {
       var rank;
       for (rank = 1; rank <= 14; rank += 1) {
@@ -3344,6 +3751,11 @@
       rank: null,
       isRook: true
     });
+    if (rules.deckFilter) {
+      return deck.filter(function (card) {
+        return rules.deckFilter(card);
+      });
+    }
     return deck;
   }
 
@@ -3400,12 +3812,29 @@
     ui.phaseWelcome.classList.toggle("hidden", state.phase !== "welcome");
     ui.phaseBidding.classList.toggle("hidden", state.phase !== "bidding");
     ui.phaseTrump.classList.toggle("hidden", state.phase !== "trump");
+    ui.phaseDraw.classList.toggle("hidden", state.phase !== "draw");
     ui.phasePlay.classList.toggle("hidden", state.phase !== "play");
     ui.phaseSummary.classList.toggle("hidden", state.phase !== "summary");
-    ui.usScoreText.textContent = "Us " + state.matchPoints[0];
-    ui.themScoreText.textContent = "Them " + state.matchPoints[1];
-    ui.usScoreBar.style.width = scoreProgressWidth(state.matchPoints[0]);
-    ui.themScoreBar.style.width = scoreProgressWidth(state.matchPoints[1]);
+    if (getRuleConfig().teamModel === "calledPartner") {
+      var leadIndex = 0;
+      var leadScore = state.playerMatchPoints[0] || 0;
+      playersList().forEach(function (player) {
+        var score = state.playerMatchPoints[player] || 0;
+        if (score > leadScore) {
+          leadScore = score;
+          leadIndex = player;
+        }
+      });
+      ui.usScoreText.textContent = PLAYER_NAMES[0] + " " + (state.playerMatchPoints[0] || 0);
+      ui.themScoreText.textContent = "Lead " + PLAYER_NAMES[leadIndex] + " " + leadScore;
+      ui.usScoreBar.style.width = scoreProgressWidth(state.playerMatchPoints[0] || 0);
+      ui.themScoreBar.style.width = scoreProgressWidth(leadScore);
+    } else {
+      ui.usScoreText.textContent = "Us " + state.matchPoints[0];
+      ui.themScoreText.textContent = "Them " + state.matchPoints[1];
+      ui.usScoreBar.style.width = scoreProgressWidth(state.matchPoints[0]);
+      ui.themScoreBar.style.width = scoreProgressWidth(state.matchPoints[1]);
+    }
     if (ui.summaryMatchTarget) {
       ui.summaryMatchTarget.textContent = String(getRuleConfig().matchTarget);
     }
@@ -3416,6 +3845,8 @@
       renderBiddingPhase();
     } else if (state.phase === "trump") {
       renderTrumpPhase();
+    } else if (state.phase === "draw") {
+      renderDrawPhase();
     } else if (state.phase === "play") {
       renderPlayPhase();
     } else if (state.phase === "summary") {
@@ -3440,6 +3871,12 @@
     ui.continueSavedGame.classList.toggle("hidden", !savedExists);
     ui.startNewGame.className = savedExists ? "ghost-button" : "primary-button";
     ui.startNewGame.textContent = savedExists ? "Start Match" : "Start Match";
+    if (ui.modeSelect) {
+      ui.modeSelect.value = state.rulesetId;
+    }
+    if (ui.modeSummary) {
+      ui.modeSummary.textContent = getRuleConfig().label;
+    }
 
     if (savedExists) {
       ui.savedMatchPhase.textContent = savedMatchMeta.phaseLabel;
@@ -3488,9 +3925,15 @@
     ui.dealSeats.classList.toggle("hidden", !preBid);
     ui.dealPile.classList.toggle("hidden", !preBid);
     ui.dealPile.classList.toggle("empty", dealDone);
-    ui.dealFillMae.style.width = dealSeatWidth(state.dealSeatCounts[0]);
-    ui.dealFillBea.style.width = dealSeatWidth(state.dealSeatCounts[1]);
-    ui.dealFillCal.style.width = dealSeatWidth(state.dealSeatCounts[2]);
+    if (currentPlayerCount() === 4) {
+      ui.dealFillMae.style.width = dealSeatWidth(state.dealSeatCounts[0]);
+      ui.dealFillBea.style.width = dealSeatWidth(state.dealSeatCounts[1]);
+      ui.dealFillCal.style.width = dealSeatWidth(state.dealSeatCounts[2]);
+    } else {
+      ui.dealFillMae.style.width = "0%";
+      ui.dealFillBea.style.width = "0%";
+      ui.dealFillCal.style.width = "0%";
+    }
     ui.currentHighRow.classList.toggle("bid-winner", state.biddingComplete);
     ui.turnRow.classList.toggle("active-turn", !preBid && !state.biddingComplete);
     ui.bidPicker.classList.toggle("is-disabled", state.currentBidTurn !== 0 || state.busy || state.biddingComplete || !state.biddingStarted);
@@ -3534,8 +3977,19 @@
     ui.trumpTitle.textContent = "Get Set Up";
     ui.trumpBidAmount.textContent = PLAYER_NAMES[state.bidder] + " at " + state.winningBid;
     ui.confirmTrump.textContent = "Confirm Selection";
+    ui.turnIt.classList.toggle("hidden", !getRuleConfig().supportsTurnIt || state.bidder !== 0);
+    ui.turnIt.disabled = state.busy || state.bidder !== 0;
+    if (getRuleConfig().supportsTurnIt) {
+      if (state.turnItCard) {
+        ui.turnItStatus.textContent = "Turn It: " + fullCardLabel(state.turnItCard, state.selectedTrump) + " set trump to " + SUIT_LABEL[state.selectedTrump] + ".";
+      } else {
+        ui.turnItStatus.textContent = "Optional: use Turn It to set trump randomly from the deck.";
+      }
+    } else {
+      ui.turnItStatus.textContent = "";
+    }
     ui.discardStatusRow.classList.toggle("hidden", state.bidder !== 0);
-    ui.discardStatus.textContent = state.selectedDiscards.length + "/5";
+    ui.discardStatus.textContent = state.selectedDiscards.length + "/" + getRuleConfig().discardCount;
     ui.trumpProcessing.classList.toggle("hidden", state.bidder === 0);
     ui.trumpKittyBlock.classList.toggle("hidden", state.bidder !== 0);
     ui.trumpReferenceBlock.classList.toggle("hidden", state.bidder === 0);
@@ -3556,7 +4010,7 @@
       button.disabled = state.bidder !== 0 || state.busy;
     });
 
-    ui.confirmTrump.disabled = !state.selectedTrump || state.busy || (state.bidder === 0 && state.selectedDiscards.length !== 5);
+    ui.confirmTrump.disabled = !state.selectedTrump || state.busy || (state.bidder === 0 && state.selectedDiscards.length !== getRuleConfig().discardCount);
     renderHandGrid(
       ui.trumpHand,
       sortedCombinedBidderCards(),
@@ -3567,6 +4021,7 @@
   }
 
   function renderPlayPhase() {
+    var fivePlayerMode = currentPlayerCount() === 5;
     ui.playTrump.textContent = state.trump ? SUIT_LABEL[state.trump] : "-";
     ui.playTrump.className = "trump-display";
     ui.playTrump.innerHTML = "";
@@ -3582,15 +4037,28 @@
     ui.playMessage.textContent = state.roundMessage || "";
     ui.playMessage.classList.toggle("is-turn", state.currentPlayer === 0 && !state.busy);
     ui.handHint.textContent = state.currentPlayer === 0 && !state.busy ? "Your turn to play" : PLAYER_NAMES[state.currentPlayer] + " to play";
-    ui.seatTopCount.textContent = state.playerPoints[2] + " pts";
-    ui.seatLeftCount.textContent = state.playerPoints[1] + " pts";
-    ui.seatRightCount.textContent = state.playerPoints[3] + " pts";
+    ui.seatTopCount.textContent = (state.playerPoints[2] || 0) + " pts";
+    ui.seatLeftCount.textContent = (state.playerPoints[1] || 0) + " pts";
+    ui.seatRightCount.textContent = (state.playerPoints[3] || 0) + " pts";
     ui.seatBottomCount.textContent = state.playerPoints[0] + " pts";
+    ui.seatBottomName.textContent = PLAYER_NAMES[0];
+    ui.seatLeftName.textContent = PLAYER_NAMES[1] || "-";
+    ui.seatTopName.textContent = PLAYER_NAMES[2] || "-";
+    ui.seatRightName.textContent = PLAYER_NAMES[3] || "-";
+    ui.seatTopLeftWrap.classList.toggle("hidden", !fivePlayerMode);
+    ui.slotTopLeft.classList.toggle("hidden", !fivePlayerMode);
+    if (fivePlayerMode) {
+      ui.seatTopLeftName.textContent = PLAYER_NAMES[4] || "-";
+      ui.seatTopLeftCount.textContent = (state.playerPoints[4] || 0) + " pts";
+    }
     syncSeatHighlight();
 
     renderSlot(ui.slotTop, playForSeat(2), state.winningCardPlayer === 2);
     renderSlot(ui.slotLeft, playForSeat(1), state.winningCardPlayer === 1);
     renderSlot(ui.slotRight, playForSeat(3), state.winningCardPlayer === 3);
+    if (fivePlayerMode) {
+      renderSlot(ui.slotTopLeft, playForSeat(4), state.winningCardPlayer === 4);
+    }
     renderSlot(ui.slotBottom, playForSeat(0), state.winningCardPlayer === 0);
     renderHandGrid(ui.playerHand, state.hands[0], state.currentPlayer === 0 && !state.busy ? playHumanCard : null, "play");
   }
@@ -3751,8 +4219,16 @@
     }
     ui.summaryDetail.textContent = "";
     clearSummaryStorySticker();
-    ui.summaryMatchUs.textContent = state.matchPoints[0];
-    ui.summaryMatchThem.textContent = state.matchPoints[1];
+    if (getRuleConfig().teamModel === "calledPartner") {
+      var bestOpponent = state.playerMatchPoints.slice(1).reduce(function (best, score) {
+        return Math.max(best, score);
+      }, 0);
+      ui.summaryMatchUs.textContent = state.playerMatchPoints[0] || 0;
+      ui.summaryMatchThem.textContent = bestOpponent;
+    } else {
+      ui.summaryMatchUs.textContent = state.matchPoints[0];
+      ui.summaryMatchThem.textContent = state.matchPoints[1];
+    }
     ui.summaryMatchNote.textContent = matchSummaryNote();
     applyMatchSummaryBackground();
     if (state.gameOver) {
@@ -3776,8 +4252,8 @@
 
     if (asset) {
       ui.summaryPanel.style.setProperty("--match-summary-gif", 'url("' + asset + '")');
-      ui.summaryPanel.classList.toggle("is-win", state.matchPoints[0] > state.matchPoints[1]);
-      ui.summaryPanel.classList.toggle("is-loss", state.matchPoints[0] < state.matchPoints[1]);
+      ui.summaryPanel.classList.toggle("is-win", isHumanWinningMatch());
+      ui.summaryPanel.classList.toggle("is-loss", !isHumanWinningMatch());
       return;
     }
 
@@ -3794,7 +4270,7 @@
       return state.summaryMatchGif;
     }
 
-    outcome = state.matchPoints[0] > state.matchPoints[1] ? "win" : "loss";
+    outcome = isHumanWinningMatch() ? "win" : "loss";
     assets = MATCH_SUMMARY_GIF_CONFIG[outcome];
 
     if (!assets || !assets.length) {
@@ -3803,6 +4279,16 @@
 
     state.summaryMatchGif = assets[Math.floor(Math.random() * assets.length)];
     return state.summaryMatchGif;
+  }
+
+  function isHumanWinningMatch() {
+    if (getRuleConfig().teamModel === "calledPartner") {
+      var bestOpponent = state.playerMatchPoints.slice(1).reduce(function (best, score) {
+        return Math.max(best, score);
+      }, -Infinity);
+      return (state.playerMatchPoints[0] || 0) >= bestOpponent;
+    }
+    return state.matchPoints[0] > state.matchPoints[1];
   }
 
   function renderSummaryProfileCard() {
@@ -3920,6 +4406,18 @@
   }
 
   function matchWinnerLabel() {
+    if (getRuleConfig().teamModel === "calledPartner") {
+      var bestIndex = 0;
+      var bestScore = state.playerMatchPoints[0] || 0;
+      playersList().forEach(function (player) {
+        var score = state.playerMatchPoints[player] || 0;
+        if (score > bestScore) {
+          bestScore = score;
+          bestIndex = player;
+        }
+      });
+      return PLAYER_NAMES[bestIndex];
+    }
     return state.matchPoints[0] > state.matchPoints[1] ? "Us" : "Them";
   }
 
@@ -4031,7 +4529,7 @@
   }
 
   function renderSummaryScoring() {
-    var grouped = [[], [], [], []];
+    var grouped = newPlayerArray(null).map(function () { return []; });
 
     ui.summaryScoringGrid.innerHTML = "";
     state.completedTricks.forEach(function (trick) {
@@ -4039,6 +4537,18 @@
         grouped[trick.winner].push(item);
       });
     });
+    if (getRuleConfig().teamModel === "calledPartner") {
+      var bidderTeam = teamForPlayer(state.bidder);
+      var bidderPlayers = playersList().filter(function (player) {
+        return teamForPlayer(player) === bidderTeam;
+      });
+      var defenders = playersList().filter(function (player) {
+        return teamForPlayer(player) !== bidderTeam;
+      });
+      buildScoringTeamGroup("Bidder Side", bidderPlayers, grouped);
+      buildScoringTeamGroup("Defenders", defenders, grouped);
+      return;
+    }
     buildScoringTeamGroup("Us", [0, 2], grouped);
     buildScoringTeamGroup("Them", [1, 3], grouped);
   }
@@ -4055,7 +4565,8 @@
 
       button.type = "button";
       var isReference = mode === "reference" || mode === "kitty";
-      var isDiscardSelected = mode === "kitty" && state.selectedDiscards.indexOf(card.id) !== -1;
+      var isDiscardSelected = (mode === "kitty" && state.selectedDiscards.indexOf(card.id) !== -1) ||
+        (mode === "draw" && state.drawSelections.indexOf(card.id) !== -1);
       var isKittyCard = mode === "kitty" && isCardFromKitty(card.id);
       button.className = "card" +
         (card.isRook ? " rook-card" : "") +
@@ -4111,7 +4622,7 @@
   function renderBidStatusBoard() {
     ui.bidStatusBoard.innerHTML = "";
 
-    PLAYERS.forEach(function (player) {
+    playersList().forEach(function (player) {
       var card = document.createElement("div");
       var name = document.createElement("span");
       var meta = document.createElement("span");
@@ -4157,7 +4668,7 @@
     var index = state.selectedDiscards.indexOf(cardId);
     if (index !== -1) {
       state.selectedDiscards.splice(index, 1);
-    } else if (state.selectedDiscards.length < 5) {
+    } else if (state.selectedDiscards.length < getRuleConfig().discardCount) {
       state.selectedDiscards.push(cardId);
     } else {
       return;
@@ -4188,6 +4699,9 @@
       ui.seatTopName.parentNode,
       ui.seatRightName.parentNode
     ];
+    if (currentPlayerCount() === 5 && ui.seatTopLeftName && ui.seatTopLeftName.parentNode) {
+      seatClasses.push(ui.seatTopLeftName.parentNode);
+    }
 
     seatClasses.forEach(function (seat, playerIndex) {
       seat.classList.toggle("active-seat", state.currentPlayer === playerIndex);
@@ -4285,10 +4799,12 @@
           });
         }
       });
-      items.push({
-        label: "Last Trick",
-        points: 20
-      });
+      if (getRuleConfig().lastTrickBonus > 0) {
+        items.push({
+          label: "Last Trick",
+          points: getRuleConfig().lastTrickBonus
+        });
+      }
     }
 
     return items;
@@ -4308,10 +4824,175 @@
   }
 
   function openingPlayMessage() {
+    if (getRuleConfig().teamModel === "calledPartner") {
+      var intro = PLAYER_NAMES[state.bidder] + " chose " + SUIT_LABEL[state.trump] + ".";
+      if (state.requestedPartnerLead && state.calledPartnerPlayer !== null) {
+        return intro + " Partner lead requested. " + playerLeadMessage(state.calledPartnerPlayer);
+      }
+      return intro + " " + playerLeadMessage(state.bidder);
+    }
     if (state.bidder === 0) {
       return playerLeadMessage(0);
     }
     return PLAYER_NAMES[state.bidder] + " chose " + SUIT_LABEL[state.trump] + ". " + playerLeadMessage(state.bidder);
+  }
+
+  function finishTrumpSetupAndContinue() {
+    if (getRuleConfig().teamModel === "calledPartner") {
+      if (!state.calledPartnerCardId) {
+        state.calledPartnerCardId = chooseCalledPartnerCard(state.bidder);
+      }
+      state.calledPartnerPlayer = findPlayerHoldingCard(state.calledPartnerCardId);
+      if (state.bidder === 0) {
+        state.askPartnerToLead = window.confirm("Ask partner to lead the first trick?");
+      } else {
+        state.askPartnerToLead = Math.random() < 0.45;
+      }
+      state.requestedPartnerLead = state.askPartnerToLead;
+    }
+    if (getRuleConfig().hasDrawPhase) {
+      beginDrawPhase();
+      return;
+    }
+    dealForPlay(false);
+  }
+
+  function applyTurnItTrump() {
+    var turned = state.drawPile.length ? state.drawPile.shift() : null;
+    var suit = turned && !turned.isRook ? turned.suit : SUITS[Math.floor(Math.random() * SUITS.length)];
+    state.turnItCard = turned;
+    state.turnedTrump = true;
+    state.selectedTrump = suit;
+  }
+
+  function shouldAiTurnIt(player, cards, chosenTrump) {
+    var plan = evaluateTrumpPlan(cards, chosenTrump, player);
+    return plan.score < 55;
+  }
+
+  function beginDrawPhase() {
+    state.hands = prepareRoundHands();
+    state.phase = "draw";
+    state.drawCurrentPlayer = (state.dealer + 1) % currentPlayerCount();
+    state.drawSelections = [];
+    state.drawPasses = newPlayerArray(false);
+    state.roundMessage = "Draw/discard phase.";
+    state.busy = false;
+    render();
+    maybeRunAiDrawTurn();
+  }
+
+  function maybeRunAiDrawTurn() {
+    if (state.phase !== "draw" || state.busy || state.drawCurrentPlayer === 0) {
+      return;
+    }
+    state.busy = true;
+    render();
+    schedule(function () {
+      var picks = chooseAiDrawDiscards(state.drawCurrentPlayer);
+      finalizeDrawTurn(state.drawCurrentPlayer, picks);
+    }, AI_DELAY);
+  }
+
+  function eligibleDrawDiscards(player) {
+    return (state.hands[player] || []).filter(function (card) {
+      return cardPoints(card) === 0 && !card.isRook;
+    });
+  }
+
+  function chooseAiDrawDiscards(player) {
+    var hand = state.hands[player] || [];
+    var eligible = eligibleDrawDiscards(player);
+    var plan = evaluateBidPlan(player);
+    var maxDiscard = state.drawPile.length === 0 ? 0 : Math.min(3, eligible.length, state.drawPile.length);
+
+    if (!maxDiscard || plan.score > 86) {
+      return [];
+    }
+
+    eligible.sort(function (a, b) {
+      return aiKeepScore(a, hand, state.trump, player) - aiKeepScore(b, hand, state.trump, player);
+    });
+
+    return eligible.slice(0, maxDiscard).map(function (card) {
+      return card.id;
+    });
+  }
+
+  function finalizeDrawTurn(player, discards) {
+    var hand = state.hands[player] || [];
+    var ids = {};
+
+    discards.forEach(function (id) { ids[id] = true; });
+    discards = hand.filter(function (card) {
+      return ids[card.id] && cardPoints(card) === 0 && !card.isRook;
+    }).map(function (card) {
+      return card.id;
+    });
+
+    hand = hand.filter(function (card) {
+      return discards.indexOf(card.id) === -1;
+    });
+
+    while (discards.length && state.drawPile.length) {
+      hand.push(state.drawPile.shift());
+      discards.pop();
+    }
+
+    sortHand(hand, state.trump);
+    state.hands[player] = hand;
+    state.drawPasses[player] = true;
+    state.drawSelections = [];
+
+    if (playersList().every(function (p) { return state.drawPasses[p]; })) {
+      dealForPlay(true);
+      return;
+    }
+
+    do {
+      state.drawCurrentPlayer = (state.drawCurrentPlayer + 1) % currentPlayerCount();
+    } while (state.drawPasses[state.drawCurrentPlayer]);
+
+    state.busy = false;
+    render();
+    maybeRunAiDrawTurn();
+  }
+
+  function toggleDrawDiscard(cardId) {
+    if (state.phase !== "draw" || state.drawCurrentPlayer !== 0 || state.busy) {
+      return;
+    }
+
+    var hand = state.hands[0] || [];
+    var card = hand.find(function (item) { return item.id === cardId; });
+    if (!card || cardPoints(card) > 0 || card.isRook) {
+      return;
+    }
+
+    var index = state.drawSelections.indexOf(cardId);
+    if (index !== -1) {
+      state.drawSelections.splice(index, 1);
+    } else if (state.drawSelections.length < Math.min(3, state.drawPile.length)) {
+      state.drawSelections.push(cardId);
+    }
+    renderDrawPhase();
+  }
+
+  function renderDrawPhase() {
+    var current = state.drawCurrentPlayer;
+    var isHumanTurn = current === 0;
+    var maxSelectable = Math.min(3, state.drawPile.length, eligibleDrawDiscards(0).length);
+
+    ui.drawTitle.textContent = "Draw / Discard";
+    ui.drawStatus.textContent = PLAYER_NAMES[current] + " may draw up to " + Math.min(3, state.drawPile.length) + " card(s).";
+    ui.drawPileCount.textContent = String(state.drawPile.length);
+    ui.drawHint.textContent = isHumanTurn
+      ? "Select up to " + maxSelectable + " non-scoring cards to replace."
+      : PLAYER_NAMES[current] + " is deciding...";
+    ui.drawPass.disabled = !isHumanTurn || state.busy;
+    ui.drawConfirm.disabled = !isHumanTurn || state.busy;
+
+    renderHandGrid(ui.drawHand, state.hands[0], isHumanTurn ? toggleDrawDiscard : null, "draw");
   }
 
   function createPlayedCardNode(cardData, isWinner) {
@@ -4404,11 +5085,11 @@
       return;
     }
 
-    if (state.dealVisibleCount < 13) {
+    if (state.dealVisibleCount < getRuleConfig().cardsPerPlayer) {
       schedule(function () {
         state.dealVisibleCount += 1;
         state.dealSeatCounts = state.dealSeatCounts.map(function (count) {
-          return Math.min(13, count + 1);
+          return Math.min(getRuleConfig().cardsPerPlayer, count + 1);
         });
         render();
         runDealAnimation();
@@ -4443,7 +5124,8 @@
   }
 
   function dealSeatWidth(count) {
-    return (Math.max(0, Math.min(13, count)) / 13) * 100 + "%";
+    var perPlayer = getRuleConfig().cardsPerPlayer;
+    return (Math.max(0, Math.min(perPlayer, count)) / perPlayer) * 100 + "%";
   }
 
   function handStrengthProfile(cards) {
@@ -4514,6 +5196,8 @@
   loadProfile();
   refreshSavedMatchMeta();
   cacheDom();
+  state.playerCount = getRuleConfig().playerCount;
+  assignAiRosterForMatch();
   bindEvents();
   render();
   registerServiceWorker();
