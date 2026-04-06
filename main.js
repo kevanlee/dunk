@@ -388,6 +388,7 @@
   var PERSISTED_STATE_KEYS = [
     "phase",
     "rulesetId",
+    "playerCount",
     "dealer",
     "roundNumber",
     "bidder",
@@ -420,6 +421,7 @@
     "playerPoints",
     "roundPoints",
     "matchPoints",
+    "playerMatchPoints",
     "trickCounts",
     "roundMessage",
     "summary",
@@ -437,7 +439,12 @@
     "matchStartedAt",
     "matchMaxDeficit",
     "profileRoundsTracked",
-    "profileMatchCompleteRecorded"
+    "profileMatchCompleteRecorded",
+    "calledPartnerCardId",
+    "calledPartnerPlayer",
+    "calledPartnerRevealed",
+    "askPartnerToLead",
+    "requestedPartnerLead"
   ];
 
   var ui = {};
@@ -448,6 +455,22 @@
 
   function rulesetById(id) {
     return RULESETS[id] || RULESETS[DEFAULT_RULESET_ID];
+  }
+
+  function rulesetRecapText(rules) {
+    if (rules.id === "fivePlayer") {
+      return "5 players, hidden partner by called card, 10 cards each + 7-card nest, bids 80-200, first to 500.";
+    }
+    if (rules.id === "tournament") {
+      return "Tournament: 41-card deck, 9 cards + 5-card nest, bids 70-120, last trick is 0, first to 300.";
+    }
+    if (rules.id === "westernKy") {
+      return "Western KY: 45-card deck, red 1 is premium (30) and highest trump, bids 80-200, last trick 20, first to 500.";
+    }
+    if (rules.id === "woodsonPatrick") {
+      return "Poker Rook: 6 cards + 3-card nest, Turn It option, draw/discard phase, bids 65-120, shoot 120 to auto-win, first to 300.";
+    }
+    return "House Rules: full deck, 13 cards + 5-card kitty, bids 100-200, rook between trump 10/11, first to 500.";
   }
 
   function currentPlayerCount() {
@@ -504,6 +527,7 @@
 
   function createState() {
     var defaultRules = rulesetById(DEFAULT_RULESET_ID);
+    var defaultPlayers = defaultRules.playerCount;
     return {
       phase: "welcome",
       rulesetId: DEFAULT_RULESET_ID,
@@ -519,9 +543,9 @@
       currentBidHolder: null,
       currentBidTurn: 0,
       bidEntries: [],
-      bidStatuses: ["-", "-", "-", "-"],
-      passed: [false, false, false, false],
-      initialHands: [[], [], [], []],
+      bidStatuses: new Array(defaultPlayers).fill("-"),
+      passed: new Array(defaultPlayers).fill(false),
+      initialHands: new Array(defaultPlayers).fill(null).map(function () { return []; }),
       kitty: [],
       buriedKitty: [],
       kittyReviewHand: [],
@@ -532,15 +556,15 @@
       drawPasses: [],
       turnItCard: null,
       turnedTrump: false,
-      hands: [[], [], [], []],
+      hands: new Array(defaultPlayers).fill(null).map(function () { return []; }),
       trick: [],
       leadSuit: null,
       currentPlayer: 0,
       winningCardPlayer: null,
-      playerPoints: [0, 0, 0, 0],
+      playerPoints: new Array(defaultPlayers).fill(0),
       roundPoints: [0, 0],
       matchPoints: [0, 0],
-      playerMatchPoints: [0, 0, 0, 0],
+      playerMatchPoints: new Array(defaultPlayers).fill(0),
       trickCounts: [0, 0],
       roundMessage: "",
       summary: null,
@@ -551,7 +575,7 @@
       aiTrumpMeterStarted: false,
       dealAnimating: true,
       dealVisibleCount: 0,
-      dealSeatCounts: [0, 0, 0],
+      dealSeatCounts: new Array(Math.max(0, defaultPlayers - 1)).fill(0),
       dealRevealed: false,
       dealRevealAnimating: false,
       biddingComplete: false,
@@ -571,6 +595,7 @@
       profileMatchCompleteRecorded: false,
       calledPartnerCardId: null,
       calledPartnerPlayer: null,
+      calledPartnerRevealed: false,
       askPartnerToLead: false,
       requestedPartnerLead: false,
       revealedPartners: {},
@@ -1077,6 +1102,7 @@
 
   function hydrateStateFromSnapshot(snapshot) {
     var nextState = createState();
+    var snapshotRules;
     snapshot = migrateLegacyBlackSuit(snapshot);
 
     PERSISTED_STATE_KEYS.forEach(function (key) {
@@ -1095,8 +1121,9 @@
     nextState.stickerLastShownAt = 0;
     nextState.aiTrumpMeterStarted = false;
     nextState.dealAnimating = false;
-    nextState.dealVisibleCount = getRuleConfig().cardsPerPlayer;
-    nextState.dealSeatCounts = [getRuleConfig().cardsPerPlayer, getRuleConfig().cardsPerPlayer, getRuleConfig().cardsPerPlayer];
+    snapshotRules = rulesetById(nextState.rulesetId);
+    nextState.dealVisibleCount = snapshotRules.cardsPerPlayer;
+    nextState.dealSeatCounts = new Array(Math.max(0, nextState.playerCount - 1)).fill(snapshotRules.cardsPerPlayer);
     nextState.dealRevealed = true;
     nextState.dealRevealAnimating = false;
 
@@ -1108,6 +1135,9 @@
     }
     if (nextState.phase === "trump" && nextState.bidder !== 0) {
       nextState.aiTrumpReady = true;
+    }
+    if (typeof nextState.calledPartnerRevealed !== "boolean") {
+      nextState.calledPartnerRevealed = false;
     }
 
     assignState(nextState);
@@ -1380,6 +1410,7 @@
     ui.welcomeMessage = document.getElementById("welcomeMessage");
     ui.modeSelect = document.getElementById("modeSelect");
     ui.modeSummary = document.getElementById("modeSummary");
+    ui.modeRecap = document.getElementById("modeRecap");
     ui.savedMatchPanel = document.getElementById("savedMatchPanel");
     ui.savedMatchPhase = document.getElementById("savedMatchPhase");
     ui.savedMatchRound = document.getElementById("savedMatchRound");
@@ -1411,6 +1442,12 @@
     ui.dealFillMae = document.getElementById("dealFillMae");
     ui.dealFillBea = document.getElementById("dealFillBea");
     ui.dealFillCal = document.getElementById("dealFillCal");
+    ui.dealFillNia = document.getElementById("dealFillNia");
+    ui.dealSeatNia = document.getElementById("dealSeatNia");
+    ui.dealLabelMae = document.getElementById("dealLabelMae");
+    ui.dealLabelBea = document.getElementById("dealLabelBea");
+    ui.dealLabelCal = document.getElementById("dealLabelCal");
+    ui.dealLabelNia = document.getElementById("dealLabelNia");
     ui.dealPile = document.getElementById("dealPile");
     ui.decreaseBid = document.getElementById("decreaseBid");
     ui.increaseBid = document.getElementById("increaseBid");
@@ -1431,6 +1468,9 @@
     ui.discardStatusRow = document.getElementById("discardStatusRow");
     ui.discardStatus = document.getElementById("discardStatus");
     ui.confirmTrump = document.getElementById("confirmTrump");
+    ui.partnerSetupBlock = document.getElementById("partnerSetupBlock");
+    ui.calledPartnerCardSelect = document.getElementById("calledPartnerCardSelect");
+    ui.askPartnerLead = document.getElementById("askPartnerLead");
     ui.turnIt = document.getElementById("turnIt");
     ui.turnItStatus = document.getElementById("turnItStatus");
     ui.trumpKittyBlock = document.getElementById("trumpKittyBlock");
@@ -1448,10 +1488,10 @@
     ui.playTrump = document.getElementById("playTrump");
     ui.playContract = document.getElementById("playContract");
     ui.playMessage = document.getElementById("playMessage");
+    ui.tableArea = document.querySelector(".table-area");
     ui.handHint = document.getElementById("handHint");
     ui.playerHand = document.getElementById("playerHand");
     ui.stickerOverlay = document.getElementById("stickerOverlay");
-    ui.tableArea = document.querySelector(".table-area");
     ui.seatTopCount = document.getElementById("seatTopCount");
     ui.seatTopLeftCount = document.getElementById("seatTopLeftCount");
     ui.seatLeftCount = document.getElementById("seatLeftCount");
@@ -1489,6 +1529,8 @@
     ui.summaryHistoryNav = document.getElementById("summaryHistoryNav");
     ui.summaryMatchUs = document.getElementById("summaryMatchUs");
     ui.summaryMatchThem = document.getElementById("summaryMatchThem");
+    ui.matchScoreboard = document.querySelector(".match-scoreboard");
+    ui.summaryIndividualBoard = document.getElementById("summaryIndividualBoard");
     ui.summaryMatchNote = document.getElementById("summaryMatchNote");
     ui.summaryMatchTarget = document.getElementById("summaryMatchTarget");
     ui.summaryProfileCard = document.getElementById("summaryProfileCard");
@@ -1637,6 +1679,22 @@
         return;
       }
       applyTurnItTrump();
+      renderTrumpPhase();
+    });
+
+    ui.calledPartnerCardSelect.addEventListener("change", function () {
+      if (state.phase !== "trump" || getRuleConfig().teamModel !== "calledPartner" || state.bidder !== 0) {
+        return;
+      }
+      state.calledPartnerCardId = ui.calledPartnerCardSelect.value || null;
+      renderTrumpPhase();
+    });
+
+    ui.askPartnerLead.addEventListener("change", function () {
+      if (state.phase !== "trump" || getRuleConfig().teamModel !== "calledPartner" || state.bidder !== 0) {
+        return;
+      }
+      state.askPartnerToLead = !!ui.askPartnerLead.checked;
       renderTrumpPhase();
     });
 
@@ -2076,6 +2134,7 @@
     state.turnedTrump = false;
     state.calledPartnerCardId = null;
     state.calledPartnerPlayer = null;
+    state.calledPartnerRevealed = false;
     state.askPartnerToLead = false;
     state.requestedPartnerLead = false;
     state.revealedPartners = {};
@@ -2096,7 +2155,7 @@
     state.aiTrumpMeterStarted = false;
     state.dealAnimating = true;
     state.dealVisibleCount = 0;
-    state.dealSeatCounts = [0, 0, 0];
+    state.dealSeatCounts = new Array(Math.max(0, currentPlayerCount() - 1)).fill(0);
     state.dealRevealed = false;
     state.dealRevealAnimating = false;
     state.biddingComplete = false;
@@ -3307,10 +3366,21 @@
   }
 
   function chooseCalledPartnerCard(player) {
+    var candidates = callablePartnerCardIds();
+    if (!candidates.length) {
+      return null;
+    }
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  function callablePartnerCardIds() {
     var held = {};
     var candidates = [];
+    var bidderCards = state.kittyReviewHand && state.kittyReviewHand.length
+      ? state.kittyReviewHand
+      : (state.initialHands[state.bidder] || []);
 
-    (state.kittyReviewHand || []).forEach(function (card) {
+    bidderCards.forEach(function (card) {
       held[card.id] = true;
     });
     buildDeck().forEach(function (card) {
@@ -3318,13 +3388,37 @@
         candidates.push(card.id);
       }
     });
-    if (!candidates.length) {
-      return null;
+    return candidates.sort();
+  }
+
+  function renderCalledPartnerPicker() {
+    var candidates;
+    var selected = state.calledPartnerCardId;
+
+    if (!ui.calledPartnerCardSelect) {
+      return;
     }
-    if (player === 0) {
-      return candidates[0];
+    candidates = callablePartnerCardIds();
+    if (!selected || candidates.indexOf(selected) === -1) {
+      selected = candidates[0] || null;
+      state.calledPartnerCardId = selected;
     }
-    return candidates[Math.floor(Math.random() * candidates.length)];
+    ui.calledPartnerCardSelect.innerHTML = "";
+    candidates.forEach(function (cardId) {
+      var option = document.createElement("option");
+      option.value = cardId;
+      option.textContent = cardIdToLabel(cardId);
+      ui.calledPartnerCardSelect.appendChild(option);
+    });
+    ui.calledPartnerCardSelect.value = selected || "";
+  }
+
+  function cardIdToLabel(cardId) {
+    var parts = cardId.split("-");
+    if (parts.length !== 2) {
+      return cardId;
+    }
+    return parts[1] + " of " + SUIT_LABEL[parts[0]];
   }
 
   function findPlayerHoldingCard(cardId) {
@@ -3427,6 +3521,7 @@
     state.trick.push({ player: player, card: card });
     if (getRuleConfig().teamModel === "calledPartner" && state.calledPartnerCardId && card.id === state.calledPartnerCardId) {
       state.calledPartnerPlayer = player;
+      state.calledPartnerRevealed = true;
       state.revealedPartners[player] = true;
       state.roundMessage = PLAYER_NAMES[player] + " reveals as the hidden partner.";
     }
@@ -3538,16 +3633,11 @@
     }
     if (getRuleConfig().teamModel === "calledPartner") {
       playersList().forEach(function (player) {
-        if (teamForPlayer(player) === bidderTeam) {
-          if (bidMade) {
-            state.playerMatchPoints[player] += Math.round(state.roundPoints[bidderTeam] / 2);
-          } else {
-            state.playerMatchPoints[player] -= Math.round(state.winningBid / 2);
-          }
-        } else {
-          state.playerMatchPoints[player] += Math.round(state.roundPoints[otherTeam] / Math.max(1, currentPlayerCount() - 2));
-        }
+        state.playerMatchPoints[player] += state.playerPoints[player] || 0;
       });
+      if (!bidMade) {
+        state.playerMatchPoints[state.bidder] -= state.winningBid;
+      }
     } else {
       playersList().forEach(function (player) {
         state.playerMatchPoints[player] = state.matchPoints[teamForPlayer(player)];
@@ -3825,8 +3915,10 @@
           leadIndex = player;
         }
       });
-      ui.usScoreText.textContent = PLAYER_NAMES[0] + " " + (state.playerMatchPoints[0] || 0);
-      ui.themScoreText.textContent = "Lead " + PLAYER_NAMES[leadIndex] + " " + leadScore;
+      ui.usScoreText.textContent = "You " + (state.playerMatchPoints[0] || 0);
+      ui.themScoreText.textContent = leadIndex === 0
+        ? "Lead " + leadScore
+        : "Lead " + PLAYER_NAMES[leadIndex] + " " + leadScore;
       ui.usScoreBar.style.width = scoreProgressWidth(state.playerMatchPoints[0] || 0);
       ui.themScoreBar.style.width = scoreProgressWidth(leadScore);
     } else {
@@ -3877,6 +3969,9 @@
     if (ui.modeSummary) {
       ui.modeSummary.textContent = getRuleConfig().label;
     }
+    if (ui.modeRecap) {
+      ui.modeRecap.textContent = rulesetRecapText(getRuleConfig());
+    }
 
     if (savedExists) {
       ui.savedMatchPhase.textContent = savedMatchMeta.phaseLabel;
@@ -3925,15 +4020,28 @@
     ui.dealSeats.classList.toggle("hidden", !preBid);
     ui.dealPile.classList.toggle("hidden", !preBid);
     ui.dealPile.classList.toggle("empty", dealDone);
-    if (currentPlayerCount() === 4) {
-      ui.dealFillMae.style.width = dealSeatWidth(state.dealSeatCounts[0]);
-      ui.dealFillBea.style.width = dealSeatWidth(state.dealSeatCounts[1]);
-      ui.dealFillCal.style.width = dealSeatWidth(state.dealSeatCounts[2]);
-    } else {
-      ui.dealFillMae.style.width = "0%";
-      ui.dealFillBea.style.width = "0%";
-      ui.dealFillCal.style.width = "0%";
+    ui.dealSeats.classList.toggle("five-player", currentPlayerCount() === 5);
+    if (ui.dealSeatNia) {
+      ui.dealSeatNia.classList.toggle("hidden", currentPlayerCount() !== 5);
     }
+    if (ui.dealLabelMae) {
+      ui.dealLabelMae.textContent = PLAYER_NAMES[1] || "P1";
+      ui.dealLabelBea.textContent = PLAYER_NAMES[2] || "P2";
+      ui.dealLabelCal.textContent = PLAYER_NAMES[3] || "P3";
+      if (ui.dealLabelNia) {
+        ui.dealLabelNia.textContent = PLAYER_NAMES[4] || "P4";
+      }
+    }
+    [ui.dealFillMae, ui.dealFillBea, ui.dealFillCal, ui.dealFillNia].forEach(function (fill, index) {
+      if (!fill) {
+        return;
+      }
+      if (index < currentPlayerCount() - 1) {
+        fill.style.width = dealSeatWidth(state.dealSeatCounts[index] || 0);
+      } else {
+        fill.style.width = "0%";
+      }
+    });
     ui.currentHighRow.classList.toggle("bid-winner", state.biddingComplete);
     ui.turnRow.classList.toggle("active-turn", !preBid && !state.biddingComplete);
     ui.bidPicker.classList.toggle("is-disabled", state.currentBidTurn !== 0 || state.busy || state.biddingComplete || !state.biddingStarted);
@@ -3966,6 +4074,7 @@
       ui.aiTrumpContinue.disabled = true;
       ui.aiTrumpContinue.classList.add("hidden");
       ui.confirmTrump.classList.remove("hidden");
+      ui.partnerSetupBlock.classList.add("hidden");
       ui.discardStatusRow.classList.add("hidden");
       ui.confirmTrump.disabled = true;
       renderHandGrid(ui.trumpHand, [], null, "reference");
@@ -3977,6 +4086,7 @@
     ui.trumpTitle.textContent = "Get Set Up";
     ui.trumpBidAmount.textContent = PLAYER_NAMES[state.bidder] + " at " + state.winningBid;
     ui.confirmTrump.textContent = "Confirm Selection";
+    ui.partnerSetupBlock.classList.toggle("hidden", !(getRuleConfig().teamModel === "calledPartner" && state.bidder === 0));
     ui.turnIt.classList.toggle("hidden", !getRuleConfig().supportsTurnIt || state.bidder !== 0);
     ui.turnIt.disabled = state.busy || state.bidder !== 0;
     if (getRuleConfig().supportsTurnIt) {
@@ -3995,6 +4105,10 @@
     ui.trumpReferenceBlock.classList.toggle("hidden", state.bidder === 0);
     ui.aiTrumpContinue.classList.toggle("hidden", state.bidder === 0);
     ui.confirmTrump.classList.toggle("hidden", state.bidder !== 0);
+    if (getRuleConfig().teamModel === "calledPartner" && state.bidder === 0) {
+      renderCalledPartnerPicker();
+      ui.askPartnerLead.checked = !!state.askPartnerToLead;
+    }
     if (state.bidder !== 0) {
       ui.trumpProcessingText.textContent = state.aiTrumpReady
         ? PLAYER_NAMES[state.bidder] + " chose " + SUIT_LABEL[state.selectedTrump] + " for trump."
@@ -4010,7 +4124,10 @@
       button.disabled = state.bidder !== 0 || state.busy;
     });
 
-    ui.confirmTrump.disabled = !state.selectedTrump || state.busy || (state.bidder === 0 && state.selectedDiscards.length !== getRuleConfig().discardCount);
+    ui.confirmTrump.disabled = !state.selectedTrump ||
+      state.busy ||
+      (state.bidder === 0 && state.selectedDiscards.length !== getRuleConfig().discardCount) ||
+      (getRuleConfig().teamModel === "calledPartner" && state.bidder === 0 && !state.calledPartnerCardId);
     renderHandGrid(
       ui.trumpHand,
       sortedCombinedBidderCards(),
@@ -4022,6 +4139,7 @@
 
   function renderPlayPhase() {
     var fivePlayerMode = currentPlayerCount() === 5;
+    var partnerStatus = "";
     ui.playTrump.textContent = state.trump ? SUIT_LABEL[state.trump] : "-";
     ui.playTrump.className = "trump-display";
     ui.playTrump.innerHTML = "";
@@ -4033,31 +4151,43 @@
     } else {
       ui.playTrump.textContent = "-";
     }
-    ui.playContract.textContent = state.winningBid ? PLAYER_NAMES[state.bidder] + " bid " + state.winningBid : "-";
+    if (fivePlayerMode) {
+      if (state.calledPartnerRevealed && state.calledPartnerPlayer !== null) {
+        partnerStatus = " • Partner: " + PLAYER_NAMES[state.calledPartnerPlayer];
+      } else if (state.calledPartnerCardId) {
+        partnerStatus = " • Partner card: " + cardIdToLabel(state.calledPartnerCardId);
+      } else {
+        partnerStatus = " • Partner card: hidden";
+      }
+    }
+    ui.playContract.textContent = state.winningBid ? PLAYER_NAMES[state.bidder] + " bid " + state.winningBid + partnerStatus : "-";
     ui.playMessage.textContent = state.roundMessage || "";
     ui.playMessage.classList.toggle("is-turn", state.currentPlayer === 0 && !state.busy);
     ui.handHint.textContent = state.currentPlayer === 0 && !state.busy ? "Your turn to play" : PLAYER_NAMES[state.currentPlayer] + " to play";
+    if (ui.tableArea) {
+      ui.tableArea.classList.toggle("five-player-layout", fivePlayerMode);
+    }
     ui.seatTopCount.textContent = (state.playerPoints[2] || 0) + " pts";
-    ui.seatLeftCount.textContent = (state.playerPoints[1] || 0) + " pts";
+    ui.seatLeftCount.textContent = (state.playerPoints[fivePlayerMode ? 4 : 1] || 0) + " pts";
     ui.seatRightCount.textContent = (state.playerPoints[3] || 0) + " pts";
     ui.seatBottomCount.textContent = state.playerPoints[0] + " pts";
     ui.seatBottomName.textContent = PLAYER_NAMES[0];
-    ui.seatLeftName.textContent = PLAYER_NAMES[1] || "-";
+    ui.seatLeftName.textContent = PLAYER_NAMES[fivePlayerMode ? 4 : 1] || "-";
     ui.seatTopName.textContent = PLAYER_NAMES[2] || "-";
     ui.seatRightName.textContent = PLAYER_NAMES[3] || "-";
     ui.seatTopLeftWrap.classList.toggle("hidden", !fivePlayerMode);
     ui.slotTopLeft.classList.toggle("hidden", !fivePlayerMode);
     if (fivePlayerMode) {
-      ui.seatTopLeftName.textContent = PLAYER_NAMES[4] || "-";
-      ui.seatTopLeftCount.textContent = (state.playerPoints[4] || 0) + " pts";
+      ui.seatTopLeftName.textContent = PLAYER_NAMES[1] || "-";
+      ui.seatTopLeftCount.textContent = (state.playerPoints[1] || 0) + " pts";
     }
     syncSeatHighlight();
 
     renderSlot(ui.slotTop, playForSeat(2), state.winningCardPlayer === 2);
-    renderSlot(ui.slotLeft, playForSeat(1), state.winningCardPlayer === 1);
+    renderSlot(ui.slotLeft, playForSeat(fivePlayerMode ? 4 : 1), state.winningCardPlayer === (fivePlayerMode ? 4 : 1));
     renderSlot(ui.slotRight, playForSeat(3), state.winningCardPlayer === 3);
     if (fivePlayerMode) {
-      renderSlot(ui.slotTopLeft, playForSeat(4), state.winningCardPlayer === 4);
+      renderSlot(ui.slotTopLeft, playForSeat(1), state.winningCardPlayer === 1);
     }
     renderSlot(ui.slotBottom, playForSeat(0), state.winningCardPlayer === 0);
     renderHandGrid(ui.playerHand, state.hands[0], state.currentPlayer === 0 && !state.busy ? playHumanCard : null, "play");
@@ -4220,14 +4350,21 @@
     ui.summaryDetail.textContent = "";
     clearSummaryStorySticker();
     if (getRuleConfig().teamModel === "calledPartner") {
-      var bestOpponent = state.playerMatchPoints.slice(1).reduce(function (best, score) {
-        return Math.max(best, score);
-      }, 0);
       ui.summaryMatchUs.textContent = state.playerMatchPoints[0] || 0;
-      ui.summaryMatchThem.textContent = bestOpponent;
+      ui.summaryMatchThem.textContent = "-";
+      if (ui.matchScoreboard) {
+        ui.matchScoreboard.classList.add("hidden");
+      }
+      ui.summaryIndividualBoard.classList.remove("hidden");
+      renderSummaryIndividualBoard();
     } else {
       ui.summaryMatchUs.textContent = state.matchPoints[0];
       ui.summaryMatchThem.textContent = state.matchPoints[1];
+      if (ui.matchScoreboard) {
+        ui.matchScoreboard.classList.remove("hidden");
+      }
+      ui.summaryIndividualBoard.classList.add("hidden");
+      ui.summaryIndividualBoard.innerHTML = "";
     }
     ui.summaryMatchNote.textContent = matchSummaryNote();
     applyMatchSummaryBackground();
@@ -4300,6 +4437,24 @@
     ui.summaryProfileDetail.textContent =
       "Rounds logged: " + profile.totals.roundsCompleted + ". Human bids won: " +
       profile.human.bidsWon + ". Current ruleset: " + getRuleConfig().label + ".";
+  }
+
+  function renderSummaryIndividualBoard() {
+    if (!ui.summaryIndividualBoard) {
+      return;
+    }
+    ui.summaryIndividualBoard.innerHTML = "";
+    playersList().forEach(function (player) {
+      var pill = document.createElement("div");
+      var name = document.createElement("span");
+      var score = document.createElement("strong");
+      pill.className = "summary-individual-pill";
+      name.textContent = PLAYER_NAMES[player];
+      score.textContent = String(state.playerMatchPoints[player] || 0);
+      pill.appendChild(name);
+      pill.appendChild(score);
+      ui.summaryIndividualBoard.appendChild(pill);
+    });
   }
 
   function renderSummaryStorySticker() {
@@ -4693,18 +4848,20 @@
   }
 
   function syncSeatHighlight() {
-    var seatClasses = [
-      ui.seatBottomName.parentNode,
-      ui.seatLeftName.parentNode,
-      ui.seatTopName.parentNode,
-      ui.seatRightName.parentNode
+    var seatMap = [
+      { seat: ui.seatBottomName.parentNode, player: 0 },
+      { seat: ui.seatTopName.parentNode, player: 2 },
+      { seat: ui.seatRightName.parentNode, player: 3 }
     ];
     if (currentPlayerCount() === 5 && ui.seatTopLeftName && ui.seatTopLeftName.parentNode) {
-      seatClasses.push(ui.seatTopLeftName.parentNode);
+      seatMap.push({ seat: ui.seatTopLeftName.parentNode, player: 1 });
+      seatMap.push({ seat: ui.seatLeftName.parentNode, player: 4 });
+    } else {
+      seatMap.push({ seat: ui.seatLeftName.parentNode, player: 1 });
     }
 
-    seatClasses.forEach(function (seat, playerIndex) {
-      seat.classList.toggle("active-seat", state.currentPlayer === playerIndex);
+    seatMap.forEach(function (item) {
+      item.seat.classList.toggle("active-seat", state.currentPlayer === item.player);
     });
   }
 
@@ -4730,6 +4887,7 @@
 
   function resetMatchSession() {
     state.matchPoints = [0, 0];
+    state.playerMatchPoints = newPlayerArray(0);
     state.roundHistory = [];
     state.roundNumber = 1;
     state.dealer = 0;
@@ -4825,11 +4983,12 @@
 
   function openingPlayMessage() {
     if (getRuleConfig().teamModel === "calledPartner") {
-      var intro = PLAYER_NAMES[state.bidder] + " chose " + SUIT_LABEL[state.trump] + ".";
+      var intro = PLAYER_NAMES[state.bidder] + " chose " + SUIT_LABEL[state.trump] + " and called " +
+        cardIdToLabel(state.calledPartnerCardId || "");
       if (state.requestedPartnerLead && state.calledPartnerPlayer !== null) {
-        return intro + " Partner lead requested. " + playerLeadMessage(state.calledPartnerPlayer);
+        return intro + ". Partner lead requested.";
       }
-      return intro + " " + playerLeadMessage(state.bidder);
+      return intro + ". " + playerLeadMessage(state.bidder);
     }
     if (state.bidder === 0) {
       return playerLeadMessage(0);
@@ -4843,9 +5002,8 @@
         state.calledPartnerCardId = chooseCalledPartnerCard(state.bidder);
       }
       state.calledPartnerPlayer = findPlayerHoldingCard(state.calledPartnerCardId);
-      if (state.bidder === 0) {
-        state.askPartnerToLead = window.confirm("Ask partner to lead the first trick?");
-      } else {
+      state.calledPartnerRevealed = false;
+      if (state.bidder !== 0) {
         state.askPartnerToLead = Math.random() < 0.45;
       }
       state.requestedPartnerLead = state.askPartnerToLead;

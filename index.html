@@ -50,20 +50,6 @@
             <img class="welcome-logo" src="img/rook-logo.png" alt="Rook">
             <h2 id="welcomeTitle">Welcome</h2>
             <p id="welcomeMessage" class="support-text welcome-message">Start a new match or pick up where you left off.</p>
-            <section class="welcome-panel" aria-live="polite">
-              <div class="welcome-panel-header">
-                <span>Game Mode</span>
-                <strong id="modeSummary">Kentucky House Rules</strong>
-              </div>
-              <label class="support-text" for="modeSelect">Mode</label>
-              <select id="modeSelect" class="mode-select">
-                <option value="kentuckyHouse">House Rules (Default)</option>
-                <option value="tournament">Tournament Rook</option>
-                <option value="westernKy">Western KY Rook</option>
-                <option value="woodsonPatrick">Poker Rook (Woodson Patrick)</option>
-                <option value="fivePlayer">5-Player Hidden Partner</option>
-              </select>
-            </section>
             <section id="savedMatchPanel" class="welcome-panel hidden" aria-live="polite">
               <div class="welcome-panel-header">
                 <span>Saved Match</span>
@@ -85,6 +71,21 @@
               <button id="continueSavedGame" class="primary-button hidden" type="button">Continue</button>
               <button id="startNewGame" class="primary-button" type="button">Start Match</button>
             </div>
+            <section class="welcome-panel" aria-live="polite">
+              <div class="welcome-panel-header">
+                <span>Choose your game type</span>
+                <strong id="modeSummary">Kentucky House Rules</strong>
+              </div>
+              <label class="support-text" for="modeSelect">Mode</label>
+              <select id="modeSelect" class="mode-select">
+                <option value="kentuckyHouse">House Rules (Default)</option>
+                <option value="tournament">Tournament Rook</option>
+                <option value="westernKy">Western KY Rook</option>
+                <option value="woodsonPatrick">Poker Rook (Woodson Patrick)</option>
+                <option value="fivePlayer">5-Player Hidden Partner</option>
+              </select>
+              <p id="modeRecap" class="support-text welcome-panel-detail"></p>
+            </section>
             <section class="welcome-panel" aria-live="polite">
               <div class="welcome-panel-header">
                 <span>Player Profile</span>
@@ -154,15 +155,19 @@
             <div id="dealSeats" class="deal-seats hidden" aria-hidden="true">
               <div class="deal-seat">
                 <span class="deal-seat-fill" id="dealFillMae"></span>
-                <span class="deal-seat-label">Mae</span>
+                <span class="deal-seat-label" id="dealLabelMae">Mae</span>
               </div>
               <div class="deal-seat">
                 <span class="deal-seat-fill" id="dealFillBea"></span>
-                <span class="deal-seat-label">Bea</span>
+                <span class="deal-seat-label" id="dealLabelBea">Bea</span>
               </div>
               <div class="deal-seat">
                 <span class="deal-seat-fill" id="dealFillCal"></span>
-                <span class="deal-seat-label">Cal</span>
+                <span class="deal-seat-label" id="dealLabelCal">Cal</span>
+              </div>
+              <div id="dealSeatNia" class="deal-seat hidden">
+                <span class="deal-seat-fill" id="dealFillNia"></span>
+                <span class="deal-seat-label" id="dealLabelNia">Nia</span>
               </div>
             </div>
             <div class="hand-header">
@@ -218,6 +223,17 @@
               <span>Your hand</span>
             </div>
             <div id="trumpReferenceHand" class="hand-grid bidding-hand-grid hand-review-grid"></div>
+          </section>
+          <section id="partnerSetupBlock" class="kitty-block hidden">
+            <div class="hand-header">
+              <span>Hidden partner setup</span>
+            </div>
+            <label class="support-text" for="calledPartnerCardSelect">Call partner card</label>
+            <select id="calledPartnerCardSelect" class="mode-select"></select>
+            <label class="partner-lead-option" for="askPartnerLead">
+              <input id="askPartnerLead" type="checkbox">
+              Ask partner to lead first trick
+            </label>
           </section>
         </div>
       </section>
@@ -361,6 +377,7 @@
                 <strong id="summaryMatchThem">0</strong>
               </div>
             </div>
+            <div id="summaryIndividualBoard" class="summary-individual-board hidden"></div>
             <p id="summaryMatchNote" class="support-text summary-match-note">First to <span id="summaryMatchTarget">500</span> wins.</p>
             <section id="summaryProfileCard" class="summary-profile-card hidden" aria-live="polite">
               <div class="welcome-panel-header">

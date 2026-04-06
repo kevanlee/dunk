@@ -631,6 +631,10 @@ h2.is-dealing::after {
   margin: 14px 0 18px;
 }
 
+.deal-seats.five-player {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 .deal-seat {
   position: relative;
   display: flex;
@@ -739,6 +743,14 @@ h2.is-dealing::after {
   padding: 0 10px;
   font: inherit;
   color: var(--ink);
+}
+
+.partner-lead-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-weight: 600;
 }
 
 .trump-grid {
@@ -1215,6 +1227,68 @@ h2.is-dealing::after {
   bottom: 68px;
   left: 50%;
   transform: translateX(-50%);
+}
+
+.table-area.five-player-layout .seat-top-left {
+  top: 18px;
+  left: 22%;
+}
+
+.table-area.five-player-layout .seat-top {
+  top: 18px;
+  left: 78%;
+  transform: translateX(-100%);
+}
+
+.table-area.five-player-layout .seat-left {
+  top: 118px;
+  left: 22%;
+  transform: translateX(-50%);
+}
+
+.table-area.five-player-layout .seat-right {
+  top: 118px;
+  right: 22%;
+  transform: translateX(50%);
+}
+
+.table-area.five-player-layout #slotTopLeft {
+  top: 88px;
+  left: 28%;
+}
+
+.table-area.five-player-layout #slotTop {
+  top: 88px;
+  left: 72%;
+  transform: translateX(-100%);
+}
+
+.table-area.five-player-layout #slotLeft {
+  top: 164px;
+  left: 28%;
+  transform: translateX(-50%);
+}
+
+.table-area.five-player-layout #slotRight {
+  top: 164px;
+  right: 28%;
+  transform: translateX(50%);
+}
+
+.summary-individual-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.summary-individual-pill {
+  display: flex;
+  justify-content: space-between;
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: rgba(250, 250, 250, 0.3);
+  font-weight: 700;
 }
 
 .play-message {
