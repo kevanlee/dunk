@@ -6,7 +6,8 @@
     yellow: "Yellow",
     orange: "Orange"
   };
-  var PLAYER_NAMES = ["You", "Bea", "Mae", "Cal"];
+  var DEFAULT_PLAYER_NAMES = ["You", "Bea", "Mae", "Cal"];
+  var PLAYER_NAMES = DEFAULT_PLAYER_NAMES.slice();
   var RULESETS = {
     kentuckyHouse: {
       id: "kentuckyHouse",
@@ -25,17 +26,84 @@
       }
     }
   };
+  var GAME_TYPES = {
+    kentuckyHouse: {
+      id: "kentuckyHouse",
+      label: "Kentucky Rook - House Rules",
+      detail: "The current live version of the game.",
+      seatCount: 3,
+      partnerSeat: 1,
+      rulesetId: "kentuckyHouse"
+    },
+    fivePlayerCallPartner: {
+      id: "fivePlayerCallPartner",
+      label: "5-Player Call Partner",
+      detail: "Setup preview only for now. Confirm still launches the current House Rules table.",
+      seatCount: 4,
+      partnerSeat: null,
+      rulesetId: "kentuckyHouse"
+    },
+    westernKentucky: {
+      id: "westernKentucky",
+      label: "Western Kentucky",
+      detail: "Routes into the current House Rules match for now.",
+      seatCount: 3,
+      partnerSeat: 1,
+      rulesetId: "kentuckyHouse"
+    },
+    tournament: {
+      id: "tournament",
+      label: "Tournament",
+      detail: "Routes into the current House Rules match for now.",
+      seatCount: 3,
+      partnerSeat: 1,
+      rulesetId: "kentuckyHouse"
+    },
+    woodsonPatrick: {
+      id: "woodsonPatrick",
+      label: "Woodson Patrick",
+      detail: "Routes into the current House Rules match for now.",
+      seatCount: 3,
+      partnerSeat: 1,
+      rulesetId: "kentuckyHouse"
+    }
+  };
+  var DEFAULT_GAME_TYPE_ID = "kentuckyHouse";
   var DEFAULT_RULESET_ID = "kentuckyHouse";
   var PLAYERS = [0, 1, 2, 3];
+  var ACTIVE_MATCH_AI_SEATS = [1, 2, 3];
+  var DEAL_STICKER_COUNT = 5;
+  var DEAL_ANIMATION_STEP = 400;
   var BID_DELAY = 1200;
   var AI_DELAY = 700;
   var TRICK_DELAY = 1200;
   var TRICK_WINNER_REVEAL_DELAY = 140;
-  var SUMMARY_DELAY = 900;
+  var SCORING_REVEAL_DELAY = 220;
+  var SCORING_COLUMN_STAGGER_DELAY = 1180;
+  var SCORING_OUTCOME_DELAY = 980;
+  var SCORING_TOTAL_DELAY = 4300;
   var CLOSE_WIN_MARGIN = 50;
   var SUMMARY_CLOSE_CALL_MARGIN = 10;
+  var STICKER_DISPLAY_DURATION = 1500;
   var STICKER_COOLDOWN = 260;
+  var PLAYER_REACTION_COOLDOWN = 1800;
+  var PLAY_REACTION_DURATION = 2200;
+  var ACHIEVEMENT_TOAST_DURATION = 3400;
   var BIG_TRICK_THRESHOLD = 30;
+  var AI_PLAY_REACTION_COPY = {
+    rook: [
+      "rook's out.",
+      "there it is.",
+      "okay, now we're talking.",
+      "that changes things."
+    ],
+    big_trick: [
+      "big points.",
+      "that was a swing.",
+      "spicy trick.",
+      "well, that moved things."
+    ]
+  };
   var MATCH_SUMMARY_GIF_CONFIG = {
     win: [
       "img/gifs/bg-gif-winning-liz.gif",
@@ -52,9 +120,8 @@
         "img/stickers/rook-caw.png"
       ],
       size: "large",
-      intensity: "strong",
-      duration: 780,
-      impact: "strong"
+      intensity: "light",
+      duration: STICKER_DISPLAY_DURATION
     },
     big_trick: {
       assets: [
@@ -64,8 +131,8 @@
         "img/stickers/big-trick-pop-tart.png"
       ],
       size: "medium",
-      intensity: "medium",
-      duration: 680
+      intensity: "light",
+      duration: STICKER_DISPLAY_DURATION
     },
     bid_set: {
       assets: [
@@ -75,8 +142,8 @@
         "img/stickers/bid-set-tears.png"
       ],
       size: "large",
-      intensity: "strong",
-      duration: 840
+      intensity: "medium",
+      duration: STICKER_DISPLAY_DURATION
     },
     bid_made: {
       assets: [
@@ -86,8 +153,8 @@
         "img/stickers/bid-made-shaq.png"
       ],
       size: "medium",
-      intensity: "medium",
-      duration: 760
+      intensity: "light",
+      duration: STICKER_DISPLAY_DURATION
     },
     game_win: {
       assets: [
@@ -95,9 +162,9 @@
         "img/stickers/game-win-jonah.png",
         "img/stickers/game-win-yaas.png"
       ],
-      size: "xlarge",
-      intensity: "strong",
-      duration: 1040
+      size: "large",
+      intensity: "medium",
+      duration: STICKER_DISPLAY_DURATION
     }
   };
   var SUMMARY_STICKER_CONFIG = {
@@ -164,6 +231,78 @@
       title: "Comeback Kid",
       description: "Win a match after trailing along the way.",
       stickerPool: SUMMARY_STICKER_CONFIG.summary_win
+    },
+    {
+      id: "century_club",
+      title: "Century Club",
+      description: "Score 150 or more points in a single round.",
+      stickerPool: STICKER_CONFIG.big_trick.assets
+    },
+    {
+      id: "double_century",
+      title: "Double Century",
+      description: "Win a match with 600 or more points.",
+      stickerPool: STICKER_CONFIG.game_win.assets
+    },
+    {
+      id: "lockdown_defense",
+      title: "Lockdown Defense",
+      description: "Set the opposing bidder in 3 matches in a row.",
+      stickerPool: STICKER_CONFIG.bid_set.assets
+    },
+    {
+      id: "ice_water",
+      title: "Ice Water",
+      description: "Make a bid within 5 points of the target.",
+      stickerPool: SUMMARY_STICKER_CONFIG.summary_close_call
+    },
+    {
+      id: "no_mercy",
+      title: "No Mercy",
+      description: "Win a match by 150 or more points.",
+      stickerPool: SUMMARY_STICKER_CONFIG.summary_win
+    },
+    {
+      id: "hot_hand",
+      title: "Hot Hand",
+      description: "Win 5 matches in a row.",
+      stickerPool: STICKER_CONFIG.game_win.assets
+    },
+    {
+      id: "bounce_back",
+      title: "Bounce Back",
+      description: "Win a match immediately after a loss.",
+      stickerPool: SUMMARY_STICKER_CONFIG.summary_win
+    },
+    {
+      id: "perfect_partner",
+      title: "Perfect Partner",
+      description: "Win 10 matches with the same teammate profile.",
+      stickerPool: STICKER_CONFIG.rook.assets
+    },
+    {
+      id: "nemesis",
+      title: "Nemesis",
+      description: "Beat the same opponent profile 10 times.",
+      stickerPool: STICKER_CONFIG.bid_set.assets
+    },
+    {
+      id: "across_the_spectrum",
+      title: "Across the Spectrum",
+      description: "Make a successful bid in every trump color.",
+      stickerPool: STICKER_CONFIG.bid_made.assets
+    },
+    {
+      id: "max_pressure",
+      title: "Max Pressure",
+      description: "Win the bid at 200 five times.",
+      stickerPool: STICKER_CONFIG.bid_made.assets
+    },
+    {
+      id: "unshakeable",
+      title: "Unshakeable",
+      description: "Complete 25 matches.",
+      stickerPool: STICKER_CONFIG.rook.assets
     }
   ];
   var MINI_STICKER_DEFS = {
@@ -192,7 +331,6 @@
       assetPool: STICKER_CONFIG.rook.assets
     }
   };
-  var COLLECTOR_SHEET_SLOT_COUNT = 12;
   // AI weights are profile-driven so we can swap personalities without rewriting decisions.
   var AI_PROFILES = {
     steady: {
@@ -239,15 +377,131 @@
       extraPointGreed: 1.0,
       denialBias: 1.25,
       closerBias: 1.0
+    },
+    careful: {
+      bidAggression: 0.88,
+      riskBias: 0.8,
+      safetyBias: 1.25,
+      partnerTrust: 1.15,
+      captureBias: 0.95,
+      disruptionBias: 0.9,
+      trumpPressure: 0.88,
+      scoringProtection: 1.22,
+      discardPragmatism: 1.1,
+      contractLockBias: 1.25,
+      extraPointGreed: 0.82,
+      denialBias: 1.0,
+      closerBias: 1.15
+    },
+    greedy: {
+      bidAggression: 1.1,
+      riskBias: 1.12,
+      safetyBias: 0.92,
+      partnerTrust: 0.85,
+      captureBias: 1.25,
+      disruptionBias: 1.05,
+      trumpPressure: 1.12,
+      scoringProtection: 0.92,
+      discardPragmatism: 0.88,
+      contractLockBias: 0.88,
+      extraPointGreed: 1.28,
+      denialBias: 0.95,
+      closerBias: 0.95
+    },
+    loyal: {
+      bidAggression: 0.95,
+      riskBias: 0.9,
+      safetyBias: 1.05,
+      partnerTrust: 1.32,
+      captureBias: 0.94,
+      disruptionBias: 0.92,
+      trumpPressure: 0.95,
+      scoringProtection: 1.12,
+      discardPragmatism: 1.08,
+      contractLockBias: 1.15,
+      extraPointGreed: 0.88,
+      denialBias: 1.0,
+      closerBias: 1.08
     }
   };
+  var AI_STYLE_LABELS = {
+    steady: "Steady",
+    bold: "Bold",
+    disruptor: "Tricky",
+    careful: "Careful",
+    greedy: "Greedy",
+    loyal: "Loyal"
+  };
+  var AI_PERSONAS = [
+    { id: "mae", name: "Mae", descriptor: "Bold", styleId: "bold" },
+    { id: "cal", name: "Cal", descriptor: "Tricky", styleId: "disruptor" },
+    { id: "bea", name: "Bea", descriptor: "Steady", styleId: "steady" },
+    { id: "june", name: "Roy", descriptor: "Careful", styleId: "careful" },
+    { id: "duke", name: "Zoe", descriptor: "Greedy", styleId: "greedy" },
+    { id: "ruth", name: "Kai", descriptor: "Loyal", styleId: "loyal" }
+  ];
+  var AI_PERSONA_BY_ID = AI_PERSONAS.reduce(function (lookup, persona) {
+    lookup[persona.id] = persona;
+    return lookup;
+  }, {});
+  var DEFAULT_MATCH_AI_PERSONA_IDS = ["mae", "cal", "bea"];
   var AI_STYLE_BY_PLAYER = [null, "steady", "bold", "disruptor"];
+  var AI_TUNING_KEYS = [
+    "bidAggression",
+    "riskBias",
+    "safetyBias",
+    "partnerTrust",
+    "disruptionBias"
+  ];
+  var AI_TUNING_LABELS = {
+    bidAggression: "Bid Aggression",
+    riskBias: "Risk",
+    safetyBias: "Safety",
+    partnerTrust: "Partner Trust",
+    disruptionBias: "Disruption"
+  };
+  var BACKGROUND_THEMES = {
+    sunset: {
+      label: "Sunset",
+      asset: "img/bg-sunset.png"
+    },
+    whiteWaves: {
+      label: "White Waves",
+      asset: "img/bg-white-waves.png"
+    },
+    blueLines: {
+      label: "Blue Lines",
+      asset: "img/bg-blue-lines.png"
+    }
+  };
+  var TABLETOP_THEMES = {
+    felt: {
+      label: "Felt",
+      asset: "img/tabletop-felt.png",
+      style: "plain"
+    },
+    classicFelt: {
+      label: "Classic Felt",
+      asset: "img/tabletop-felt.png",
+      style: "classic"
+    },
+    aquarium: {
+      label: "Aquarium",
+      asset: "img/tabletop-aquarium.png",
+      style: "classic"
+    }
+  };
+  var DEFAULT_BACKGROUND_THEME_ID = "sunset";
+  var DEFAULT_TABLETOP_THEME_ID = "classicFelt";
   var STORAGE_SCHEMA_VERSION = 1;
   var PROFILE_STORAGE_KEY = "kentucky-rook.profile";
   var ACTIVE_MATCH_STORAGE_KEY = "kentucky-rook.active-match";
   var PERSISTED_STATE_KEYS = [
     "phase",
+    "gameTypeId",
     "rulesetId",
+    "setupSeatPersonaIds",
+    "matchAiPersonaIds",
     "dealer",
     "roundNumber",
     "bidder",
@@ -277,9 +531,13 @@
     "trickCounts",
     "roundMessage",
     "summary",
+    "scoringInterstitial",
+    "scoringMeterProgress",
+    "scoringOutcomeVisible",
     "summaryStep",
     "summaryMatchGif",
     "summaryScoringOpen",
+    "matchOpponentSetRounds",
     "aiTrumpReady",
     "biddingComplete",
     "biddingStarted",
@@ -302,7 +560,10 @@
   function createState() {
     return {
       phase: "welcome",
+      gameTypeId: DEFAULT_GAME_TYPE_ID,
       rulesetId: DEFAULT_RULESET_ID,
+      setupSeatPersonaIds: [],
+      matchAiPersonaIds: DEFAULT_MATCH_AI_PERSONA_IDS.slice(),
       dealer: 0,
       roundNumber: 1,
       bidder: null,
@@ -332,9 +593,13 @@
       trickCounts: [0, 0],
       roundMessage: "",
       summary: null,
+      scoringInterstitial: null,
+      scoringMeterProgress: [0, 0],
+      scoringOutcomeVisible: false,
       summaryStep: 1,
       summaryMatchGif: null,
       summaryScoringOpen: false,
+      matchOpponentSetRounds: 0,
       aiTrumpReady: false,
       aiTrumpMeterStarted: false,
       dealAnimating: true,
@@ -357,13 +622,205 @@
       stickerBookPage: "achievements",
       profileRoundsTracked: 0,
       profileMatchCompleteRecorded: false,
+      achievementToastQueue: [],
+      achievementToastCurrent: null,
+      achievementToastExiting: false,
+      achievementToastTimeoutId: null,
+      setupPreviewPersonaIds: [],
+      setupCycling: false,
+      setupCycleIntervalId: null,
+      setupCycleFinalizeId: null,
       busy: false,
       timeoutId: null,
       winnerRevealId: null,
       stickerCleanupId: null,
       stickerActive: false,
-      stickerLastShownAt: 0
+      stickerLastShownAt: 0,
+      playerReactionReadyAt: 0,
+      playerReactionCooldownId: null,
+      playReactionText: "",
+      playReactionTimeoutId: null
     };
+  }
+
+  function gameTypeConfig(gameTypeId) {
+    return GAME_TYPES[gameTypeId] || GAME_TYPES[DEFAULT_GAME_TYPE_ID];
+  }
+
+  function normalizeGameTypeId(gameTypeId) {
+    return gameTypeConfig(gameTypeId).id;
+  }
+
+  function setupSeatCount(gameTypeId) {
+    return gameTypeConfig(gameTypeId).seatCount;
+  }
+
+  function createEmptySetupSeats(gameTypeId) {
+    return Array(setupSeatCount(gameTypeId)).fill(null);
+  }
+
+  function normalizeSetupSeatPersonaIds(raw, gameTypeId) {
+    var count = setupSeatCount(gameTypeId);
+    var next = [];
+
+    if (Array.isArray(raw)) {
+      raw.forEach(function (personaId) {
+        if (AI_PERSONA_BY_ID[personaId] && next.indexOf(personaId) === -1 && next.length < count) {
+          next.push(personaId);
+        }
+      });
+    }
+
+    while (next.length < count) {
+      next.push(null);
+    }
+
+    return next;
+  }
+
+  function normalizeMatchAiPersonaIds(raw) {
+    var next = [];
+
+    if (Array.isArray(raw)) {
+      raw.forEach(function (personaId) {
+        if (AI_PERSONA_BY_ID[personaId] && next.indexOf(personaId) === -1 && next.length < ACTIVE_MATCH_AI_SEATS.length) {
+          next.push(personaId);
+        }
+      });
+    }
+
+    DEFAULT_MATCH_AI_PERSONA_IDS.forEach(function (personaId) {
+      if (next.length < ACTIVE_MATCH_AI_SEATS.length && next.indexOf(personaId) === -1) {
+        next.push(personaId);
+      }
+    });
+
+    return next.slice(0, ACTIVE_MATCH_AI_SEATS.length);
+  }
+
+  function selectedSetupSeatsFilled() {
+    return normalizeSetupSeatPersonaIds(state.setupSeatPersonaIds, state.gameTypeId).every(function (personaId) {
+      return Boolean(personaId);
+    });
+  }
+
+  function displayedSetupSeatPersonaIds() {
+    if (state.setupCycling) {
+      return normalizeSetupSeatPersonaIds(state.setupPreviewPersonaIds, state.gameTypeId);
+    }
+    return normalizeSetupSeatPersonaIds(state.setupSeatPersonaIds, state.gameTypeId);
+  }
+
+  function deriveMatchAiPersonaIds(gameTypeId, setupSeatPersonaIds) {
+    return normalizeMatchAiPersonaIds(
+      normalizeSetupSeatPersonaIds(setupSeatPersonaIds, gameTypeId).slice(0, ACTIVE_MATCH_AI_SEATS.length)
+    );
+  }
+
+  function personaForPlayer(sourceState, player) {
+    var activeIds = normalizeMatchAiPersonaIds(sourceState && sourceState.matchAiPersonaIds);
+    var personaId;
+
+    if (player === 0) {
+      return null;
+    }
+    personaId = activeIds[player - 1];
+    return AI_PERSONA_BY_ID[personaId] || AI_PERSONA_BY_ID[DEFAULT_MATCH_AI_PERSONA_IDS[player - 1]];
+  }
+
+  function playerNameFromState(sourceState, player) {
+    var persona = personaForPlayer(sourceState, player);
+
+    if (player === 0) {
+      return "You";
+    }
+    return persona ? persona.name : DEFAULT_PLAYER_NAMES[player];
+  }
+
+  function aiStyleLabel(styleId) {
+    return AI_STYLE_LABELS[styleId] || "Steady";
+  }
+
+  function applyMatchAiPersonas(personaIds) {
+    var activeIds = normalizeMatchAiPersonaIds(personaIds);
+
+    PLAYER_NAMES = DEFAULT_PLAYER_NAMES.slice();
+    AI_STYLE_BY_PLAYER = [null, "steady", "bold", "disruptor"];
+    ACTIVE_MATCH_AI_SEATS.forEach(function (player, index) {
+      var persona = AI_PERSONA_BY_ID[activeIds[index]] || AI_PERSONA_BY_ID[DEFAULT_MATCH_AI_PERSONA_IDS[index]];
+
+      PLAYER_NAMES[player] = persona.name;
+      AI_STYLE_BY_PLAYER[player] = persona.styleId;
+    });
+  }
+
+  function randomSetupSeatPersonaIds(gameTypeId, currentIds) {
+    var available = AI_PERSONAS.map(function (persona) {
+      return persona.id;
+    });
+    var count = setupSeatCount(gameTypeId);
+    var next;
+    var attempt;
+
+    for (attempt = 0; attempt < 5; attempt += 1) {
+      shuffle(available, Date.now() + attempt * 37);
+      next = available.slice(0, count);
+      if (!Array.isArray(currentIds) || next.join(",") !== currentIds.join(",")) {
+        return next;
+      }
+    }
+
+    return available.slice(0, count);
+  }
+
+  function clearSetupCycle() {
+    if (state.setupCycleIntervalId !== null) {
+      window.clearInterval(state.setupCycleIntervalId);
+      state.setupCycleIntervalId = null;
+    }
+    if (state.setupCycleFinalizeId !== null) {
+      window.clearTimeout(state.setupCycleFinalizeId);
+      state.setupCycleFinalizeId = null;
+    }
+    state.setupCycling = false;
+    state.setupPreviewPersonaIds = [];
+  }
+
+  function startSetupSeatCycle() {
+    var settledIds;
+    var cycleSteps = 0;
+
+    if (state.phase !== "setup" || state.setupCycling) {
+      return;
+    }
+
+    settledIds = randomSetupSeatPersonaIds(
+      state.gameTypeId,
+      normalizeSetupSeatPersonaIds(state.setupSeatPersonaIds, state.gameTypeId)
+    );
+
+    clearSetupCycle();
+    state.setupCycling = true;
+    state.setupPreviewPersonaIds = randomSetupSeatPersonaIds(state.gameTypeId, settledIds);
+    render();
+
+    state.setupCycleIntervalId = window.setInterval(function () {
+      cycleSteps += 1;
+      state.setupPreviewPersonaIds = randomSetupSeatPersonaIds(state.gameTypeId, state.setupPreviewPersonaIds);
+      render();
+
+      if (cycleSteps >= 4) {
+        window.clearInterval(state.setupCycleIntervalId);
+        state.setupCycleIntervalId = null;
+      }
+    }, 170);
+
+    state.setupCycleFinalizeId = window.setTimeout(function () {
+      state.setupCycleFinalizeId = null;
+      clearSetupCycle();
+      state.setupSeatPersonaIds = settledIds;
+      render();
+    }, 820);
   }
 
   function createProfile() {
@@ -398,7 +855,21 @@
       },
       opponents: {
         opponentBidRounds: 0,
-        opponentSetRounds: 0
+        opponentSetRounds: 0,
+        currentSetMatchStreak: 0
+      },
+      milestones: {
+        nearTargetBidMakes: 0,
+        bounceBackWins: 0,
+        maxBidWins: 0
+      },
+      trumpStats: {
+        madeBidBySuit: {
+          red: 0,
+          green: 0,
+          yellow: 0,
+          orange: 0
+        }
       },
       streaks: {
         currentMatchWinStreak: 0,
@@ -407,9 +878,12 @@
       achievements: {
         unlocked: {}
       },
+      collectionStickers: [],
       miniStickers: [],
       rulesets: {},
       playerRecords: {},
+      visuals: defaultVisualSettings(),
+      aiTuning: defaultAiTuning(),
       lastMatch: null
     };
   }
@@ -461,7 +935,9 @@
     var human = raw && raw.human ? raw.human : {};
     var performance = raw && raw.performance ? raw.performance : {};
     var opponents = raw && raw.opponents ? raw.opponents : {};
+    var milestones = raw && raw.milestones ? raw.milestones : {};
     var streaks = raw && raw.streaks ? raw.streaks : {};
+    var trumpStats = raw && raw.trumpStats ? raw.trumpStats : {};
 
     nextProfile.version = STORAGE_SCHEMA_VERSION;
     nextProfile.createdAt = raw && raw.createdAt ? raw.createdAt : null;
@@ -487,12 +963,26 @@
     nextProfile.performance.closeWins = Number(performance.closeWins) || 0;
     nextProfile.opponents.opponentBidRounds = Number(opponents.opponentBidRounds) || 0;
     nextProfile.opponents.opponentSetRounds = Number(opponents.opponentSetRounds) || 0;
+    nextProfile.opponents.currentSetMatchStreak = Number(opponents.currentSetMatchStreak) || 0;
+    nextProfile.milestones.nearTargetBidMakes = Number(milestones.nearTargetBidMakes) || 0;
+    nextProfile.milestones.bounceBackWins = Number(milestones.bounceBackWins) || 0;
+    nextProfile.milestones.maxBidWins = Number(milestones.maxBidWins) || 0;
+    nextProfile.trumpStats.madeBidBySuit.red = Number(trumpStats.madeBidBySuit && trumpStats.madeBidBySuit.red) || 0;
+    nextProfile.trumpStats.madeBidBySuit.green = Number(trumpStats.madeBidBySuit && trumpStats.madeBidBySuit.green) || 0;
+    nextProfile.trumpStats.madeBidBySuit.yellow = Number(trumpStats.madeBidBySuit && trumpStats.madeBidBySuit.yellow) || 0;
+    nextProfile.trumpStats.madeBidBySuit.orange = Number(trumpStats.madeBidBySuit && trumpStats.madeBidBySuit.orange) || 0;
     nextProfile.streaks.currentMatchWinStreak = Number(streaks.currentMatchWinStreak) || 0;
     nextProfile.streaks.bestMatchWinStreak = Number(streaks.bestMatchWinStreak) || 0;
     nextProfile.achievements = normalizeAchievementProgress(raw && raw.achievements);
+    nextProfile.collectionStickers = normalizeCollectionStickers(
+      raw && raw.collectionStickers,
+      nextProfile.totals.matchesWon
+    );
     nextProfile.miniStickers = normalizeMiniStickers(raw && raw.miniStickers);
     nextProfile.rulesets = normalizeRulesetRecords(raw && raw.rulesets);
     nextProfile.playerRecords = normalizePlayerRecords(raw && raw.playerRecords);
+    nextProfile.visuals = normalizeVisualSettings(raw && raw.visuals);
+    nextProfile.aiTuning = normalizeAiTuning(raw && raw.aiTuning);
     nextProfile.lastMatch = raw && raw.lastMatch ? raw.lastMatch : null;
 
     return nextProfile;
@@ -512,11 +1002,81 @@
       next.unlocked[id] = {
         unlockedAt: item.unlockedAt || null,
         stickerAsset: item.stickerAsset || null,
-        tilt: typeof item.tilt === "number" ? item.tilt : 0
+        tilt: typeof item.tilt === "number" ? item.tilt : 0,
+        toastShownAt: item.toastShownAt || null
       };
     });
 
     return next;
+  }
+
+  function seededCollectionMetric(seed, offset) {
+    var value = 0;
+    var index;
+    var source = String(seed || "");
+
+    for (index = 0; index < source.length; index += 1) {
+      value = (value * 31 + source.charCodeAt(index) + offset) % 1000003;
+    }
+
+    return value / 1000003;
+  }
+
+  function createCollectionStickerFromSeed(id, earnedAt, matchId) {
+    var baseAsset = stickerAssetFromPool(STICKER_CONFIG.rook.assets) || STICKER_CONFIG.rook.assets[0];
+    var x = 10 + seededCollectionMetric(id, 11) * 78;
+    var y = 8 + seededCollectionMetric(id, 29) * 78;
+    var rotation = Math.round((seededCollectionMetric(id, 47) * 22) - 11);
+    var scale = Math.round((0.9 + seededCollectionMetric(id, 71) * 0.22) * 100) / 100;
+
+    return {
+      id: id,
+      kind: "match_win",
+      asset: baseAsset,
+      x: Math.max(8, Math.min(88, x)),
+      y: Math.max(8, Math.min(88, y)),
+      rotation: rotation,
+      scale: scale,
+      earnedAt: earnedAt || null,
+      matchId: matchId || null
+    };
+  }
+
+  function normalizeCollectionStickers(raw, fallbackWinCount) {
+    var stickers;
+    var index;
+
+    if (Array.isArray(raw) && raw.length) {
+      return raw.reduce(function (items, item, itemIndex) {
+        if (!item || typeof item !== "object") {
+          return items;
+        }
+        items.push({
+          id: item.id || "collection-" + itemIndex,
+          kind: item.kind || "match_win",
+          asset: item.asset || STICKER_CONFIG.rook.assets[0],
+          x: typeof item.x === "number" ? item.x : createCollectionStickerFromSeed(String(item.id || itemIndex), item.earnedAt, item.matchId).x,
+          y: typeof item.y === "number" ? item.y : createCollectionStickerFromSeed(String(item.id || itemIndex), item.earnedAt, item.matchId).y,
+          rotation: typeof item.rotation === "number" ? item.rotation : 0,
+          scale: typeof item.scale === "number" ? item.scale : 1,
+          earnedAt: item.earnedAt || null,
+          matchId: item.matchId || null
+        });
+        return items;
+      }, []);
+    }
+
+    stickers = [];
+    for (index = 0; index < (Number(fallbackWinCount) || 0); index += 1) {
+      stickers.push(
+        createCollectionStickerFromSeed(
+          "legacy-win-" + index,
+          null,
+          "legacy-win-" + index
+        )
+      );
+    }
+    return stickers;
   }
 
   function normalizeMiniStickers(raw) {
@@ -578,20 +1138,122 @@
     return records;
   }
 
+  function defaultAiTuning() {
+    var tuning = {};
+
+    AI_PERSONAS.forEach(function (persona) {
+      tuning[persona.id] = {};
+      AI_TUNING_KEYS.forEach(function (key) {
+        tuning[persona.id][key] = AI_PROFILES[persona.styleId][key];
+      });
+    });
+    return tuning;
+  }
+
+  function defaultVisualSettings() {
+    return {
+      backgroundThemeId: DEFAULT_BACKGROUND_THEME_ID,
+      tabletopThemeId: DEFAULT_TABLETOP_THEME_ID
+    };
+  }
+
+  function normalizeVisualChoice(value, options, fallback) {
+    if (value && options[value]) {
+      return value;
+    }
+    return fallback;
+  }
+
+  function normalizeVisualSettings(raw) {
+    return {
+      backgroundThemeId: normalizeVisualChoice(
+        raw && raw.backgroundThemeId,
+        BACKGROUND_THEMES,
+        DEFAULT_BACKGROUND_THEME_ID
+      ),
+      tabletopThemeId: normalizeVisualChoice(
+        raw && raw.tabletopThemeId,
+        TABLETOP_THEMES,
+        DEFAULT_TABLETOP_THEME_ID
+      )
+    };
+  }
+
+  function normalizeAiTuning(raw) {
+    var normalized = defaultAiTuning();
+    var legacySeatMap = {
+      1: "bea",
+      2: "mae",
+      3: "cal"
+    };
+
+    if (!raw || typeof raw !== "object") {
+      return normalized;
+    }
+
+    Object.keys(raw).forEach(function (rawKey) {
+      var personaId = AI_PERSONA_BY_ID[rawKey] ? rawKey : legacySeatMap[rawKey];
+      var entry;
+
+      if (!personaId) {
+        return;
+      }
+      entry = raw[rawKey] || {};
+      AI_TUNING_KEYS.forEach(function (key) {
+        if (typeof entry[key] === "number" && !Number.isNaN(entry[key])) {
+          normalized[personaId][key] = Math.max(0.7, Math.min(1.35, entry[key]));
+        }
+      });
+    });
+    return normalized;
+  }
+
   function loadProfile() {
     var beforeCount;
 
     profile = normalizeProfile(parseStoredJson(PROFILE_STORAGE_KEY));
     beforeCount = unlockedAchievementCount();
-    evaluateAchievements();
+    evaluateAchievements({ silent: true });
     if (unlockedAchievementCount() !== beforeCount) {
       saveProfile();
     }
+    applyVisualSettings();
   }
 
   function saveProfile() {
     profile.version = STORAGE_SCHEMA_VERSION;
     safeStorageSet(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+  }
+
+  function applyVisualSettings() {
+    var root = document.documentElement;
+    var backgroundTheme = BACKGROUND_THEMES[profile.visuals.backgroundThemeId] || BACKGROUND_THEMES[DEFAULT_BACKGROUND_THEME_ID];
+    var tabletopTheme = TABLETOP_THEMES[profile.visuals.tabletopThemeId] || TABLETOP_THEMES[DEFAULT_TABLETOP_THEME_ID];
+    var classicTabletop = tabletopTheme.style !== "plain";
+
+    root.style.setProperty("--app-bg-image", 'url("' + backgroundTheme.asset + '")');
+    root.style.setProperty("--tabletop-image", 'url("' + tabletopTheme.asset + '")');
+    root.style.setProperty(
+      "--tabletop-overlay-top",
+      classicTabletop
+        ? "radial-gradient(circle at 50% 43%, rgba(255, 248, 220, 0.18), rgba(255, 255, 255, 0) 34%)"
+        : "linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0))"
+    );
+    root.style.setProperty(
+      "--tabletop-overlay-middle",
+      classicTabletop
+        ? "radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0), rgba(27, 14, 5, 0.24) 82%)"
+        : "linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0))"
+    );
+    root.style.setProperty(
+      "--tabletop-overlay-bottom",
+      classicTabletop
+        ? "linear-gradient(180deg, rgba(42, 22, 10, 0.08), rgba(20, 10, 4, 0.22))"
+        : "linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0))"
+    );
+    root.style.setProperty("--tabletop-blend-mode", classicTabletop ? "screen, multiply, normal" : "normal");
+    root.style.setProperty("--tabletop-before-opacity", classicTabletop ? "0.55" : "0");
+    root.style.setProperty("--tabletop-after-opacity", classicTabletop ? "0.7" : "0");
   }
 
   function ensureRulesetRecord(rulesetId) {
@@ -680,8 +1342,122 @@
     return !!profile.achievements.unlocked[id];
   }
 
-  function unlockAchievement(id) {
+  function enqueueAchievementToast(achievementId) {
+    var def = achievementById(achievementId);
+    var unlocked = profile.achievements.unlocked[achievementId];
+
+    if (!def || !unlocked || unlocked.toastShownAt) {
+      return;
+    }
+
+    state.achievementToastQueue.push({
+      id: achievementId,
+      title: def.title,
+      description: def.description,
+      stickerAsset: unlocked.stickerAsset || stickerAssetFromPool(def.stickerPool)
+    });
+  }
+
+  function canShowAchievementToast() {
+    return state.menuOpen || state.phase === "welcome" || state.phase === "summary" || state.phase === "scoring";
+  }
+
+  function renderAchievementToast() {
+    var toast;
+    var image;
+    var label;
+    var title;
+    var description;
+
+    if (!ui.achievementToastLayer) {
+      return;
+    }
+
+    ui.achievementToastLayer.innerHTML = "";
+
+    if (!state.achievementToastCurrent) {
+      ui.achievementToastLayer.classList.remove("is-visible");
+      return;
+    }
+
+    toast = document.createElement("article");
+    toast.className = "achievement-toast" + (state.achievementToastExiting ? " is-exiting" : "");
+    image = document.createElement("img");
+    label = document.createElement("span");
+    title = document.createElement("strong");
+    description = document.createElement("p");
+
+    image.className = "achievement-toast-sticker";
+    image.src = state.achievementToastCurrent.stickerAsset;
+    image.alt = "";
+    image.decoding = "async";
+    image.setAttribute("aria-hidden", "true");
+    label.className = "achievement-toast-label";
+    label.textContent = "Achievement Unlocked";
+    title.textContent = state.achievementToastCurrent.title;
+    description.textContent = state.achievementToastCurrent.description;
+
+    toast.appendChild(image);
+    toast.appendChild(label);
+    toast.appendChild(title);
+    toast.appendChild(description);
+    ui.achievementToastLayer.appendChild(toast);
+    ui.achievementToastLayer.classList.add("is-visible");
+  }
+
+  function clearAchievementToast() {
+    if (state.achievementToastTimeoutId !== null) {
+      window.clearTimeout(state.achievementToastTimeoutId);
+      state.achievementToastTimeoutId = null;
+    }
+    state.achievementToastCurrent = null;
+    state.achievementToastExiting = false;
+    renderAchievementToast();
+  }
+
+  function dismissAchievementToast() {
+    if (!state.achievementToastCurrent) {
+      clearAchievementToast();
+      processAchievementToastQueue();
+      return;
+    }
+
+    if (state.achievementToastTimeoutId !== null) {
+      window.clearTimeout(state.achievementToastTimeoutId);
+      state.achievementToastTimeoutId = null;
+    }
+
+    state.achievementToastExiting = true;
+    renderAchievementToast();
+    state.achievementToastTimeoutId = window.setTimeout(function () {
+      clearAchievementToast();
+      processAchievementToastQueue();
+    }, 240);
+  }
+
+  function processAchievementToastQueue() {
+    var unlocked;
+
+    if (state.achievementToastCurrent || !state.achievementToastQueue.length || !canShowAchievementToast()) {
+      renderAchievementToast();
+      return;
+    }
+
+    state.achievementToastCurrent = state.achievementToastQueue.shift();
+    unlocked = profile.achievements.unlocked[state.achievementToastCurrent.id];
+    if (unlocked && !unlocked.toastShownAt) {
+      unlocked.toastShownAt = new Date().toISOString();
+      saveProfile();
+    }
+    renderAchievementToast();
+    state.achievementToastTimeoutId = window.setTimeout(function () {
+      dismissAchievementToast();
+    }, ACHIEVEMENT_TOAST_DURATION);
+  }
+
+  function unlockAchievement(id, options) {
     var def = achievementById(id);
+    options = options || {};
 
     if (!def || isAchievementUnlocked(id)) {
       return false;
@@ -690,26 +1466,78 @@
     profile.achievements.unlocked[id] = {
       unlockedAt: new Date().toISOString(),
       stickerAsset: stickerAssetFromPool(def.stickerPool),
-      tilt: randomStickerTilt()
+      tilt: randomStickerTilt(),
+      toastShownAt: options.silent ? new Date().toISOString() : null
     };
+    if (!options.silent) {
+      enqueueAchievementToast(id);
+    }
     return true;
   }
 
-  function evaluateAchievements() {
-    unlockAchievementIf("first_match_win", profile.totals.matchesWon >= 1);
-    unlockAchievementIf("bid_caller", profile.human.bidsWon >= 5);
-    unlockAchievementIf("contract_clutch", profile.human.bidsMade >= 3);
-    unlockAchievementIf("set_em_up", profile.opponents.opponentSetRounds >= 3);
-    unlockAchievementIf("big_round", profile.human.bestRoundPoints >= 100);
-    unlockAchievementIf("perfect_200", profile.human.perfectBid200Made >= 1);
-    unlockAchievementIf("close_shave", profile.performance.closeWins >= 1);
-    unlockAchievementIf("comeback_kid", profile.performance.comebackWins >= 1);
+  function evaluateAchievements(options) {
+    unlockAchievementIf("first_match_win", profile.totals.matchesWon >= 1, options);
+    unlockAchievementIf("bid_caller", profile.human.bidsWon >= 5, options);
+    unlockAchievementIf("contract_clutch", profile.human.bidsMade >= 3, options);
+    unlockAchievementIf("set_em_up", profile.opponents.opponentSetRounds >= 3, options);
+    unlockAchievementIf("big_round", profile.human.bestRoundPoints >= 100, options);
+    unlockAchievementIf("perfect_200", profile.human.perfectBid200Made >= 1, options);
+    unlockAchievementIf("close_shave", profile.performance.closeWins >= 1, options);
+    unlockAchievementIf("comeback_kid", profile.performance.comebackWins >= 1, options);
+    unlockAchievementIf("century_club", profile.human.bestRoundPoints >= 150, options);
+    unlockAchievementIf("double_century", profile.performance.bestMatchScore >= 600, options);
+    unlockAchievementIf("lockdown_defense", profile.opponents.currentSetMatchStreak >= 3, options);
+    unlockAchievementIf("ice_water", profile.milestones.nearTargetBidMakes >= 1, options);
+    unlockAchievementIf("no_mercy", profile.performance.biggestWinMargin >= 150, options);
+    unlockAchievementIf("hot_hand", profile.streaks.bestMatchWinStreak >= 5, options);
+    unlockAchievementIf("bounce_back", profile.milestones.bounceBackWins >= 1, options);
+    unlockAchievementIf("perfect_partner", hasTeammateWinThreshold(10), options);
+    unlockAchievementIf("nemesis", hasOpponentWinThreshold(10), options);
+    unlockAchievementIf("across_the_spectrum", hasMadeBidInEverySuit(), options);
+    unlockAchievementIf("max_pressure", profile.milestones.maxBidWins >= 5, options);
+    unlockAchievementIf("unshakeable", profile.totals.matchesCompleted >= 25, options);
   }
 
-  function unlockAchievementIf(id, condition) {
+  function unlockAchievementIf(id, condition, options) {
     if (condition) {
-      unlockAchievement(id);
+      unlockAchievement(id, options);
     }
+  }
+
+  function hasCollectionSticker(matchId) {
+    return profile.collectionStickers.some(function (item) {
+      return item.matchId === matchId;
+    });
+  }
+
+  function hasTeammateWinThreshold(threshold) {
+    return Object.keys(profile.playerRecords).some(function (name) {
+      return ensurePlayerRecord(name).teammateWins >= threshold;
+    });
+  }
+
+  function hasOpponentWinThreshold(threshold) {
+    return Object.keys(profile.playerRecords).some(function (name) {
+      return ensurePlayerRecord(name).opponentWins >= threshold;
+    });
+  }
+
+  function hasMadeBidInEverySuit() {
+    return SUITS.every(function (suit) {
+      return profile.trumpStats.madeBidBySuit[suit] >= 1;
+    });
+  }
+
+  function awardCollectionSticker(matchId) {
+    var sticker;
+
+    if (!matchId || hasCollectionSticker(matchId)) {
+      return false;
+    }
+
+    sticker = createCollectionStickerFromSeed("match-win-" + matchId, new Date().toISOString(), matchId);
+    profile.collectionStickers.push(sticker);
+    return true;
   }
 
   function hasMiniSticker(type, matchId) {
@@ -749,6 +1577,9 @@
   }
 
   function savedPhaseLabel(savedState) {
+    if (savedState.phase === "setup") {
+      return "Match Setup";
+    }
     if (savedState.phase === "bidding") {
       return savedState.biddingComplete ? "Bid Locked In" : "Bidding";
     }
@@ -758,6 +1589,9 @@
     if (savedState.phase === "play") {
       return "In Play";
     }
+    if (savedState.phase === "scoring") {
+      return "Scoring Reveal";
+    }
     if (savedState.phase === "summary") {
       return savedState.gameOver ? "Final Score Saved" : "Round Summary";
     }
@@ -765,18 +1599,27 @@
   }
 
   function savedRoundLabel(savedState) {
-    if (savedState.phase === "summary") {
+    if (savedState.phase === "setup") {
+      return "Ready";
+    }
+    if (savedState.phase === "summary" || savedState.phase === "scoring") {
       return "Round " + Math.max(1, savedState.roundNumber - 1);
     }
     return "Round " + savedState.roundNumber;
   }
 
   function savedMatchDetail(savedState) {
+    if (savedState.phase === "setup") {
+      return gameTypeConfig(savedState.gameTypeId).label + " selected.";
+    }
     if (savedState.phase === "play") {
-      return PLAYER_NAMES[savedState.currentPlayer] + " to play.";
+      return playerNameFromState(savedState, savedState.currentPlayer) + " to play.";
     }
     if (savedState.phase === "trump") {
-      return PLAYER_NAMES[savedState.bidder] + " won " + savedState.winningBid + ".";
+      return playerNameFromState(savedState, savedState.bidder) + " won " + savedState.winningBid + ".";
+    }
+    if (savedState.phase === "scoring" && savedState.summary) {
+      return "Tallying " + savedState.summary.bid + ".";
     }
     if (savedState.phase === "summary" && savedState.summary) {
       return savedState.summary.bid + " • " + savedState.summary.result + ".";
@@ -794,7 +1637,74 @@
       snapshot[key] = JSON.parse(JSON.stringify(sourceState[key]));
     });
 
+    if (snapshot.phase === "play") {
+      normalizePlaySnapshot(snapshot);
+    }
+
     return snapshot;
+  }
+
+  function rebuildHandsFromHistory(sourceState) {
+    var playedByPlayer = [{}, {}, {}, {}];
+    var rebuiltHands = [[], [], [], []];
+
+    (sourceState.completedTricks || []).forEach(function (trick) {
+      (trick.cards || []).forEach(function (play) {
+        if (play && play.card && playedByPlayer[play.player]) {
+          playedByPlayer[play.player][play.card.id] = true;
+        }
+      });
+    });
+
+    (sourceState.trick || []).forEach(function (play) {
+      if (play && play.card && playedByPlayer[play.player]) {
+        playedByPlayer[play.player][play.card.id] = true;
+      }
+    });
+
+    PLAYERS.forEach(function (player) {
+      var baseHand = player === sourceState.bidder && Array.isArray(sourceState.kittyReviewHand) && sourceState.kittyReviewHand.length
+        ? sourceState.kittyReviewHand
+        : sourceState.initialHands[player] || [];
+
+      rebuiltHands[player] = baseHand.filter(function (card) {
+        return !playedByPlayer[player][card.id];
+      });
+      sortHand(rebuiltHands[player], sourceState.trump);
+    });
+
+    return rebuiltHands;
+  }
+
+  function nextPlayerWithCards(sourceState, startPlayer) {
+    var offset;
+    var candidate;
+
+    for (offset = 0; offset < PLAYERS.length; offset += 1) {
+      candidate = (startPlayer + offset) % PLAYERS.length;
+      if ((sourceState.hands[candidate] || []).length > 0) {
+        return candidate;
+      }
+    }
+
+    return startPlayer;
+  }
+
+  function normalizePlaySnapshot(snapshot) {
+    var trick = Array.isArray(snapshot.trick) ? snapshot.trick : [];
+    var lastPlay;
+
+    snapshot.hands = rebuildHandsFromHistory(snapshot);
+
+    if (trick.length) {
+      lastPlay = trick[trick.length - 1];
+      snapshot.leadSuit = effectiveSuit(trick[0].card, snapshot.trump);
+      snapshot.currentPlayer = nextPlayerWithCards(snapshot, (lastPlay.player + 1) % PLAYERS.length);
+      return;
+    }
+
+    snapshot.leadSuit = null;
+    snapshot.currentPlayer = nextPlayerWithCards(snapshot, snapshot.currentPlayer || 0);
   }
 
   function saveActiveMatch() {
@@ -863,6 +1773,9 @@
     });
 
     nextState.phase = snapshot.phase || "welcome";
+    nextState.gameTypeId = normalizeGameTypeId(nextState.gameTypeId);
+    nextState.setupSeatPersonaIds = normalizeSetupSeatPersonaIds(nextState.setupSeatPersonaIds, nextState.gameTypeId);
+    nextState.matchAiPersonaIds = normalizeMatchAiPersonaIds(nextState.matchAiPersonaIds);
     nextState.historyOpen = false;
     nextState.busy = false;
     nextState.timeoutId = null;
@@ -870,6 +1783,10 @@
     nextState.stickerCleanupId = null;
     nextState.stickerActive = false;
     nextState.stickerLastShownAt = 0;
+    nextState.playerReactionReadyAt = 0;
+    nextState.playerReactionCooldownId = null;
+    nextState.playReactionText = "";
+    nextState.playReactionTimeoutId = null;
     nextState.aiTrumpMeterStarted = false;
     nextState.dealAnimating = false;
     nextState.dealVisibleCount = 13;
@@ -886,7 +1803,17 @@
     if (nextState.phase === "trump" && nextState.bidder !== 0) {
       nextState.aiTrumpReady = true;
     }
+    if (nextState.phase === "play") {
+      normalizePlaySnapshot(nextState);
+    }
+    if (nextState.phase === "scoring") {
+      nextState.phase = "summary";
+      nextState.busy = false;
+      nextState.scoringOutcomeVisible = true;
+    }
 
+    clearSetupCycle();
+    applyMatchAiPersonas(nextState.matchAiPersonaIds);
     assignState(nextState);
   }
 
@@ -899,8 +1826,12 @@
       return;
     }
 
+    clearSetupCycle();
     clearPendingTimeout();
-    clearSticker();
+    clearSticker(true);
+    clearPlayerReactionCooldown();
+    clearPlayReaction(false);
+    clearAchievementToast();
     hydrateStateFromSnapshot(payload.state);
     state.menuOpen = false;
     state.menuView = "hub";
@@ -915,14 +1846,50 @@
     }
   }
 
+  function openSetupPhase() {
+    var nextState = createState();
+    var selectedGameTypeId = normalizeGameTypeId(state.gameTypeId);
+
+    clearSetupCycle();
+    clearPendingTimeout();
+    clearSticker(true);
+    clearPlayerReactionCooldown();
+    clearPlayReaction(false);
+    clearAchievementToast();
+    clearActiveMatch();
+    nextState.phase = "setup";
+    nextState.gameTypeId = selectedGameTypeId;
+    nextState.rulesetId = gameTypeConfig(selectedGameTypeId).rulesetId;
+    nextState.setupSeatPersonaIds = createEmptySetupSeats(selectedGameTypeId);
+    nextState.matchAiPersonaIds = normalizeMatchAiPersonaIds(state.matchAiPersonaIds);
+    assignState(nextState);
+    state.menuOpen = false;
+    state.menuView = "hub";
+    updateProfileTimestamp();
+    saveProfile();
+    render();
+  }
+
   function beginNewMatch() {
     var nextState = createState();
+    var selectedGameTypeId = normalizeGameTypeId(state.gameTypeId);
+    var selectedSetupSeats = normalizeSetupSeatPersonaIds(state.setupSeatPersonaIds, selectedGameTypeId);
+    var matchAiPersonaIds = deriveMatchAiPersonaIds(selectedGameTypeId, selectedSetupSeats);
 
+    clearSetupCycle();
     clearPendingTimeout();
-    clearSticker();
+    clearSticker(true);
+    clearPlayerReactionCooldown();
+    clearPlayReaction(false);
+    clearAchievementToast();
     clearActiveMatch();
+    nextState.gameTypeId = selectedGameTypeId;
+    nextState.rulesetId = gameTypeConfig(selectedGameTypeId).rulesetId;
+    nextState.setupSeatPersonaIds = selectedSetupSeats;
+    nextState.matchAiPersonaIds = matchAiPersonaIds;
     nextState.matchId = createMatchId();
     nextState.matchStartedAt = new Date().toISOString();
+    applyMatchAiPersonas(matchAiPersonaIds);
     assignState(nextState);
     state.menuOpen = false;
     state.menuView = "hub";
@@ -934,6 +1901,7 @@
 
   function recordRoundStats(bidMade) {
     var bidderTeam;
+    var bidMargin;
 
     if (state.profileRoundsTracked >= state.roundHistory.length) {
       return;
@@ -950,8 +1918,18 @@
       profile.human.bidsWon += 1;
       profile.human.winningBidTotal += state.winningBid;
       profile.human.winningBidCount += 1;
+      if (state.winningBid === getRuleConfig().maxBid) {
+        profile.milestones.maxBidWins += 1;
+      }
       if (bidMade) {
         profile.human.bidsMade += 1;
+        bidMargin = state.roundPoints[0] - state.winningBid;
+        if (bidMargin >= 0 && bidMargin <= 5) {
+          profile.milestones.nearTargetBidMakes += 1;
+        }
+        if (state.trump && profile.trumpStats.madeBidBySuit[state.trump] !== undefined) {
+          profile.trumpStats.madeBidBySuit[state.trump] += 1;
+        }
         if (state.winningBid === getRuleConfig().maxBid) {
           profile.human.perfectBid200Made += 1;
           awardMiniSticker("perfect_200", state.matchId);
@@ -963,6 +1941,7 @@
       profile.opponents.opponentBidRounds += 1;
       if (!bidMade) {
         profile.opponents.opponentSetRounds += 1;
+        state.matchOpponentSetRounds += 1;
         awardMiniSticker("opponent_set", state.matchId + "-round-" + state.roundNumber);
       }
     }
@@ -975,6 +1954,7 @@
 
   function recordMatchCompletion() {
     var margin;
+    var previousMatchWon;
     var rulesetRecord;
     var won;
 
@@ -984,11 +1964,13 @@
 
     won = state.matchPoints[0] > state.matchPoints[1];
     margin = Math.abs(state.matchPoints[0] - state.matchPoints[1]);
+    previousMatchWon = profile.lastMatch ? profile.lastMatch.won : null;
     updateProfileTimestamp();
     profile.totals.matchesCompleted += 1;
     profile.performance.bestMatchScore = Math.max(profile.performance.bestMatchScore, state.matchPoints[0]);
     if (won) {
       profile.totals.matchesWon += 1;
+      awardCollectionSticker(state.matchId);
       if (profile.totals.matchesWon === 1) {
         awardMiniSticker("first_match_win", state.matchId);
       }
@@ -1000,6 +1982,9 @@
       if (margin <= CLOSE_WIN_MARGIN) {
         profile.performance.closeWins += 1;
         awardMiniSticker("close_win", state.matchId);
+      }
+      if (previousMatchWon === false) {
+        profile.milestones.bounceBackWins += 1;
       }
       profile.streaks.currentMatchWinStreak += 1;
       profile.streaks.bestMatchWinStreak = Math.max(
@@ -1013,6 +1998,12 @@
       profile.totals.matchesLost += 1;
       profile.performance.biggestLossMargin = Math.max(profile.performance.biggestLossMargin, margin);
       profile.streaks.currentMatchWinStreak = 0;
+    }
+
+    if (state.matchOpponentSetRounds > 0) {
+      profile.opponents.currentSetMatchStreak += 1;
+    } else {
+      profile.opponents.currentSetMatchStreak = 0;
     }
 
     rulesetRecord = ensureRulesetRecord(state.rulesetId);
@@ -1064,63 +2055,63 @@
 
   function cacheDom() {
     ui.phaseWelcome = document.getElementById("phaseWelcome");
+    ui.phaseSetup = document.getElementById("phaseSetup");
     ui.phaseBidding = document.getElementById("phaseBidding");
     ui.phaseTrump = document.getElementById("phaseTrump");
     ui.phasePlay = document.getElementById("phasePlay");
+    ui.phaseScoring = document.getElementById("phaseScoring");
     ui.phaseSummary = document.getElementById("phaseSummary");
+    ui.matchSummaryBackdrop = document.getElementById("matchSummaryBackdrop");
     ui.summaryPanel = ui.phaseSummary ? ui.phaseSummary.querySelector(".panel-card") : null;
     ui.menuToggle = document.getElementById("menuToggle");
     ui.menuSheet = document.getElementById("menuSheet");
+    ui.menuBack = document.getElementById("menuBack");
     ui.menuClose = document.getElementById("menuClose");
     ui.menuBackdrop = document.getElementById("menuBackdrop");
     ui.menuTitle = document.getElementById("menuTitle");
     ui.menuContext = document.getElementById("menuContext");
     ui.menuHubView = document.getElementById("menuHubView");
     ui.menuProfileView = document.getElementById("menuProfileView");
-    ui.menuProfileBack = document.getElementById("menuProfileBack");
-    ui.menuActionStatus = document.getElementById("menuActionStatus");
-    ui.menuPrimaryAction = document.getElementById("menuPrimaryAction");
-    ui.menuSecondaryAction = document.getElementById("menuSecondaryAction");
-    ui.menuViewProfile = document.getElementById("menuViewProfile");
-    ui.menuProfileStatus = document.getElementById("menuProfileStatus");
+    ui.menuAchievementsView = document.getElementById("menuAchievementsView");
+    ui.menuSettingsView = document.getElementById("menuSettingsView");
+    ui.menuNavProfile = document.getElementById("menuNavProfile");
+    ui.menuNavAchievements = document.getElementById("menuNavAchievements");
+    ui.menuNavSettings = document.getElementById("menuNavSettings");
     ui.menuProfileMatches = document.getElementById("menuProfileMatches");
     ui.menuProfileRecord = document.getElementById("menuProfileRecord");
     ui.menuProfileBidRate = document.getElementById("menuProfileBidRate");
     ui.menuProfileBestRound = document.getElementById("menuProfileBestRound");
-    ui.menuProfileDetail = document.getElementById("menuProfileDetail");
-    ui.menuProgressStatus = document.getElementById("menuProgressStatus");
-    ui.menuProgressRounds = document.getElementById("menuProgressRounds");
-    ui.menuProgressBidsMade = document.getElementById("menuProgressBidsMade");
-    ui.menuProgressBidsWon = document.getElementById("menuProgressBidsWon");
-    ui.menuProgressStreak = document.getElementById("menuProgressStreak");
     ui.menuRulesetName = document.getElementById("menuRulesetName");
     ui.menuRulesDetail = document.getElementById("menuRulesDetail");
-    ui.menuHelpDetail = document.getElementById("menuHelpDetail");
-    ui.menuFullProfileStatus = document.getElementById("menuFullProfileStatus");
+    ui.menuBackgroundSelect = document.getElementById("menuBackgroundSelect");
+    ui.menuTabletopSelect = document.getElementById("menuTabletopSelect");
+    ui.menuAiSettingsStatus = document.getElementById("menuAiSettingsStatus");
+    ui.menuAiPlayerSettings = document.getElementById("menuAiPlayerSettings");
+    ui.resetAiSettings = document.getElementById("resetAiSettings");
+    ui.menuHeroRecord = document.getElementById("menuHeroRecord");
+    ui.menuHeroWinRate = document.getElementById("menuHeroWinRate");
+    ui.menuHeroBestRound = document.getElementById("menuHeroBestRound");
+    ui.menuHeroCurrentStreak = document.getElementById("menuHeroCurrentStreak");
+    ui.menuHeroBidRate = document.getElementById("menuHeroBidRate");
     ui.menuFullMatchesStarted = document.getElementById("menuFullMatchesStarted");
     ui.menuFullMatchesCompleted = document.getElementById("menuFullMatchesCompleted");
     ui.menuFullWins = document.getElementById("menuFullWins");
     ui.menuFullLosses = document.getElementById("menuFullLosses");
     ui.menuFullRounds = document.getElementById("menuFullRounds");
     ui.menuFullBestRound = document.getElementById("menuFullBestRound");
-    ui.menuFullProfileDetail = document.getElementById("menuFullProfileDetail");
-    ui.menuFullPerformanceStatus = document.getElementById("menuFullPerformanceStatus");
     ui.menuFullAvgRoundPoints = document.getElementById("menuFullAvgRoundPoints");
     ui.menuFullBestMatchScore = document.getElementById("menuFullBestMatchScore");
     ui.menuFullBiggestWinMargin = document.getElementById("menuFullBiggestWinMargin");
     ui.menuFullBiggestLossMargin = document.getElementById("menuFullBiggestLossMargin");
     ui.menuFullComebackWins = document.getElementById("menuFullComebackWins");
     ui.menuFullCloseWins = document.getElementById("menuFullCloseWins");
-    ui.menuFullBidStatus = document.getElementById("menuFullBidStatus");
     ui.menuFullBidsWon = document.getElementById("menuFullBidsWon");
     ui.menuFullAvgWinningBid = document.getElementById("menuFullAvgWinningBid");
     ui.menuFullPerfect200 = document.getElementById("menuFullPerfect200");
     ui.menuFullOpponentSetRate = document.getElementById("menuFullOpponentSetRate");
     ui.menuFullOpponentSetRaw = document.getElementById("menuFullOpponentSetRaw");
     ui.menuFullBidAttempts = document.getElementById("menuFullBidAttempts");
-    ui.menuFullRulesetStatus = document.getElementById("menuFullRulesetStatus");
     ui.menuRulesetRecords = document.getElementById("menuRulesetRecords");
-    ui.menuFullPlayerStatus = document.getElementById("menuFullPlayerStatus");
     ui.menuPlayerRecords = document.getElementById("menuPlayerRecords");
     ui.menuFullProgressStatus = document.getElementById("menuFullProgressStatus");
     ui.menuFullUsPoints = document.getElementById("menuFullUsPoints");
@@ -1132,6 +2123,9 @@
     ui.showCollectorSheet = document.getElementById("showCollectorSheet");
     ui.menuStickerAchievements = document.getElementById("menuStickerAchievements");
     ui.menuStickerCollector = document.getElementById("menuStickerCollector");
+    ui.menuStickerCanvas = document.getElementById("menuStickerCanvas");
+    ui.menuCollectorStatus = document.getElementById("menuCollectorStatus");
+    ui.achievementToastLayer = document.getElementById("achievementToastLayer");
     ui.welcomeTitle = document.getElementById("welcomeTitle");
     ui.welcomeMessage = document.getElementById("welcomeMessage");
     ui.savedMatchPanel = document.getElementById("savedMatchPanel");
@@ -1146,6 +2140,14 @@
     ui.profileRounds = document.getElementById("profileRounds");
     ui.profileBids = document.getElementById("profileBids");
     ui.profileDetail = document.getElementById("profileDetail");
+    ui.setupGameTypeSelect = document.getElementById("setupGameTypeSelect");
+    ui.setupRosterGrid = document.getElementById("setupRosterGrid");
+    ui.setupSeatsStatus = document.getElementById("setupSeatsStatus");
+    ui.setupSelectedSeats = document.getElementById("setupSelectedSeats");
+    ui.setupPartnerHint = document.getElementById("setupPartnerHint");
+    ui.fillSetupSeats = document.getElementById("fillSetupSeats");
+    ui.refreshSetupSeats = document.getElementById("refreshSetupSeats");
+    ui.confirmSetup = document.getElementById("confirmSetup");
     ui.usScoreText = document.getElementById("usScoreText");
     ui.themScoreText = document.getElementById("themScoreText");
     ui.usScoreBar = document.getElementById("usScoreBar");
@@ -1160,12 +2162,11 @@
     ui.selectedBid = document.getElementById("selectedBid");
     ui.bidPicker = document.getElementById("bidPicker");
     ui.bidActions = document.getElementById("bidActions");
+    ui.dealingSequence = document.getElementById("dealingSequence");
+    ui.dealSummary = document.getElementById("dealSummary");
+    ui.biddingHandHeader = document.getElementById("biddingHandHeader");
     ui.handStrengthHint = document.getElementById("handStrengthHint");
-    ui.dealSeats = document.getElementById("dealSeats");
-    ui.dealFillMae = document.getElementById("dealFillMae");
-    ui.dealFillBea = document.getElementById("dealFillBea");
-    ui.dealFillCal = document.getElementById("dealFillCal");
-    ui.dealPile = document.getElementById("dealPile");
+    ui.dealingStickers = Array.prototype.slice.call(document.querySelectorAll(".dealing-sticker"));
     ui.decreaseBid = document.getElementById("decreaseBid");
     ui.increaseBid = document.getElementById("increaseBid");
     ui.placeBid = document.getElementById("placeBid");
@@ -1197,6 +2198,8 @@
     ui.playerHand = document.getElementById("playerHand");
     ui.stickerOverlay = document.getElementById("stickerOverlay");
     ui.tableArea = document.querySelector(".table-area");
+    ui.reactionNice = document.getElementById("reactionNice");
+    ui.reactionOof = document.getElementById("reactionOof");
     ui.seatTopCount = document.getElementById("seatTopCount");
     ui.seatLeftCount = document.getElementById("seatLeftCount");
     ui.seatRightCount = document.getElementById("seatRightCount");
@@ -1240,6 +2243,16 @@
     ui.summaryProfileStreak = document.getElementById("summaryProfileStreak");
     ui.summaryProfileDetail = document.getElementById("summaryProfileDetail");
     ui.summaryTableBody = document.getElementById("summaryTableBody");
+    ui.scoringTitle = document.getElementById("scoringTitle");
+    ui.scoringSubtitle = document.getElementById("scoringSubtitle");
+    ui.scoringUsFill = document.getElementById("scoringUsFill");
+    ui.scoringThemFill = document.getElementById("scoringThemFill");
+    ui.scoringUsPoints = document.getElementById("scoringUsPoints");
+    ui.scoringThemPoints = document.getElementById("scoringThemPoints");
+    ui.scoringUsBidMarker = document.getElementById("scoringUsBidMarker");
+    ui.scoringThemBidMarker = document.getElementById("scoringThemBidMarker");
+    ui.scoringOutcome = document.getElementById("scoringOutcome");
+    ui.scoringStorySticker = document.getElementById("scoringStorySticker");
     ui.nextRound = document.getElementById("nextRound");
     ui.backToRoundSummary = document.getElementById("backToRoundSummary");
     ui.historyToggle = document.getElementById("historyToggle");
@@ -1263,22 +2276,82 @@
       closeMenuSheet();
     });
 
-    ui.menuPrimaryAction.addEventListener("click", function () {
-      handleMenuAction(ui.menuPrimaryAction.getAttribute("data-action"));
+    ui.menuBack.addEventListener("click", function () {
+      state.menuView = "hub";
+      renderMenuSheet();
     });
 
-    ui.menuSecondaryAction.addEventListener("click", function () {
-      handleMenuAction(ui.menuSecondaryAction.getAttribute("data-action"));
-    });
-
-    ui.menuViewProfile.addEventListener("click", function () {
+    ui.menuNavProfile.addEventListener("click", function () {
       state.menuView = "profile";
       renderMenuSheet();
     });
 
-    ui.menuProfileBack.addEventListener("click", function () {
-      state.menuView = "hub";
+    ui.menuNavAchievements.addEventListener("click", function () {
+      state.menuView = "achievements";
       renderMenuSheet();
+    });
+
+    ui.menuNavSettings.addEventListener("click", function () {
+      state.menuView = "settings";
+      renderMenuSheet();
+    });
+
+    ui.menuBackgroundSelect.addEventListener("change", function () {
+      profile.visuals.backgroundThemeId = normalizeVisualChoice(
+        ui.menuBackgroundSelect.value,
+        BACKGROUND_THEMES,
+        DEFAULT_BACKGROUND_THEME_ID
+      );
+      applyVisualSettings();
+      saveProfile();
+    });
+
+    ui.menuTabletopSelect.addEventListener("change", function () {
+      profile.visuals.tabletopThemeId = normalizeVisualChoice(
+        ui.menuTabletopSelect.value,
+        TABLETOP_THEMES,
+        DEFAULT_TABLETOP_THEME_ID
+      );
+      applyVisualSettings();
+      saveProfile();
+    });
+
+    ui.menuAiPlayerSettings.addEventListener("input", function (event) {
+      var input = event.target;
+      var personaId;
+      var key;
+      var value;
+      var valueNode;
+
+      if (!input || input.tagName !== "INPUT" || input.type !== "range") {
+        return;
+      }
+      personaId = input.getAttribute("data-persona");
+      key = input.getAttribute("data-key");
+      value = Number(input.value);
+      if (!personaId || !profile.aiTuning[personaId] || !key || Number.isNaN(value)) {
+        return;
+      }
+      profile.aiTuning[personaId][key] = value;
+      valueNode = input.parentNode.querySelector("[data-ai-value]");
+      if (valueNode) {
+        valueNode.textContent = value.toFixed(2);
+      }
+      saveProfile();
+    });
+
+    ui.resetAiSettings.addEventListener("click", function () {
+      profile.aiTuning = defaultAiTuning();
+      saveProfile();
+      renderSettingsView();
+    });
+
+    ui.reactionNice.addEventListener("click", function () {
+      triggerPlayerStickerReaction("nice");
+    });
+
+    ui.reactionOof.addEventListener("click", function () {
+      triggerPlayerStickerReaction("oof");
     });
 
     ui.showAchievementBook.addEventListener("click", function () {
@@ -1291,11 +2364,48 @@
       renderStickerBook();
     });
 
+    ui.setupGameTypeSelect.addEventListener("change", function () {
+      var gameTypeId;
+
+      if (state.phase !== "setup" || state.setupCycling) {
+        return;
+      }
+      gameTypeId = normalizeGameTypeId(ui.setupGameTypeSelect.value);
+      if (gameTypeId === state.gameTypeId) {
+        return;
+      }
+      state.gameTypeId = gameTypeId;
+      state.rulesetId = gameTypeConfig(gameTypeId).rulesetId;
+      state.setupSeatPersonaIds = createEmptySetupSeats(gameTypeId);
+      render();
+    });
+
+    ui.fillSetupSeats.addEventListener("click", function () {
+      if (state.phase !== "setup" || state.setupCycling) {
+        return;
+      }
+      startSetupSeatCycle();
+    });
+
+    ui.refreshSetupSeats.addEventListener("click", function () {
+      if (state.phase !== "setup" || state.setupCycling) {
+        return;
+      }
+      startSetupSeatCycle();
+    });
+
+    ui.confirmSetup.addEventListener("click", function () {
+      if (state.phase !== "setup" || state.setupCycling || !selectedSetupSeatsFilled()) {
+        return;
+      }
+      beginNewMatch();
+    });
+
     ui.startNewGame.addEventListener("click", function () {
       if (state.phase !== "welcome") {
         return;
       }
-      beginNewMatch();
+      openSetupPhase();
     });
 
     ui.continueSavedGame.addEventListener("click", function () {
@@ -1394,7 +2504,7 @@
         return;
       }
       if (state.gameOver) {
-        beginNewMatch();
+        openSetupPhase();
         return;
       }
       startRound();
@@ -1438,30 +2548,6 @@
     renderMenuSheet();
   }
 
-  function handleMenuAction(action) {
-    if (action === "view_profile") {
-      state.menuView = "profile";
-      renderMenuSheet();
-      return;
-    }
-    if (action === "back_to_hub") {
-      state.menuView = "hub";
-      renderMenuSheet();
-      return;
-    }
-    if (action === "continue_saved") {
-      closeMenuSheet();
-      continueSavedMatch();
-      return;
-    }
-    if (action === "start_new") {
-      closeMenuSheet();
-      beginNewMatch();
-      return;
-    }
-    closeMenuSheet();
-  }
-
   function profileBidAttemptCount() {
     return profile.human.bidsMade + profile.human.bidsSet;
   }
@@ -1479,7 +2565,7 @@
     var matches = profile.totals.matchesCompleted;
 
     if (!matches) {
-      return "Fresh profile";
+      return "No completed matches yet";
     }
     return Math.round((profile.totals.matchesWon / matches) * 100) + "% match win rate";
   }
@@ -1488,35 +2574,46 @@
     return "";
   }
 
+  function menuTitleText() {
+    if (state.menuView === "profile") {
+      return "Full Profile";
+    }
+    if (state.menuView === "achievements") {
+      return "Achievements";
+    }
+    if (state.menuView === "settings") {
+      return "Settings";
+    }
+    return "Menu";
+  }
+
   function renderFullProfileView() {
     var bidAttempts = profileBidAttemptCount();
+    var matchWinRate = formatRate(profile.totals.matchesWon, profile.totals.matchesCompleted);
     var avgRoundPoints = profile.totals.roundsCompleted
       ? formatAverage(profile.totals.usPointsEarned / profile.totals.roundsCompleted)
       : 0;
     var avgWinningBid = profile.human.winningBidCount
       ? formatAverage(profile.human.winningBidTotal / profile.human.winningBidCount)
       : 0;
-    var unlockedCount = unlockedAchievementCount();
 
-    ui.menuFullProfileStatus.textContent = profileWinRateText();
+    ui.menuHeroRecord.textContent = profile.totals.matchesWon + "-" + profile.totals.matchesLost;
+    ui.menuHeroWinRate.textContent = matchWinRate;
+    ui.menuHeroBestRound.textContent = String(profile.human.bestRoundPoints);
+    ui.menuHeroCurrentStreak.textContent = String(profile.streaks.currentMatchWinStreak);
+    ui.menuHeroBidRate.textContent = profileBidRateText();
     ui.menuFullMatchesStarted.textContent = String(profile.totals.matchesStarted);
     ui.menuFullMatchesCompleted.textContent = String(profile.totals.matchesCompleted);
     ui.menuFullWins.textContent = String(profile.totals.matchesWon);
     ui.menuFullLosses.textContent = String(profile.totals.matchesLost);
     ui.menuFullRounds.textContent = String(profile.totals.roundsCompleted);
     ui.menuFullBestRound.textContent = String(profile.human.bestRoundPoints);
-    ui.menuFullProfileDetail.textContent = profile.lastMatch
-      ? "Last recorded match finished " + (profile.lastMatch.won ? "with a win" : "with a loss") +
-        " at Us " + profile.lastMatch.usScore + " / Them " + profile.lastMatch.themScore + "."
-      : "No completed match yet. As you play, this screen will build a long-term picture of your style and results.";
-    ui.menuFullPerformanceStatus.textContent = avgRoundPoints + " avg";
     ui.menuFullAvgRoundPoints.textContent = String(avgRoundPoints);
     ui.menuFullBestMatchScore.textContent = String(profile.performance.bestMatchScore);
     ui.menuFullBiggestWinMargin.textContent = String(profile.performance.biggestWinMargin);
     ui.menuFullBiggestLossMargin.textContent = String(profile.performance.biggestLossMargin);
     ui.menuFullComebackWins.textContent = String(profile.performance.comebackWins);
     ui.menuFullCloseWins.textContent = String(profile.performance.closeWins);
-    ui.menuFullBidStatus.textContent = profileBidRateText();
     ui.menuFullBidsWon.textContent = String(profile.human.bidsWon);
     ui.menuFullAvgWinningBid.textContent = String(avgWinningBid);
     ui.menuFullPerfect200.textContent = String(profile.human.perfectBid200Made);
@@ -1532,16 +2629,13 @@
     ui.menuFullThemPoints.textContent = String(profile.totals.themPointsEarned);
     ui.menuFullCurrentStreak.textContent = String(profile.streaks.currentMatchWinStreak);
     ui.menuFullBestStreak.textContent = String(profile.streaks.bestMatchWinStreak);
-    ui.menuStickerBookStatus.textContent = unlockedCount + " of " + totalAchievementCount() + " unlocked";
     renderRulesetRecords();
     renderPlayerRecords();
-    renderStickerBook();
   }
 
   function renderRulesetRecords() {
     var rulesetIds = Object.keys(RULESETS);
 
-    ui.menuFullRulesetStatus.textContent = getRuleConfig().label;
     ui.menuRulesetRecords.innerHTML = "";
 
     rulesetIds.forEach(function (rulesetId) {
@@ -1554,7 +2648,7 @@
       row.className = "profile-list-row";
       title.textContent = config.label;
       detail.textContent = formatRecord(record.wins, record.losses) + " record • " +
-        record.matchesCompleted + " matches";
+        formatRate(record.wins, record.matchesCompleted) + " win rate";
       row.appendChild(title);
       row.appendChild(detail);
       ui.menuRulesetRecords.appendChild(row);
@@ -1562,7 +2656,6 @@
   }
 
   function renderPlayerRecords() {
-    ui.menuFullPlayerStatus.textContent = "Across completed matches";
     ui.menuPlayerRecords.innerHTML = "";
 
     PLAYER_NAMES.slice(1).forEach(function (name) {
@@ -1597,9 +2690,25 @@
   }
 
   function renderAchievementBook() {
+    var orderedDefs = ACHIEVEMENT_DEFS.slice().sort(function (a, b) {
+      var aUnlocked = profile.achievements.unlocked[a.id];
+      var bUnlocked = profile.achievements.unlocked[b.id];
+
+      if (aUnlocked && !bUnlocked) {
+        return -1;
+      }
+      if (!aUnlocked && bUnlocked) {
+        return 1;
+      }
+      if (aUnlocked && bUnlocked) {
+        return String(bUnlocked.unlockedAt || "").localeCompare(String(aUnlocked.unlockedAt || ""));
+      }
+      return a.title.localeCompare(b.title);
+    });
+
     ui.menuStickerAchievements.innerHTML = "";
 
-    ACHIEVEMENT_DEFS.forEach(function (def) {
+    orderedDefs.forEach(function (def) {
       var unlocked = profile.achievements.unlocked[def.id];
       var card = document.createElement("article");
       var copy = document.createElement("div");
@@ -1644,117 +2753,147 @@
   }
 
   function renderCollectorSheet() {
-    var stickers = profile.miniStickers.slice(-COLLECTOR_SHEET_SLOT_COUNT);
-    var slotCount = Math.max(COLLECTOR_SHEET_SLOT_COUNT, stickers.length);
-    var index;
+    ui.menuCollectorStatus.textContent = profile.collectionStickers.length
+      ? "Total wins = " + profile.collectionStickers.length
+      : "No win stickers yet";
+    ui.menuStickerCanvas.innerHTML = "";
 
-    ui.menuStickerCollector.innerHTML = "";
-    ui.menuStickerCollector.classList.add("collector-sheet");
-
-    for (index = 0; index < slotCount; index += 1) {
-      var slot = document.createElement("div");
-      var item = stickers[index];
-      var helper;
+    profile.collectionStickers.forEach(function (item, index) {
+      var sticker = document.createElement("div");
       var image;
 
-      slot.className = "collector-slot" + (item ? " is-filled" : "");
-      if (item) {
-        image = document.createElement("img");
-        image.className = "collector-sticker";
-        image.src = item.asset || stickerAssetFromPool((MINI_STICKER_DEFS[item.id] || {}).assetPool);
-        image.alt = "";
-        image.decoding = "async";
-        image.setAttribute("aria-hidden", "true");
-        image.style.transform = "rotate(" + (item.tilt || 0) + "deg)";
-        slot.appendChild(image);
-      } else {
-        helper = document.createElement("span");
-        helper.textContent = "Open spot";
-        slot.appendChild(helper);
-      }
-      ui.menuStickerCollector.appendChild(slot);
+      sticker.className = "collector-canvas-sticker" + (index === profile.collectionStickers.length - 1 ? " is-fresh" : "");
+      sticker.style.left = item.x + "%";
+      sticker.style.top = item.y + "%";
+      sticker.style.setProperty("--collector-rotation", item.rotation + "deg");
+      sticker.style.setProperty("--collector-scale", String(item.scale || 1));
+
+      image = document.createElement("img");
+      image.src = item.asset || STICKER_CONFIG.rook.assets[0];
+      image.alt = "";
+      image.decoding = "async";
+      image.setAttribute("aria-hidden", "true");
+      sticker.appendChild(image);
+      ui.menuStickerCanvas.appendChild(sticker);
+    });
+
+    if (!profile.collectionStickers.length) {
+      var empty = document.createElement("div");
+      empty.className = "collector-canvas-empty";
+      empty.textContent = "Your first match win sticker will land here.";
+      ui.menuStickerCanvas.appendChild(empty);
     }
   }
 
-  function renderMenuSheet() {
-    var primaryAction = "close";
-    var secondaryAction = "close";
-    var primaryLabel = "Close Menu";
-    var secondaryLabel = "Back";
-    var bidAttempts = profileBidAttemptCount();
+  function renderAchievementsView() {
+    var unlockedCount = unlockedAchievementCount();
+
+    ui.menuStickerBookStatus.textContent = unlockedCount + " of " + totalAchievementCount() + " unlocked";
+    renderStickerBook();
+  }
+
+  function populateSettingsSelect(selectNode, options, selectedId) {
+    var optionIds = Object.keys(options);
+
+    selectNode.innerHTML = "";
+
+    optionIds.forEach(function (optionId) {
+      var option = document.createElement("option");
+
+      option.value = optionId;
+      option.textContent = options[optionId].label;
+      option.selected = optionId === selectedId;
+      selectNode.appendChild(option);
+    });
+  }
+
+  function renderSettingsView() {
     var rules = getRuleConfig();
+
+    populateSettingsSelect(ui.menuBackgroundSelect, BACKGROUND_THEMES, profile.visuals.backgroundThemeId);
+    populateSettingsSelect(ui.menuTabletopSelect, TABLETOP_THEMES, profile.visuals.tabletopThemeId);
+    ui.menuRulesetName.textContent = rules.label;
+    ui.menuRulesDetail.textContent =
+      "Playing " + rules.label + " • bids " + rules.minBid + "-" + rules.maxBid +
+      " (" + rules.bidStep + " steps), last trick +" + rules.lastTrickBonus + ", first to " +
+      rules.matchTarget + ".";
+    ui.menuAiSettingsStatus.textContent = AI_PERSONAS.length + " archetypes";
+    ui.menuAiPlayerSettings.innerHTML = "";
+
+    AI_PERSONAS.forEach(function (persona) {
+      var card = document.createElement("div");
+      var header = document.createElement("strong");
+      var subhead = document.createElement("span");
+
+      card.className = "ai-player-card";
+      header.textContent = persona.name + " (" + aiStyleLabel(persona.styleId) + ")";
+      card.appendChild(header);
+      subhead.className = "support-text";
+      subhead.textContent = persona.descriptor + " playstyle";
+      card.appendChild(subhead);
+
+      AI_TUNING_KEYS.forEach(function (key) {
+        var row = document.createElement("div");
+        var label = document.createElement("label");
+        var value = document.createElement("span");
+        var slider = document.createElement("input");
+        var current = profile.aiTuning[persona.id][key];
+
+        row.className = "ai-slider-row";
+        label.textContent = AI_TUNING_LABELS[key];
+        value.setAttribute("data-ai-value", "true");
+        value.textContent = current.toFixed(2);
+        slider.type = "range";
+        slider.min = "0.70";
+        slider.max = "1.35";
+        slider.step = "0.01";
+        slider.value = String(current);
+        slider.setAttribute("data-persona", persona.id);
+        slider.setAttribute("data-key", key);
+        row.appendChild(label);
+        row.appendChild(value);
+        row.appendChild(slider);
+        card.appendChild(row);
+      });
+
+      ui.menuAiPlayerSettings.appendChild(card);
+    });
+  }
+
+  function renderMenuSheet() {
+    var bidAttempts = profileBidAttemptCount();
+    var hubViewActive = state.menuView === "hub";
+    var profileViewActive = state.menuView === "profile";
+    var achievementsViewActive = state.menuView === "achievements";
+    var settingsViewActive = state.menuView === "settings";
 
     ui.menuToggle.setAttribute("aria-expanded", state.menuOpen ? "true" : "false");
     ui.menuSheet.classList.toggle("open", state.menuOpen);
     ui.menuSheet.setAttribute("aria-hidden", state.menuOpen ? "false" : "true");
     ui.menuBackdrop.classList.toggle("hidden", !state.menuOpen);
 
-    ui.menuHubView.classList.toggle("hidden", state.menuView !== "hub");
-    ui.menuProfileView.classList.toggle("hidden", state.menuView !== "profile");
-    ui.menuTitle.textContent = state.menuView === "profile"
-      ? "Player Profile"
-      : "Menu";
+    ui.menuHubView.classList.toggle("hidden", !hubViewActive);
+    ui.menuProfileView.classList.toggle("hidden", !profileViewActive);
+    ui.menuAchievementsView.classList.toggle("hidden", !achievementsViewActive);
+    ui.menuSettingsView.classList.toggle("hidden", !settingsViewActive);
+    ui.menuBack.classList.toggle("hidden", hubViewActive);
+    ui.menuTitle.textContent = menuTitleText();
     ui.menuContext.textContent = menuContextText();
     ui.menuContext.classList.toggle("hidden", !ui.menuContext.textContent);
 
-    if (state.menuView === "profile") {
-      primaryAction = "back_to_hub";
-      secondaryAction = "close";
-      primaryLabel = "Back to Menu";
-      secondaryLabel = "Close Menu";
-      ui.menuActionStatus.textContent = "Full profile";
-    } else if (state.phase === "welcome" && savedMatchMeta) {
-      primaryAction = "continue_saved";
-      secondaryAction = "start_new";
-      primaryLabel = "Continue Match";
-      secondaryLabel = "Start New Match";
-      ui.menuActionStatus.textContent = savedMatchMeta.phaseLabel;
-    } else if (state.phase === "welcome") {
-      primaryAction = "start_new";
-      primaryLabel = "Start New Match";
-      secondaryLabel = "Close Menu";
-      ui.menuActionStatus.textContent = "No active match";
-    } else if (state.phase === "summary" && state.gameOver) {
-      primaryAction = "start_new";
-      primaryLabel = "Start New Match";
-      secondaryLabel = "Close Menu";
-      ui.menuActionStatus.textContent = "Match complete";
-    } else {
-      primaryAction = "close";
-      primaryLabel = "Back to Match";
-      secondaryLabel = "Close Menu";
-      ui.menuActionStatus.textContent = state.phase === "play" ? "Match in progress" : "Quick access";
-    }
-
-    ui.menuPrimaryAction.textContent = primaryLabel;
-    ui.menuPrimaryAction.setAttribute("data-action", primaryAction);
-    ui.menuSecondaryAction.textContent = secondaryLabel;
-    ui.menuSecondaryAction.setAttribute("data-action", secondaryAction);
-
-    ui.menuProfileStatus.textContent = profileWinRateText();
     ui.menuProfileMatches.textContent = String(profile.totals.matchesCompleted);
     ui.menuProfileRecord.textContent = profile.totals.matchesWon + "-" + profile.totals.matchesLost;
     ui.menuProfileBidRate.textContent = profileBidRateText();
     ui.menuProfileBestRound.textContent = String(profile.human.bestRoundPoints);
-
-    ui.menuProgressStatus.textContent = bidAttempts
-      ? "Bid success " + profileBidRateText()
-      : "Just getting started";
-    ui.menuProgressRounds.textContent = String(profile.totals.roundsCompleted);
-    ui.menuProgressBidsMade.textContent = String(profile.human.bidsMade);
-    ui.menuProgressBidsWon.textContent = String(profile.human.bidsWon);
-    ui.menuProgressStreak.textContent = String(profile.streaks.currentMatchWinStreak);
-
-    ui.menuRulesetName.textContent = rules.label;
-    ui.menuRulesDetail.textContent =
-      "Current ruleset uses bids from " + rules.minBid + " to " + rules.maxBid + " in steps of " +
-      rules.bidStep + ", last trick bonus " + rules.lastTrickBonus + ", and first to " +
-      rules.matchTarget + " wins.";
     renderFullProfileView();
+    renderAchievementsView();
+    renderSettingsView();
   }
 
   function startRound() {
     clearPendingTimeout();
+    clearPlayerReactionCooldown();
+    clearPlayReaction(false);
 
     if (state.gameOver) {
       resetMatchSession();
@@ -1785,6 +2924,9 @@
     state.trickCounts = [0, 0];
     state.roundMessage = "";
     state.summary = null;
+    state.scoringInterstitial = null;
+    state.scoringMeterProgress = [0, 0];
+    state.scoringOutcomeVisible = false;
     state.summaryStep = 1;
     state.summaryMatchGif = null;
     state.summaryScoringOpen = false;
@@ -1801,7 +2943,7 @@
     state.previousTrick = null;
     state.completedTricks = [];
     state.busy = false;
-    clearSticker();
+    clearSticker(true);
 
     dealInitialHands();
     state.hands = cloneHands(state.initialHands);
@@ -1998,7 +3140,21 @@
   }
 
   function getAiProfile(player) {
-    return AI_PROFILES[AI_STYLE_BY_PLAYER[player] || "steady"];
+    var persona = personaForPlayer(state, player);
+    var styleId = persona ? persona.styleId : (AI_STYLE_BY_PLAYER[player] || "steady");
+    var tuning = persona && profile.aiTuning && profile.aiTuning[persona.id] ? profile.aiTuning[persona.id] : {};
+    var base = AI_PROFILES[styleId] || AI_PROFILES.steady;
+    var merged = {};
+
+    Object.keys(base).forEach(function (key) {
+      merged[key] = base[key];
+    });
+    AI_TUNING_KEYS.forEach(function (key) {
+      if (typeof tuning[key] === "number") {
+        merged[key] = tuning[key];
+      }
+    });
+    return merged;
   }
 
   function clamp(value, min, max) {
@@ -2948,6 +4104,8 @@
   }
 
   function dealForPlay() {
+    clearPlayerReactionCooldown();
+    clearPlayReaction(false);
     state.hands = prepareRoundHands();
     state.phase = "play";
     state.currentPlayer = state.bidder;
@@ -2996,7 +4154,18 @@
     render();
 
     schedule(function () {
+      if (state.phase !== "play" || state.currentPlayer === 0) {
+        state.busy = false;
+        render();
+        return;
+      }
       var choice = chooseAiPlay(state.currentPlayer);
+
+      if (!choice) {
+        recoverAiTurn(state.currentPlayer);
+        return;
+      }
+
       playCard(state.currentPlayer, choice.id);
     }, AI_DELAY);
   }
@@ -3014,6 +4183,10 @@
     });
     var preferred = scored[0];
     var fallback = null;
+
+    if (!legal.length) {
+      return null;
+    }
 
     scored.slice(1).forEach(function (entry) {
       if (entry.score > preferred.score) {
@@ -3036,6 +4209,46 @@
     }
 
     return preferred.card;
+  }
+
+  function recoverAiTurn(player) {
+    var hand = state.hands[player] || [];
+    var nextPlayer = (player + 1) % 4;
+
+    console.warn("AI turn recovery triggered", {
+      player: player,
+      handSize: hand.length,
+      trickSize: state.trick.length,
+      currentPlayer: state.currentPlayer,
+      phase: state.phase
+    });
+
+    if (hand.length) {
+      state.busy = false;
+      playCard(player, hand[0].id);
+      return;
+    }
+
+    state.busy = false;
+
+    if (state.trick.length >= 4) {
+      resolveTrick();
+      return;
+    }
+
+    if (state.hands.some(function (cards) { return cards.length > 0; })) {
+      state.currentPlayer = nextPlayer;
+      render();
+      maybeRunAiTurn();
+      return;
+    }
+
+    if (state.trick.length) {
+      resolveTrick();
+      return;
+    }
+
+    finishRound();
   }
 
   function canBeatCurrentWinner(card) {
@@ -3078,7 +4291,11 @@
 
     if (state.trick.length < 4) {
       state.currentPlayer = (player + 1) % 4;
+      clearPlayReaction(false);
       state.roundMessage = PLAYER_NAMES[player] + " plays " + fullCardLabel(card, state.trump) + ".";
+      if (card.isRook) {
+        maybeShowAiPlayReaction("rook", player);
+      }
       state.busy = false;
       render();
       maybeRunAiTurn();
@@ -3123,10 +4340,11 @@
       scoringItems: scoringItems
     };
     state.completedTricks.push(state.previousTrick);
+    clearPlayReaction(false);
     state.roundMessage = trickWinMessage(winner, pointsWon);
     state.busy = true;
     if (!isLastTrick && pointsWon >= BIG_TRICK_THRESHOLD) {
-      showSticker("big_trick");
+      maybeShowAiPlayReaction("big_trick", winner);
     }
     render();
 
@@ -3162,7 +4380,15 @@
     var summaryThem = roundSummaryPoints(1, bidderTeam, bidMade);
     var bidderName = PLAYER_NAMES[state.bidder];
     var bidderTotal = state.roundPoints[bidderTeam];
+    var usAccrued = state.roundPoints[0];
+    var themAccrued = state.roundPoints[1];
+    var scoringScale = Math.max(usAccrued, themAccrued, state.winningBid, 1);
     var story = buildSummaryStory(bidderTeam, bidderName, bidderTotal, bidMade, bidMargin);
+    var stickerType = getSummaryStoryStickerType();
+    var stickerAsset = stickerType ? randomSummaryStickerAsset(stickerType) : null;
+
+    clearPlayerReactionCooldown();
+    clearPlayReaction(false);
 
     if (bidMade) {
       state.matchPoints[bidderTeam] += state.roundPoints[bidderTeam];
@@ -3186,6 +4412,21 @@
       storyHeadline: story.headline,
       storyMood: story.mood
     };
+    state.scoringInterstitial = {
+      usAccrued: usAccrued,
+      themAccrued: themAccrued,
+      bidderTeam: bidderTeam,
+      bidderName: bidderName,
+      winningBid: state.winningBid,
+      bidMarkerPct: (state.winningBid / scoringScale) * 100,
+      stickerAsset: stickerAsset,
+      stickerLandscape: Boolean(stickerAsset && (stickerAsset.indexOf("lsp") !== -1 || stickerAsset.indexOf("facepalm") !== -1)),
+      outcomeLine: bidMade
+        ? bidderName + " made the bid. Us " + summaryUs + " • Them " + summaryThem + "."
+        : bidderName + " got set. Us " + summaryUs + " • Them " + summaryThem + "."
+    };
+    state.scoringMeterProgress = [0, 0];
+    state.scoringOutcomeVisible = false;
     state.roundHistory.unshift({
       round: "R" + state.roundNumber,
       bid: PLAYER_NAMES[state.bidder] + " bid " + state.winningBid,
@@ -3200,7 +4441,7 @@
     });
     recordRoundStats(bidMade);
 
-    state.phase = "summary";
+    state.phase = "scoring";
     state.summaryStep = 1;
     state.summaryScoringOpen = false;
     state.busy = true;
@@ -3218,10 +4459,37 @@
     }
     recordMatchCompletion();
 
+    render();
+
     schedule(function () {
-      state.busy = false;
+      if (state.phase !== "scoring" || !state.scoringInterstitial) {
+        return;
+      }
+      state.scoringMeterProgress[0] = (state.scoringInterstitial.usAccrued / scoringScale) * 100;
       render();
-    }, SUMMARY_DELAY);
+      schedule(function () {
+        if (state.phase !== "scoring" || !state.scoringInterstitial) {
+          return;
+        }
+        state.scoringMeterProgress[1] = (state.scoringInterstitial.themAccrued / scoringScale) * 100;
+        render();
+        schedule(function () {
+          if (state.phase !== "scoring" || !state.scoringInterstitial) {
+            return;
+          }
+          state.scoringOutcomeVisible = true;
+          render();
+          schedule(function () {
+            if (state.phase !== "scoring") {
+              return;
+            }
+            state.phase = "summary";
+            state.busy = false;
+            render();
+          }, SCORING_TOTAL_DELAY);
+        }, SCORING_OUTCOME_DELAY);
+      }, SCORING_COLUMN_STAGGER_DELAY);
+    }, SCORING_REVEAL_DELAY);
   }
 
   function roundSummaryPoints(team, bidderTeam, bidMade) {
@@ -3398,9 +4666,11 @@
 
   function render() {
     ui.phaseWelcome.classList.toggle("hidden", state.phase !== "welcome");
+    ui.phaseSetup.classList.toggle("hidden", state.phase !== "setup");
     ui.phaseBidding.classList.toggle("hidden", state.phase !== "bidding");
     ui.phaseTrump.classList.toggle("hidden", state.phase !== "trump");
     ui.phasePlay.classList.toggle("hidden", state.phase !== "play");
+    ui.phaseScoring.classList.toggle("hidden", state.phase !== "scoring");
     ui.phaseSummary.classList.toggle("hidden", state.phase !== "summary");
     ui.usScoreText.textContent = "Us " + state.matchPoints[0];
     ui.themScoreText.textContent = "Them " + state.matchPoints[1];
@@ -3412,17 +4682,22 @@
 
     if (state.phase === "welcome") {
       renderWelcomePhase();
+    } else if (state.phase === "setup") {
+      renderSetupPhase();
     } else if (state.phase === "bidding") {
       renderBiddingPhase();
     } else if (state.phase === "trump") {
       renderTrumpPhase();
     } else if (state.phase === "play") {
       renderPlayPhase();
+    } else if (state.phase === "scoring") {
+      renderScoringInterstitial();
     } else if (state.phase === "summary") {
       renderSummaryPhase();
     }
     renderHistoryDrawer();
     renderMenuSheet();
+    processAchievementToastQueue();
     saveActiveMatch();
   }
 
@@ -3439,7 +4714,7 @@
     ui.savedMatchPanel.classList.toggle("hidden", !savedExists);
     ui.continueSavedGame.classList.toggle("hidden", !savedExists);
     ui.startNewGame.className = savedExists ? "ghost-button" : "primary-button";
-    ui.startNewGame.textContent = savedExists ? "Start Match" : "Start Match";
+    ui.startNewGame.textContent = savedExists ? "Start New Match" : "Start New Match";
 
     if (savedExists) {
       ui.savedMatchPhase.textContent = savedMatchMeta.phaseLabel;
@@ -3454,21 +4729,109 @@
     ui.profileBids.textContent = profile.human.bidsMade + "/" + humanBidAttempts;
     ui.profileStatus.textContent = matchesPlayed
       ? winRate + "% match win rate"
-      : "No matches yet";
+      : "No completed matches yet";
     ui.profileDetail.textContent = matchesPlayed
       ? "Best round " + profile.human.bestRoundPoints + ". Streak " + profile.streaks.currentMatchWinStreak + "."
       : "Stats build as you play.";
   }
 
+  function renderSetupPhase() {
+    var config = gameTypeConfig(state.gameTypeId);
+    var seatIds = displayedSetupSeatPersonaIds();
+    var filled = normalizeSetupSeatPersonaIds(state.setupSeatPersonaIds, state.gameTypeId).filter(Boolean).length;
+
+    if (state.setupCycling) {
+      ui.setupSeatsStatus.textContent = "Filling seats...";
+    } else if (filled === seatIds.length) {
+      ui.setupSeatsStatus.textContent = "Seats filled and ready";
+    } else {
+      ui.setupSeatsStatus.textContent = filled + "/" + seatIds.length + " seats filled";
+    }
+    ui.setupPartnerHint.textContent = config.partnerSeat === null
+      ? "Call Partner preview shows four fellow-player seats. Confirm still launches the current House Rules match."
+      : "";
+    ui.setupGameTypeSelect.disabled = state.setupCycling;
+    ui.fillSetupSeats.disabled = state.setupCycling || selectedSetupSeatsFilled();
+    ui.refreshSetupSeats.disabled = state.setupCycling || !filled;
+    ui.confirmSetup.disabled = state.setupCycling || !selectedSetupSeatsFilled();
+
+    renderSetupGameTypeSelect();
+    renderSetupRosterGrid(seatIds);
+    renderSetupSelectedSeats(seatIds, config);
+  }
+
+  function renderSetupGameTypeSelect() {
+    ui.setupGameTypeSelect.innerHTML = "";
+
+    Object.keys(GAME_TYPES).forEach(function (gameTypeId) {
+      var config = gameTypeConfig(gameTypeId);
+      var option = document.createElement("option");
+
+      option.value = gameTypeId;
+      option.textContent = config.label;
+      option.selected = gameTypeId === state.gameTypeId;
+      ui.setupGameTypeSelect.appendChild(option);
+    });
+  }
+
+  function renderSetupRosterGrid(selectedSeatIds) {
+    ui.setupRosterGrid.innerHTML = "";
+
+    AI_PERSONAS.forEach(function (persona) {
+      var card = document.createElement("article");
+      var name = document.createElement("strong");
+      var descriptor = document.createElement("span");
+
+      card.className = "setup-roster-card";
+      card.classList.toggle("is-selected", selectedSeatIds.indexOf(persona.id) !== -1);
+      card.classList.toggle("is-cycling", state.setupCycling && selectedSeatIds.indexOf(persona.id) !== -1);
+      name.textContent = persona.name;
+      descriptor.textContent = persona.descriptor;
+      card.appendChild(name);
+      card.appendChild(descriptor);
+      ui.setupRosterGrid.appendChild(card);
+    });
+  }
+
+  function renderSetupSelectedSeats(selectedSeatIds, config) {
+    ui.setupSelectedSeats.innerHTML = "";
+    ui.setupSelectedSeats.setAttribute("data-seat-count", String(selectedSeatIds.length));
+
+    selectedSeatIds.forEach(function (personaId, index) {
+      var slot = document.createElement("div");
+      var seatLabel = document.createElement("span");
+      var occupant = document.createElement("strong");
+      var descriptor = document.createElement("small");
+      var persona = personaId ? AI_PERSONA_BY_ID[personaId] : null;
+
+      slot.className = "setup-seat-slot";
+      if (config.partnerSeat === index) {
+        slot.classList.add("is-partner");
+      }
+      seatLabel.textContent = config.partnerSeat === index
+        ? "Partner"
+        : (config.partnerSeat === null ? "Seat " + (index + 1) : "Opponent");
+      occupant.textContent = persona ? persona.name : "Open Seat";
+      descriptor.textContent = persona ? persona.descriptor : "Waiting";
+      slot.appendChild(seatLabel);
+      slot.appendChild(occupant);
+      slot.appendChild(descriptor);
+      ui.setupSelectedSeats.appendChild(slot);
+    });
+  }
+
   function renderBiddingPhase() {
     var preBid = !state.biddingStarted && !state.biddingComplete;
     var dealDone = !state.dealAnimating && state.dealRevealed;
+    var showDealing = preBid && !dealDone;
+    var showDealSummary = preBid && dealDone;
+    var visibleStickerCount = Math.max(0, Math.min(DEAL_STICKER_COUNT, state.dealVisibleCount));
 
     ui.biddingPhaseLabel.textContent = preBid ? "Dealing" : "Bidding";
     ui.biddingTitle.textContent = preBid
       ? (dealDone ? "Deal Complete" : "Dealing")
       : (state.biddingComplete ? "Bid Winner" : "Choose Your Bid");
-    ui.biddingTitle.classList.toggle("is-dealing", preBid && !dealDone);
+    ui.biddingTitle.classList.remove("is-dealing");
     ui.currentHighLabel.textContent = state.biddingComplete ? "Bid winner" : "Current high bid";
     ui.currentHighBid.textContent = !state.biddingStarted || state.currentBid === null
       ? "n/a"
@@ -3485,12 +4848,14 @@
     ui.passBid.disabled = state.currentBidTurn !== 0 || state.busy || state.biddingComplete || !state.biddingStarted;
     ui.handStrengthHint.textContent = biddingStrengthHint(state.initialHands[0]);
     ui.handStrengthHint.classList.toggle("hidden", !dealDone);
-    ui.dealSeats.classList.toggle("hidden", !preBid);
-    ui.dealPile.classList.toggle("hidden", !preBid);
-    ui.dealPile.classList.toggle("empty", dealDone);
-    ui.dealFillMae.style.width = dealSeatWidth(state.dealSeatCounts[0]);
-    ui.dealFillBea.style.width = dealSeatWidth(state.dealSeatCounts[1]);
-    ui.dealFillCal.style.width = dealSeatWidth(state.dealSeatCounts[2]);
+    ui.dealingSequence.classList.toggle("hidden", !showDealing);
+    ui.dealingSequence.classList.toggle("is-active", showDealing);
+    ui.dealSummary.classList.toggle("hidden", !showDealSummary);
+    ui.biddingHandHeader.classList.toggle("hidden", showDealing);
+    ui.biddingHand.classList.toggle("hidden", showDealing);
+    ui.dealingStickers.forEach(function (sticker, index) {
+      sticker.classList.toggle("is-visible", showDealing && index < visibleStickerCount);
+    });
     ui.currentHighRow.classList.toggle("bid-winner", state.biddingComplete);
     ui.turnRow.classList.toggle("active-turn", !preBid && !state.biddingComplete);
     ui.bidPicker.classList.toggle("is-disabled", state.currentBidTurn !== 0 || state.busy || state.biddingComplete || !state.biddingStarted);
@@ -3502,12 +4867,17 @@
     ui.continueToTrump.classList.toggle("hidden", !state.biddingComplete);
     ui.bidStatusBoard.classList.toggle("hidden", preBid);
     renderBidStatusBoard();
-    if (dealDone) {
+    if (showDealSummary) {
+      renderDealSummary();
+    } else {
+      ui.dealSummary.innerHTML = "";
+    }
+    if (showDealing) {
+      ui.biddingHand.innerHTML = "";
+      ui.biddingHand.classList.remove("reveal-hand");
+    } else {
       renderHandGrid(ui.biddingHand, state.initialHands[0], null, "reference");
       ui.biddingHand.classList.toggle("reveal-hand", state.dealRevealAnimating);
-    } else {
-      renderDealHand(ui.biddingHand, state.dealVisibleCount);
-      ui.biddingHand.classList.remove("reveal-hand");
     }
   }
 
@@ -3567,6 +4937,8 @@
   }
 
   function renderPlayPhase() {
+    var reactionCoolingDown = Date.now() < state.playerReactionReadyAt;
+
     ui.playTrump.textContent = state.trump ? SUIT_LABEL[state.trump] : "-";
     ui.playTrump.className = "trump-display";
     ui.playTrump.innerHTML = "";
@@ -3579,9 +4951,11 @@
       ui.playTrump.textContent = "-";
     }
     ui.playContract.textContent = state.winningBid ? PLAYER_NAMES[state.bidder] + " bid " + state.winningBid : "-";
-    ui.playMessage.textContent = state.roundMessage || "";
+    ui.playMessage.textContent = currentPlayLaneMessage();
     ui.playMessage.classList.toggle("is-turn", state.currentPlayer === 0 && !state.busy);
     ui.handHint.textContent = state.currentPlayer === 0 && !state.busy ? "Your turn to play" : PLAYER_NAMES[state.currentPlayer] + " to play";
+    ui.reactionNice.disabled = reactionCoolingDown || state.stickerActive;
+    ui.reactionOof.disabled = reactionCoolingDown || state.stickerActive;
     ui.seatTopCount.textContent = state.playerPoints[2] + " pts";
     ui.seatLeftCount.textContent = state.playerPoints[1] + " pts";
     ui.seatRightCount.textContent = state.playerPoints[3] + " pts";
@@ -3593,6 +4967,186 @@
     renderSlot(ui.slotRight, playForSeat(3), state.winningCardPlayer === 3);
     renderSlot(ui.slotBottom, playForSeat(0), state.winningCardPlayer === 0);
     renderHandGrid(ui.playerHand, state.hands[0], state.currentPlayer === 0 && !state.busy ? playHumanCard : null, "play");
+  }
+
+  function renderScoringInterstitial() {
+    var scoring = state.scoringInterstitial;
+    var usProgress;
+    var themProgress;
+
+    if (!scoring) {
+      return;
+    }
+
+    usProgress = Math.max(0, Math.min(100, state.scoringMeterProgress[0]));
+    themProgress = Math.max(0, Math.min(100, state.scoringMeterProgress[1]));
+    ui.scoringTitle.textContent = "Round " + state.roundNumber + " Score Reveal";
+    ui.scoringSubtitle.textContent = scoring.bidderName + " bid " + scoring.winningBid + ". Counting points.";
+    ui.scoringUsPoints.textContent = String(scoring.usAccrued);
+    ui.scoringThemPoints.textContent = String(scoring.themAccrued);
+    ui.scoringUsFill.style.width = usProgress + "%";
+    ui.scoringThemFill.style.width = themProgress + "%";
+    ui.scoringUsBidMarker.classList.toggle("hidden", scoring.bidderTeam !== 0);
+    ui.scoringThemBidMarker.classList.toggle("hidden", scoring.bidderTeam !== 1);
+
+    if (scoring.bidderTeam === 0) {
+      ui.scoringUsBidMarker.style.left = scoring.bidMarkerPct + "%";
+      ui.scoringUsBidMarker.style.opacity = scoring.usAccrued >= scoring.winningBid ? "1" : "0.72";
+    } else {
+      ui.scoringThemBidMarker.style.left = scoring.bidMarkerPct + "%";
+      ui.scoringThemBidMarker.style.opacity = scoring.themAccrued >= scoring.winningBid ? "1" : "0.72";
+    }
+
+    ui.scoringOutcome.classList.toggle("hidden", !state.scoringOutcomeVisible);
+    if (state.scoringOutcomeVisible) {
+      ui.scoringOutcome.textContent = scoring.outcomeLine;
+      renderScoringStorySticker();
+    } else {
+      clearScoringStorySticker();
+    }
+  }
+
+  function renderScoringStorySticker() {
+    var scoring = state.scoringInterstitial;
+    var image;
+
+    if (!ui.scoringStorySticker || !scoring || !scoring.stickerAsset) {
+      clearScoringStorySticker();
+      return;
+    }
+
+    ui.scoringStorySticker.innerHTML = "";
+    ui.scoringStorySticker.classList.remove("hidden");
+    ui.scoringStorySticker.classList.toggle("is-landscape", Boolean(scoring.stickerLandscape));
+
+    image = document.createElement("img");
+    image.src = scoring.stickerAsset;
+    image.alt = "";
+    image.decoding = "async";
+    image.setAttribute("aria-hidden", "true");
+    ui.scoringStorySticker.appendChild(image);
+  }
+
+  function clearScoringStorySticker() {
+    if (!ui.scoringStorySticker) {
+      return;
+    }
+
+    ui.scoringStorySticker.innerHTML = "";
+    ui.scoringStorySticker.classList.add("hidden");
+    ui.scoringStorySticker.classList.remove("is-landscape");
+  }
+
+  function currentPlayLaneMessage() {
+    if (state.roundMessage && state.playReactionText) {
+      return state.roundMessage + " " + state.playReactionText;
+    }
+    return state.roundMessage || state.playReactionText || "";
+  }
+
+  function clearPlayerReactionCooldown() {
+    if (state.playerReactionCooldownId !== null) {
+      window.clearTimeout(state.playerReactionCooldownId);
+      state.playerReactionCooldownId = null;
+    }
+    state.playerReactionReadyAt = 0;
+  }
+
+  function clearPlayReaction(shouldRender) {
+    if (state.playReactionTimeoutId !== null) {
+      window.clearTimeout(state.playReactionTimeoutId);
+      state.playReactionTimeoutId = null;
+    }
+    if (!state.playReactionText) {
+      return;
+    }
+    state.playReactionText = "";
+    if (shouldRender && state.phase === "play") {
+      renderPlayPhase();
+    }
+  }
+
+  function startPlayerReactionCooldown() {
+    clearPlayerReactionCooldown();
+    state.playerReactionReadyAt = Date.now() + PLAYER_REACTION_COOLDOWN;
+    state.playerReactionCooldownId = window.setTimeout(function () {
+      state.playerReactionCooldownId = null;
+      state.playerReactionReadyAt = 0;
+      if (state.phase === "play") {
+        renderPlayPhase();
+      }
+    }, PLAYER_REACTION_COOLDOWN);
+  }
+
+  function randomPlayerReactionStickerType(tone) {
+    var positivePool = ["bid_made", "big_trick"];
+
+    if (tone === "nice") {
+      return positivePool[Math.floor(Math.random() * positivePool.length)];
+    }
+    return "bid_set";
+  }
+
+  function triggerPlayerStickerReaction(tone) {
+    var type;
+
+    if (state.phase !== "play" || state.stickerActive || Date.now() < state.playerReactionReadyAt) {
+      return;
+    }
+
+    type = randomPlayerReactionStickerType(tone);
+    if (!showSticker(type, { bypassCooldown: true })) {
+      return;
+    }
+
+    startPlayerReactionCooldown();
+    renderPlayPhase();
+  }
+
+  function randomAiPlayReactionSpeaker(excludedPlayer) {
+    var candidates = [1, 2, 3].filter(function (player) {
+      return player !== excludedPlayer;
+    });
+
+    if (!candidates.length) {
+      candidates = [1, 2, 3];
+    }
+    if (!candidates.length) {
+      return null;
+    }
+
+    return PLAYER_NAMES[candidates[Math.floor(Math.random() * candidates.length)]];
+  }
+
+  function showPlayReactionText(text, duration) {
+    clearPlayReaction(false);
+    state.playReactionText = text;
+    state.playReactionTimeoutId = window.setTimeout(function () {
+      state.playReactionTimeoutId = null;
+      state.playReactionText = "";
+      if (state.phase === "play") {
+        renderPlayPhase();
+      }
+    }, duration || PLAY_REACTION_DURATION);
+  }
+
+  function maybeShowAiPlayReaction(kind, featuredPlayer) {
+    var lines = AI_PLAY_REACTION_COPY[kind];
+    var speaker;
+    var line;
+    var chance = kind === "rook" ? 0.78 : 0.58;
+
+    if (state.phase !== "play" || !lines || !lines.length || Math.random() > chance) {
+      return;
+    }
+
+    speaker = randomAiPlayReactionSpeaker(featuredPlayer);
+    if (!speaker) {
+      return;
+    }
+
+    line = lines[Math.floor(Math.random() * lines.length)];
+    showPlayReactionText(speaker + ": " + line, PLAY_REACTION_DURATION);
   }
 
   function showSticker(type, options) {
@@ -3612,7 +5166,7 @@
       return false;
     }
 
-    clearSticker();
+    clearSticker(true);
     state.stickerActive = true;
     state.stickerLastShownAt = now;
 
@@ -3637,7 +5191,6 @@
     }
 
     ui.stickerOverlay.appendChild(sticker);
-    applyStickerImpact(config.impact);
 
     sticker.addEventListener("animationend", function () {
       clearSticker();
@@ -3657,17 +5210,7 @@
     return config.assets[Math.floor(Math.random() * config.assets.length)];
   }
 
-  function applyStickerImpact(impact) {
-    if (!ui.tableArea || !impact) {
-      return;
-    }
-    ui.tableArea.classList.remove("sticker-impact-medium");
-    ui.tableArea.classList.remove("sticker-impact-strong");
-    void ui.tableArea.offsetWidth;
-    ui.tableArea.classList.add("sticker-impact-" + impact);
-  }
-
-  function clearSticker() {
+  function clearSticker(skipRender) {
     if (state.stickerCleanupId !== null) {
       window.clearTimeout(state.stickerCleanupId);
       state.stickerCleanupId = null;
@@ -3676,9 +5219,8 @@
     if (ui.stickerOverlay) {
       ui.stickerOverlay.innerHTML = "";
     }
-    if (ui.tableArea) {
-      ui.tableArea.classList.remove("sticker-impact-medium");
-      ui.tableArea.classList.remove("sticker-impact-strong");
+    if (!skipRender && state.phase === "play") {
+      renderPlayPhase();
     }
   }
 
@@ -3726,6 +5268,7 @@
     ui.summaryHistory.classList.toggle("hidden", state.summaryStep !== 2);
     ui.summaryStory.classList.toggle("hidden", state.summaryStep !== 1);
     ui.summaryProfileCard.classList.toggle("hidden", !(state.summaryStep === 2 && state.gameOver));
+    clearSummaryStorySticker();
 
     if (state.summaryStep === 1) {
       if (ui.summaryNav.parentNode !== ui.phaseSummary.querySelector(".panel-card")) {
@@ -3735,7 +5278,6 @@
       ui.summaryStoryHeadline.textContent = state.summary.storyHeadline;
       ui.summaryStoryMood.textContent = state.summary.storyMood;
       ui.summaryDetail.textContent = state.summary.margin || "";
-      renderSummaryStorySticker();
       if (state.summaryScoringOpen) {
         renderSummaryScoring();
       } else {
@@ -3764,7 +5306,7 @@
   function applyMatchSummaryBackground() {
     var asset = null;
 
-    if (!ui.summaryPanel) {
+    if (!ui.matchSummaryBackdrop) {
       return;
     }
 
@@ -3772,18 +5314,18 @@
       asset = getMatchSummaryGifAsset();
     }
 
-    ui.summaryPanel.classList.toggle("match-summary-gif", Boolean(asset));
-
     if (asset) {
-      ui.summaryPanel.style.setProperty("--match-summary-gif", 'url("' + asset + '")');
-      ui.summaryPanel.classList.toggle("is-win", state.matchPoints[0] > state.matchPoints[1]);
-      ui.summaryPanel.classList.toggle("is-loss", state.matchPoints[0] < state.matchPoints[1]);
+      ui.matchSummaryBackdrop.style.setProperty("--match-summary-gif", 'url("' + asset + '")');
+      ui.matchSummaryBackdrop.classList.add("is-visible");
+      ui.matchSummaryBackdrop.classList.toggle("is-win", state.matchPoints[0] > state.matchPoints[1]);
+      ui.matchSummaryBackdrop.classList.toggle("is-loss", state.matchPoints[0] < state.matchPoints[1]);
       return;
     }
 
-    ui.summaryPanel.style.removeProperty("--match-summary-gif");
-    ui.summaryPanel.classList.remove("is-win");
-    ui.summaryPanel.classList.remove("is-loss");
+    ui.matchSummaryBackdrop.style.removeProperty("--match-summary-gif");
+    ui.matchSummaryBackdrop.classList.remove("is-visible");
+    ui.matchSummaryBackdrop.classList.remove("is-win");
+    ui.matchSummaryBackdrop.classList.remove("is-loss");
   }
 
   function getMatchSummaryGifAsset() {
@@ -4097,15 +5639,29 @@
     });
   }
 
-  function renderDealHand(container, count) {
-    var index;
+  function renderDealSummary() {
+    ui.dealSummary.innerHTML = "";
 
-    container.innerHTML = "";
-    for (index = 0; index < count; index += 1) {
+    ACTIVE_MATCH_AI_SEATS.forEach(function (player, index) {
       var card = document.createElement("div");
-      card.className = "card card-back deal-card";
-      container.appendChild(card);
-    }
+      var name = document.createElement("span");
+      var badge = document.createElement("strong");
+      var count = state.initialHands[player] && state.initialHands[player].length
+        ? state.initialHands[player].length
+        : state.dealSeatCounts[index];
+
+      card.className = "deal-summary-card";
+      if (teamForPlayer(player) === teamForPlayer(0)) {
+        card.classList.add("is-teammate");
+      }
+      name.className = "deal-summary-name";
+      badge.className = "deal-summary-badge";
+      name.textContent = PLAYER_NAMES[player];
+      badge.textContent = "(" + count + ")";
+      card.appendChild(name);
+      card.appendChild(badge);
+      ui.dealSummary.appendChild(card);
+    });
   }
 
   function renderBidStatusBoard() {
@@ -4404,20 +5960,25 @@
       return;
     }
 
-    if (state.dealVisibleCount < 13) {
+    if (state.dealVisibleCount < 1) {
+      state.dealVisibleCount = 1;
+      render();
+    }
+
+    if (state.dealVisibleCount < DEAL_STICKER_COUNT) {
       schedule(function () {
-        state.dealVisibleCount += 1;
-        state.dealSeatCounts = state.dealSeatCounts.map(function (count) {
-          return Math.min(13, count + 1);
-        });
+        state.dealVisibleCount = Math.min(DEAL_STICKER_COUNT, state.dealVisibleCount + 1);
         render();
         runDealAnimation();
-      }, 290);
+      }, DEAL_ANIMATION_STEP);
       return;
     }
 
     schedule(function () {
       state.dealAnimating = false;
+      state.dealSeatCounts = ACTIVE_MATCH_AI_SEATS.map(function (player) {
+        return state.initialHands[player].length;
+      });
       state.dealRevealed = true;
       state.dealRevealAnimating = true;
       render();
@@ -4425,7 +5986,7 @@
         state.dealRevealAnimating = false;
         render();
       }, 260);
-    }, 230);
+    }, DEAL_ANIMATION_STEP);
   }
 
   function triggerCardLockout(cardNode) {
@@ -4440,10 +6001,6 @@
   function biddingStrengthHint(cards) {
     var profile = handStrengthProfile(cards || []);
     return profile.label;
-  }
-
-  function dealSeatWidth(count) {
-    return (Math.max(0, Math.min(13, count)) / 13) * 100 + "%";
   }
 
   function handStrengthProfile(cards) {

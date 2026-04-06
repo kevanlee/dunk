@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div id="matchSummaryBackdrop" class="match-summary-backdrop" aria-hidden="true"></div>
   <div class="app">
     <header class="topbar">
       <div class="topbar-brand">
@@ -69,12 +70,12 @@
             </section>
             <div class="welcome-actions">
               <button id="continueSavedGame" class="primary-button hidden" type="button">Continue</button>
-              <button id="startNewGame" class="primary-button" type="button">Start Match</button>
+              <button id="startNewGame" class="primary-button" type="button">Start New Match</button>
             </div>
             <section class="welcome-panel" aria-live="polite">
               <div class="welcome-panel-header">
                 <span>Player Profile</span>
-                <strong id="profileStatus">Fresh profile</strong>
+                <strong id="profileStatus">No completed matches yet</strong>
               </div>
               <div class="welcome-stat-grid">
                 <div class="summary-box welcome-stat-box">
@@ -97,6 +98,43 @@
               <p id="profileDetail" class="support-text welcome-panel-detail"></p>
             </section>
           </div>
+        </div>
+      </section>
+
+      <section id="phaseSetup" class="phase-panel hidden">
+        <div class="panel-card setup-card">
+          <p class="phase-label">New Match</p>
+          <h2>Let's Get Set Up</h2>
+
+          <section class="welcome-panel" aria-live="polite">
+            <div class="welcome-panel-header">
+              <span>Choose Game Type</span>
+            </div>
+            <label class="setup-select-field" for="setupGameTypeSelect">
+              <select id="setupGameTypeSelect" class="setup-select"></select>
+            </label>
+          </section>
+
+          <section class="welcome-panel" aria-live="polite">
+            <div class="welcome-panel-header">
+              <span>Player Roster</span>
+            </div>
+            <div id="setupRosterGrid" class="setup-roster-grid"></div>
+          </section>
+
+          <section class="welcome-panel" aria-live="polite">
+            <div class="welcome-panel-header">
+              <span>Selected Seats</span>
+              <strong id="setupSeatsStatus">Fill the seats to continue</strong>
+            </div>
+            <div id="setupSelectedSeats" class="setup-selected-seats"></div>
+            <p id="setupPartnerHint" class="support-text welcome-panel-detail"></p>
+            <div class="setup-actions">
+              <button id="fillSetupSeats" class="primary-button" type="button">Fill Seats</button>
+              <button id="refreshSetupSeats" class="table-icon-button" type="button" aria-label="Refresh seats">↻</button>
+            </div>
+            <button id="confirmSetup" class="primary-button" type="button" disabled>Let's Play</button>
+          </section>
         </div>
       </section>
 
@@ -134,24 +172,20 @@
           </div>
 
           <section class="inline-hand bidding-hand-strip">
-            <div id="dealPile" class="deal-pile hidden" aria-hidden="true">
-              <span class="deal-pile-card"></span>
+            <div id="dealingSequence" class="dealing-sequence hidden" aria-hidden="true">
+              <div class="dealing-sticker-row">
+                <img class="dealing-sticker dealing-sticker-d" src="img/dealing-d.png" alt="" />
+                <img class="dealing-sticker dealing-sticker-e" src="img/dealing-e.png" alt="" />
+                <img class="dealing-sticker dealing-sticker-a" src="img/dealing-a.png" alt="" />
+                <img class="dealing-sticker dealing-sticker-l" src="img/dealing-l.png" alt="" />
+                <img class="dealing-sticker dealing-sticker-ing" src="img/dealing-ing.png" alt="" />
+              </div>
+              <span class="trump-processing-track dealing-progress-track" aria-hidden="true">
+                <span id="dealingProgressBar" class="trump-processing-fill dealing-progress-fill"></span>
+              </span>
             </div>
-            <div id="dealSeats" class="deal-seats hidden" aria-hidden="true">
-              <div class="deal-seat">
-                <span class="deal-seat-fill" id="dealFillMae"></span>
-                <span class="deal-seat-label">Mae</span>
-              </div>
-              <div class="deal-seat">
-                <span class="deal-seat-fill" id="dealFillBea"></span>
-                <span class="deal-seat-label">Bea</span>
-              </div>
-              <div class="deal-seat">
-                <span class="deal-seat-fill" id="dealFillCal"></span>
-                <span class="deal-seat-label">Cal</span>
-              </div>
-            </div>
-            <div class="hand-header">
+            <div id="dealSummary" class="deal-summary hidden" aria-live="polite"></div>
+            <div id="biddingHandHeader" class="hand-header">
               <span>Your hand</span>
               <strong id="handStrengthHint" class="hand-strength-label">Medium hand</strong>
             </div>
@@ -245,6 +279,11 @@
                 <div id="slotRight" class="table-slot"></div>
                 <div id="slotBottom" class="table-slot"></div>
               </div>
+
+              <div class="table-reaction-buttons" aria-label="Sticker reactions">
+                <button id="reactionNice" class="table-reaction-button" type="button" aria-label="Drop a nice sticker">Nice</button>
+                <button id="reactionOof" class="table-reaction-button is-oof" type="button" aria-label="Drop an oof sticker">Oof</button>
+              </div>
             </div>
 
             <p id="playMessage" class="play-message">Play a card.</p>
@@ -257,6 +296,34 @@
             </div>
             <div id="playerHand" class="hand-grid"></div>
           </section>
+        </div>
+      </section>
+
+      <section id="phaseScoring" class="phase-panel hidden">
+        <div class="panel-card scoring-interstitial">
+          <p class="phase-label">Scoring</p>
+          <h2 id="scoringTitle">Counting the Hand</h2>
+          <p id="scoringSubtitle" class="support-text">Every point matters...</p>
+          <div class="score-meter-grid" aria-live="polite">
+            <div class="score-meter-card">
+              <span class="score-meter-label">Us</span>
+              <div class="score-meter-track">
+                <span id="scoringUsFill" class="score-meter-fill score-meter-fill-us"></span>
+                <span id="scoringUsBidMarker" class="score-meter-bid-marker hidden" aria-hidden="true"></span>
+              </div>
+              <strong id="scoringUsPoints" class="score-meter-points">0</strong>
+            </div>
+            <div class="score-meter-card">
+              <span class="score-meter-label">Them</span>
+              <div class="score-meter-track">
+                <span id="scoringThemFill" class="score-meter-fill score-meter-fill-them"></span>
+                <span id="scoringThemBidMarker" class="score-meter-bid-marker hidden" aria-hidden="true"></span>
+              </div>
+              <strong id="scoringThemPoints" class="score-meter-points">0</strong>
+            </div>
+          </div>
+          <p id="scoringOutcome" class="scoring-outcome hidden">Outcome pending...</p>
+          <div id="scoringStorySticker" class="summary-story-sticker scoring-story-sticker hidden" aria-hidden="true"></div>
         </div>
       </section>
 
@@ -313,7 +380,7 @@
             <section id="summaryProfileCard" class="summary-profile-card hidden" aria-live="polite">
               <div class="welcome-panel-header">
                 <span>Profile Updated</span>
-                <strong id="summaryProfileStatus">Fresh profile</strong>
+                <strong id="summaryProfileStatus">No completed matches yet</strong>
               </div>
               <div class="welcome-stat-grid">
                 <div class="summary-box welcome-stat-box">
@@ -362,27 +429,17 @@
         <div class="menu-sheet-scroll">
           <div class="menu-sheet-handle" aria-hidden="true"></div>
           <div class="menu-sheet-header">
+            <button id="menuBack" class="ghost-button hidden" type="button" aria-label="Back to menu">←</button>
             <div>
               <h2 id="menuTitle">Menu</h2>
             </div>
-            <button id="menuClose" class="ghost-button" type="button">Close</button>
+            <button id="menuClose" class="ghost-button" type="button" aria-label="Close menu">✕</button>
           </div>
         <p id="menuContext" class="support-text hidden">Manage your match, profile, and rules without leaving the table.</p>
         <div id="menuHubView">
-          <div class="menu-sheet-section">
-            <div class="welcome-panel-header">
-              <span>Actions</span>
-              <strong id="menuActionStatus">Ready</strong>
-            </div>
-            <div class="menu-actions">
-              <button id="menuPrimaryAction" class="primary-button" type="button">Start New Match</button>
-              <button id="menuSecondaryAction" class="ghost-button" type="button">Close Menu</button>
-            </div>
-          </div>
           <section class="menu-sheet-section">
-            <div class="welcome-panel-header">
+            <div class="menu-section-divider">
               <span>Profile Snapshot</span>
-              <strong id="menuProfileStatus">Fresh profile</strong>
             </div>
             <div class="welcome-stat-grid">
               <div class="summary-box welcome-stat-box">
@@ -402,196 +459,247 @@
                 <strong id="menuProfileBestRound">0</strong>
               </div>
             </div>
-            <p id="menuProfileDetail" class="support-text welcome-panel-detail hidden"></p>
-            <button id="menuViewProfile" class="ghost-button" type="button">View Full Profile</button>
           </section>
-          <section class="menu-sheet-section">
-            <div class="welcome-panel-header">
-              <span>Progress</span>
-              <strong id="menuProgressStatus">Just getting started</strong>
-            </div>
-            <div class="welcome-stat-grid">
-              <div class="summary-box welcome-stat-box">
-                <span>Rounds</span>
-                <strong id="menuProgressRounds">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Bids Made</span>
-                <strong id="menuProgressBidsMade">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Bids Won</span>
-                <strong id="menuProgressBidsWon">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Streak</span>
-                <strong id="menuProgressStreak">0</strong>
-              </div>
-            </div>
-          </section>
-          <section class="menu-sheet-section">
-            <div class="welcome-panel-header">
-              <span>Rules &amp; Ruleset</span>
-              <strong id="menuRulesetName">Kentucky House Rules</strong>
-            </div>
-            <p id="menuRulesDetail" class="support-text welcome-panel-detail"></p>
-          </section>
+          <div class="menu-nav-list" aria-label="Menu sections">
+            <button id="menuNavProfile" class="menu-nav-button" type="button">
+              <strong>Full Profile</strong>
+            </button>
+            <button id="menuNavAchievements" class="menu-nav-button" type="button">
+              <strong>Achievements</strong>
+            </button>
+            <button id="menuNavSettings" class="menu-nav-button" type="button">
+              <strong>Settings</strong>
+            </button>
+          </div>
         </div>
         <div id="menuProfileView" class="hidden">
-          <div class="menu-profile-topbar">
-            <button id="menuProfileBack" class="menu-back-button" type="button" aria-label="Back to menu">←</button>
-          </div>
           <section class="menu-sheet-section">
-            <div class="welcome-panel-header">
-              <span>Lifetime Profile</span>
-              <strong id="menuFullProfileStatus">Fresh profile</strong>
+            <div class="menu-section-divider">
+              <span>Player Profile</span>
             </div>
-            <div class="welcome-stat-grid">
-              <div class="summary-box welcome-stat-box">
-                <span>Matches Started</span>
-                <strong id="menuFullMatchesStarted">0</strong>
+            <div class="profile-hero-grid">
+              <div class="summary-box welcome-stat-box profile-hero-box">
+                <span>Record</span>
+                <strong id="menuHeroRecord">0-0</strong>
               </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Matches Finished</span>
-                <strong id="menuFullMatchesCompleted">0</strong>
+              <div class="summary-box welcome-stat-box profile-hero-box">
+                <span>Win Rate</span>
+                <strong id="menuHeroWinRate">0%</strong>
               </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Wins</span>
-                <strong id="menuFullWins">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Losses</span>
-                <strong id="menuFullLosses">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Rounds Played</span>
-                <strong id="menuFullRounds">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
+              <div class="summary-box welcome-stat-box profile-hero-box">
                 <span>Best Round</span>
-                <strong id="menuFullBestRound">0</strong>
+                <strong id="menuHeroBestRound">0</strong>
               </div>
-            </div>
-            <p id="menuFullProfileDetail" class="support-text welcome-panel-detail"></p>
-          </section>
-          <section class="menu-sheet-section">
-            <div class="welcome-panel-header">
-              <span>Performance</span>
-              <strong id="menuFullPerformanceStatus">0 avg</strong>
-            </div>
-            <div class="welcome-stat-grid">
-              <div class="summary-box welcome-stat-box">
-                <span>Avg / Round</span>
-                <strong id="menuFullAvgRoundPoints">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Best Match</span>
-                <strong id="menuFullBestMatchScore">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Biggest Win</span>
-                <strong id="menuFullBiggestWinMargin">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Biggest Loss</span>
-                <strong id="menuFullBiggestLossMargin">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Comeback Wins</span>
-                <strong id="menuFullComebackWins">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Close Wins</span>
-                <strong id="menuFullCloseWins">0</strong>
-              </div>
-            </div>
-          </section>
-          <section class="menu-sheet-section">
-            <div class="welcome-panel-header">
-              <span>Human Bidding</span>
-              <strong id="menuFullBidStatus">0%</strong>
-            </div>
-            <div class="welcome-stat-grid">
-              <div class="summary-box welcome-stat-box">
-                <span>Avg Winning Bid</span>
-                <strong id="menuFullAvgWinningBid">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Made at 200</span>
-                <strong id="menuFullPerfect200">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Opp. Set Rate</span>
-                <strong id="menuFullOpponentSetRate">0%</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Opp. Set Rounds</span>
-                <strong id="menuFullOpponentSetRaw">0/0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Bids Won</span>
-                <strong id="menuFullBidsWon">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Bid Attempts</span>
-                <strong id="menuFullBidAttempts">0</strong>
-              </div>
-            </div>
-          </section>
-          <section class="menu-sheet-section">
-            <div class="welcome-panel-header">
-              <span>Per-Ruleset Record</span>
-              <strong id="menuFullRulesetStatus">Current ruleset</strong>
-            </div>
-            <div id="menuRulesetRecords" class="profile-list"></div>
-          </section>
-          <section class="menu-sheet-section">
-            <div class="welcome-panel-header">
-              <span>Teammates &amp; Rivals</span>
-              <strong id="menuFullPlayerStatus">Table records</strong>
-            </div>
-            <div id="menuPlayerRecords" class="profile-list"></div>
-          </section>
-          <section class="menu-sheet-section">
-            <div class="welcome-panel-header">
-              <span>Progress Totals</span>
-              <strong id="menuFullProgressStatus">On this device</strong>
-            </div>
-            <div class="welcome-stat-grid">
-              <div class="summary-box welcome-stat-box">
-                <span>Us Points</span>
-                <strong id="menuFullUsPoints">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Them Points</span>
-                <strong id="menuFullThemPoints">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
+              <div class="summary-box welcome-stat-box profile-hero-box">
                 <span>Current Streak</span>
-                <strong id="menuFullCurrentStreak">0</strong>
-              </div>
-              <div class="summary-box welcome-stat-box">
-                <span>Best Streak</span>
-                <strong id="menuFullBestStreak">0</strong>
+                <strong id="menuHeroCurrentStreak">0</strong>
               </div>
             </div>
           </section>
           <section class="menu-sheet-section">
+            <div class="profile-section-card">
+              <div class="menu-section-divider">
+                <span>Overview</span>
+              </div>
+              <div class="profile-stat-table">
+                <div class="profile-stat-row">
+                  <span>Matches Started</span>
+                  <strong id="menuFullMatchesStarted">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Matches Finished</span>
+                  <strong id="menuFullMatchesCompleted">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Wins</span>
+                  <strong id="menuFullWins">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Losses</span>
+                  <strong id="menuFullLosses">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Rounds Played</span>
+                  <strong id="menuFullRounds">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Best Round</span>
+                  <strong id="menuFullBestRound">0</strong>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="profile-section-card">
+              <div class="menu-section-divider">
+                <span>Performance</span>
+              </div>
+              <div class="profile-stat-table">
+                <div class="profile-stat-row">
+                  <span>Average per Round</span>
+                  <strong id="menuFullAvgRoundPoints">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Best Match Score</span>
+                  <strong id="menuFullBestMatchScore">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Biggest Win Margin</span>
+                  <strong id="menuFullBiggestWinMargin">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Biggest Loss Margin</span>
+                  <strong id="menuFullBiggestLossMargin">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Comeback Wins</span>
+                  <strong id="menuFullComebackWins">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Close Wins</span>
+                  <strong id="menuFullCloseWins">0</strong>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="profile-section-card">
+              <div class="menu-section-divider">
+                <span>Bidding</span>
+              </div>
+              <div class="profile-stat-table">
+                <div class="profile-stat-row">
+                  <span>Bid Win Rate</span>
+                  <strong id="menuHeroBidRate">0%</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Average Winning Bid</span>
+                  <strong id="menuFullAvgWinningBid">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Made at 200</span>
+                  <strong id="menuFullPerfect200">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Opponent Set Rate</span>
+                  <strong id="menuFullOpponentSetRate">0%</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Opponent Set Rounds</span>
+                  <strong id="menuFullOpponentSetRaw">0/0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Bids Won</span>
+                  <strong id="menuFullBidsWon">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Bid Attempts</span>
+                  <strong id="menuFullBidAttempts">0</strong>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="profile-section-card">
+              <div class="menu-section-divider">
+                <span>Matchups</span>
+              </div>
+              <div id="menuPlayerRecords" class="profile-list"></div>
+            </div>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="profile-section-card">
+              <div class="menu-section-divider">
+                <span>Rulesets</span>
+              </div>
+              <p id="menuFullProgressStatus" class="support-text menu-section-note">On this device</p>
+              <div id="menuRulesetRecords" class="profile-list"></div>
+            </div>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="profile-section-card">
+              <div class="menu-section-divider">
+                <span>Progress Totals</span>
+              </div>
+              <div class="profile-stat-table">
+                <div class="profile-stat-row">
+                  <span>Us Points</span>
+                  <strong id="menuFullUsPoints">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Them Points</span>
+                  <strong id="menuFullThemPoints">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Current Streak</span>
+                  <strong id="menuFullCurrentStreak">0</strong>
+                </div>
+                <div class="profile-stat-row">
+                  <span>Best Streak</span>
+                  <strong id="menuFullBestStreak">0</strong>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <div id="menuAchievementsView" class="hidden">
+          <section class="menu-sheet-section">
             <div class="welcome-panel-header">
-              <span>Sticker Book</span>
+              <span>Achievements</span>
               <strong id="menuStickerBookStatus">0 of 8 unlocked</strong>
             </div>
             <div class="sticker-book-toggle" role="tablist" aria-label="Sticker book pages">
               <button id="showAchievementBook" class="sticker-book-tab active" type="button" role="tab" aria-selected="true">Achievements</button>
-              <button id="showCollectorSheet" class="sticker-book-tab" type="button" role="tab" aria-selected="false">Collector Sheet</button>
+              <button id="showCollectorSheet" class="sticker-book-tab" type="button" role="tab" aria-selected="false">Collection</button>
             </div>
             <div id="menuStickerAchievements" class="sticker-book-page"></div>
-            <div id="menuStickerCollector" class="sticker-book-page hidden"></div>
+            <div id="menuStickerCollector" class="sticker-book-page hidden">
+              <div class="collector-canvas-header">
+                <div>
+                  <strong id="menuCollectorStatus">No win stickers yet</strong>
+                </div>
+              </div>
+              <div id="menuStickerCanvas" class="collector-canvas" aria-label="Match win sticker collection"></div>
+            </div>
+          </section>
+        </div>
+        <div id="menuSettingsView" class="hidden">
+          <section class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Look &amp; Feel</span>
+              <strong>Visual style</strong>
+            </div>
+            <div class="settings-form">
+              <label class="settings-field" for="menuBackgroundSelect">
+                <span>Background</span>
+                <select id="menuBackgroundSelect"></select>
+              </label>
+              <label class="settings-field" for="menuTabletopSelect">
+                <span>Tabletop</span>
+                <select id="menuTabletopSelect"></select>
+              </label>
+            </div>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Ruleset</span>
+              <strong id="menuRulesetName">Kentucky House Rules</strong>
+            </div>
+            <p id="menuRulesDetail" class="support-text welcome-panel-detail"></p>
+          </section>
+          <section class="menu-sheet-section">
+            <div class="welcome-panel-header">
+              <span>Computer Players</span>
+              <strong id="menuAiSettingsStatus">Custom tuning</strong>
+            </div>
+            <div id="menuAiPlayerSettings" class="ai-settings-grid"></div>
+            <button id="resetAiSettings" class="ghost-button" type="button">Reset Player Settings</button>
           </section>
         </div>
       </div>
     </aside>
     <div id="menuBackdrop" class="menu-backdrop hidden"></div>
+    <div id="achievementToastLayer" class="achievement-toast-layer" aria-live="polite" aria-atomic="true"></div>
     <aside id="historyDrawer" class="history-drawer">
       <div class="history-header">
         <h2>Previous Trick</h2>
