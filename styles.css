@@ -430,31 +430,34 @@ body {
   border-radius: 999px;
   border: 1px solid rgba(17, 17, 17, 0.08);
   box-shadow: 0 1px 5px rgba(17, 17, 17, 0.14);
-  background: linear-gradient(135deg, #d8d8d8, #bdbdbd);
+  background-color: #d8d8d8;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .setup-roster-avatar.avatar-mae {
-  background: linear-gradient(135deg, #bfe8ff, #9eaaff);
+  background-image: url("img/avatar-mae.png");
 }
 
 .setup-roster-avatar.avatar-cal {
-  background: linear-gradient(135deg, #bbf5dc, #c4e585);
+  background-image: url("img/avatar-cal.png");
 }
 
 .setup-roster-avatar.avatar-bea {
-  background: linear-gradient(135deg, #faddfa, #e88ce8);
+  background-image: url("img/avatar-bea.png");
 }
 
-.setup-roster-avatar.avatar-june {
-  background: linear-gradient(135deg, #ffe9a4, #f6cb5c);
+.setup-roster-avatar.avatar-roy {
+  background-image: url("img/avatar-roy.png");
 }
 
-.setup-roster-avatar.avatar-duke {
-  background: linear-gradient(135deg, #cedeef, #f47b68);
+.setup-roster-avatar.avatar-zoe {
+  background-image: url("img/avatar-zoe.png");
 }
 
-.setup-roster-avatar.avatar-ruth {
-  background: linear-gradient(135deg, #fcea96, #b7a4ff);
+.setup-roster-avatar.avatar-kai {
+  background-image: url("img/avatar-kai.png");
 }
 
 .setup-select-field {
