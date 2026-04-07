@@ -406,6 +406,7 @@ body {
 
 .setup-roster-card,
 .setup-seat-slot {
+  position: relative;
   display: grid;
   gap: 6px;
   padding: 12px;
@@ -414,6 +415,46 @@ body {
   background: rgba(250, 250, 250, 0.3);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56);
   text-align: left;
+}
+
+.setup-roster-card {
+  padding-right: 40px;
+}
+
+.setup-roster-avatar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  box-shadow: 0 1px 5px rgba(17, 17, 17, 0.14);
+  background: linear-gradient(135deg, #d8d8d8, #bdbdbd);
+}
+
+.setup-roster-avatar.avatar-mae {
+  background: linear-gradient(135deg, #bfe8ff, #9eaaff);
+}
+
+.setup-roster-avatar.avatar-cal {
+  background: linear-gradient(135deg, #bbf5dc, #c4e585);
+}
+
+.setup-roster-avatar.avatar-bea {
+  background: linear-gradient(135deg, #faddfa, #e88ce8);
+}
+
+.setup-roster-avatar.avatar-june {
+  background: linear-gradient(135deg, #ffe9a4, #f6cb5c);
+}
+
+.setup-roster-avatar.avatar-duke {
+  background: linear-gradient(135deg, #cedeef, #f47b68);
+}
+
+.setup-roster-avatar.avatar-ruth {
+  background: linear-gradient(135deg, #fcea96, #b7a4ff);
 }
 
 .setup-select-field {
@@ -654,9 +695,9 @@ h2.is-dealing::after {
   position: absolute;
   top: -4px;
   bottom: -4px;
-  width: 2px;
-  background: #ffd64f;
-  box-shadow: 0 0 14px rgba(255, 214, 79, 0.92);
+  width: 3px;
+  background: #7e5600;
+  box-shadow: 0 0 10px rgba(126, 86, 0, 0.4);
   transition: opacity 220ms ease;
   transform: translateX(-50%);
 }
@@ -1051,12 +1092,22 @@ h2.is-dealing::after {
 }
 
 .kitty-legend-icon {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  background: var(--primary-blue-soft);
-  border-top-right-radius: 8px;
-  clip-path: polygon(100% 0, 0 0, 100% 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 18px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(44, 75, 255, 0.12);
+  color: #2c4bff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.kitty-legend-icon::before {
+  content: "KITTY";
 }
 
 .kitty-block {
@@ -1369,7 +1420,7 @@ h2.is-dealing::after {
   font-weight: 650;
   font-size: 1.02rem;
   display: inline-block;
-  padding-left: 12px;
+  padding-left: 0;
   color: #fafafa;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
@@ -1377,7 +1428,7 @@ h2.is-dealing::after {
 .seat-name::before {
   content: "";
   position: absolute;
-  left: 0;
+  left: -12px;
   top: 50%;
   width: 7px;
   height: 7px;
@@ -2068,6 +2119,39 @@ h2.is-dealing::after {
 }
 
 .rook-card.show-rook-trump.rook-trump-orange::after {
+  background: #ff8c50;
+}
+
+.card.show-red-one-trump::before,
+.played-card.show-red-one-trump::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  z-index: 2;
+}
+
+.card.show-red-one-trump.rook-trump-red::before,
+.played-card.show-red-one-trump.rook-trump-red::before {
+  background: #fd2f2f;
+}
+
+.card.show-red-one-trump.rook-trump-green::before,
+.played-card.show-red-one-trump.rook-trump-green::before {
+  background: #79bf81;
+}
+
+.card.show-red-one-trump.rook-trump-yellow::before,
+.played-card.show-red-one-trump.rook-trump-yellow::before {
+  background: #caca00;
+}
+
+.card.show-red-one-trump.rook-trump-orange::before,
+.played-card.show-red-one-trump.rook-trump-orange::before {
   background: #ff8c50;
 }
 
