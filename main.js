@@ -172,14 +172,6 @@
       seatCount: 3,
       partnerSeat: 1,
       rulesetId: "tournament"
-    },
-    woodsonPatrick: {
-      id: "woodsonPatrick",
-      label: "Woodson Patrick",
-      detail: "Poker-style Eastern Kentucky variant with a face-up 3-card kitty exchange.",
-      seatCount: 3,
-      partnerSeat: 1,
-      rulesetId: "woodsonPatrick"
     }
   };
   var RULESET_GUIDES = {
@@ -299,37 +291,6 @@
           ]
         }
       ]
-    },
-    woodsonPatrick: {
-      summary: "41-card, 3-card swap.",
-      sections: [
-        {
-          title: "Overview",
-          rows: [
-            ["Players", "4 players, fixed partners"],
-            ["Match", "First team to 300 wins"],
-            ["Style", "Short hands, volatile rounds, and a shared kitty exchange"]
-          ]
-        },
-        {
-          title: "Deck And Deal",
-          rows: [
-            ["Deck", "Remove 1 through 4 from each suit"],
-            ["Deal", "6 cards each plus a 3-card kitty"],
-            ["Counters", "5=5, 10=10, 14=10, Rook=20, no last-trick bonus"]
-          ]
-        },
-        {
-          title: "Round Flow",
-          rows: [
-            ["Bid range", "65 to 120 by 5"],
-            ["Setup", "Bid winner reviews the kitty, keeps what they want, and buries back to 3"],
-            ["Trump", "Chosen after the bidder finalizes the kitty"],
-            ["Exchange", "Clockwise, each player may swap up to 3 non-scoring cards with the face-up kitty"],
-            ["Scoring", "No setback penalty; each team banks captured counters"]
-          ]
-        }
-      ]
     }
   };
   var DEFAULT_GAME_TYPE_ID = "kentuckyHouse";
@@ -346,7 +307,16 @@
   var SCORING_REVEAL_DELAY = 220;
   var SCORING_COLUMN_STAGGER_DELAY = 1180;
   var SCORING_OUTCOME_DELAY = 980;
-  var SCORING_TOTAL_DELAY = 4300;
+  var SCORING_TOTAL_DELAY = 2600;
+  var SCORE_METER_MAX = 200;
+  var ROSTER_AVATAR_STYLE = {
+    mae: "avatar-mae",
+    cal: "avatar-cal",
+    bea: "avatar-bea",
+    june: "avatar-june",
+    duke: "avatar-duke",
+    ruth: "avatar-ruth"
+  };
   var CLOSE_WIN_MARGIN = 50;
   var SUMMARY_CLOSE_CALL_MARGIN = 10;
   var STICKER_DISPLAY_DURATION = 1500;
@@ -1962,7 +1932,7 @@
       return savedState.biddingComplete ? "Bid Locked In" : "Bidding";
     }
     if (savedState.phase === "trump") {
-      return "Trump Setup";
+      return "Power Setup";
     }
     if (savedState.phase === "play") {
       return "In Play";
@@ -3659,6 +3629,37 @@
     return "Menu";
   }
 
+  function visibleRulesetIds() {
+    var ids = {};
+
+    Object.keys(GAME_TYPES).forEach(function (gameTypeId) {
+      var rulesetId = GAME_TYPES[gameTypeId].rulesetId;
+      if (rulesetId && RULESETS[rulesetId]) {
+        ids[rulesetId] = true;
+      }
+    });
+    return Object.keys(ids);
+  }
+
+  function settingsRulesetParagraph(rules) {
+    if (!rules) {
+      return "";
+    }
+    if (rules.id === "kentuckyHouse") {
+      return "Kentucky House Rules is classic 4-player partnership Rook with the full deck, a 5-card kitty, and setback scoring. The bidder takes the kitty, buries five cards, chooses the Power suit, and must reach the contract while both teams race to 500 points.";
+    }
+    if (rules.id === "fivePlayerCallPartner") {
+      return "5-Player Call Partner uses a full deck and a 7-card nest, with one temporary hidden teammate each round. After winning the bid and setting the kitty, the bidder names a callable card to reveal their partner, and that pair tries to make contract against the other three players.";
+    }
+    if (rules.id === "westernKentucky") {
+      return "Western Kentucky trims the deck by removing 2, 3, and 4 of each color while keeping house-style flow and setback scoring. The Red 1 is always treated as the highest trump card, followed by the Rook, which makes every trump decision more volatile and tactical.";
+    }
+    if (rules.id === "tournament") {
+      return "Tournament Rook follows a 41-card tournament deck with no last-trick bonus, lower bid ranges, and a 300-point match target. Play starts left of dealer and emphasizes consistency, efficient counters, and disciplined contract management.";
+    }
+    return "Playing " + rules.label + ".";
+  }
+
   function renderFullProfileView() {
     var bidAttempts = profileBidAttemptCount();
     var matchWinRate = formatRate(profile.totals.matchesWon, profile.totals.matchesCompleted);
@@ -3706,7 +3707,7 @@
   }
 
   function renderRulesetRecords() {
-    var rulesetIds = Object.keys(RULESETS);
+    var rulesetIds = visibleRulesetIds();
 
     ui.menuRulesetRecords.innerHTML = "";
 
@@ -3885,10 +3886,7 @@
     populateSettingsSelect(ui.menuBackgroundSelect, BACKGROUND_THEMES, profile.visuals.backgroundThemeId);
     populateSettingsSelect(ui.menuTabletopSelect, TABLETOP_THEMES, profile.visuals.tabletopThemeId);
     ui.menuRulesetName.textContent = rules.label;
-    ui.menuRulesDetail.textContent =
-      "Playing " + rules.label + " • bids " + rules.minBid + "-" + rules.maxBid +
-      " (" + rules.bidStep + " steps), last trick +" + rules.lastTrickBonus + ", first to " +
-      rules.matchTarget + ".";
+    ui.menuRulesDetail.textContent = settingsRulesetParagraph(rules);
     ui.menuAiSettingsStatus.textContent = AI_PERSONAS.length + " archetypes";
     ui.menuAiPlayerSettings.innerHTML = "";
 
@@ -3949,6 +3947,7 @@
     ui.menuAchievementsView.classList.toggle("hidden", !achievementsViewActive);
     ui.menuSettingsView.classList.toggle("hidden", !settingsViewActive);
     ui.menuBack.classList.toggle("hidden", hubViewActive);
+    ui.menuHome.classList.toggle("hidden", !hubViewActive);
     ui.menuTitle.textContent = menuTitleText();
     ui.menuContext.textContent = menuContextText();
     ui.menuContext.classList.toggle("hidden", !ui.menuContext.textContent);
@@ -5551,7 +5550,7 @@
     var bidderTotal = state.roundPoints[bidderTeam];
     var usAccrued = state.roundPoints[0];
     var themAccrued = state.roundPoints[1];
-    var scoringScale = Math.max(usAccrued, themAccrued, state.winningBid, 1);
+    var scoringScale = SCORE_METER_MAX;
     var story = buildSummaryStory(bidderTeam, bidderName, bidderTotal, bidMade, bidMargin);
     var stickerType = getSummaryStoryStickerType();
     var stickerAsset = stickerType ? randomSummaryStickerAsset(stickerType) : null;
@@ -5656,13 +5655,13 @@
       if (state.phase !== "scoring" || !state.scoringInterstitial) {
         return;
       }
-      state.scoringMeterProgress[0] = (state.scoringInterstitial.usAccrued / scoringScale) * 100;
+      state.scoringMeterProgress[0] = (Math.min(state.scoringInterstitial.usAccrued, scoringScale) / scoringScale) * 100;
       render();
       schedule(function () {
         if (state.phase !== "scoring" || !state.scoringInterstitial) {
           return;
         }
-        state.scoringMeterProgress[1] = (state.scoringInterstitial.themAccrued / scoringScale) * 100;
+        state.scoringMeterProgress[1] = (Math.min(state.scoringInterstitial.themAccrued, scoringScale) / scoringScale) * 100;
         render();
         schedule(function () {
           if (state.phase !== "scoring" || !state.scoringInterstitial) {
@@ -6017,14 +6016,19 @@
 
     AI_PERSONAS.forEach(function (persona) {
       var card = document.createElement("article");
+      var avatar = document.createElement("span");
       var name = document.createElement("strong");
       var descriptor = document.createElement("span");
 
       card.className = "setup-roster-card";
       card.classList.toggle("is-selected", selectedSeatIds.indexOf(persona.id) !== -1);
       card.classList.toggle("is-cycling", state.setupCycling && selectedSeatIds.indexOf(persona.id) !== -1);
+      avatar.className = "setup-roster-avatar";
+      avatar.classList.add(ROSTER_AVATAR_STYLE[persona.id] || "avatar-default");
+      avatar.setAttribute("aria-hidden", "true");
       name.textContent = persona.name;
       descriptor.textContent = persona.descriptor;
+      card.appendChild(avatar);
       card.appendChild(name);
       card.appendChild(descriptor);
       ui.setupRosterGrid.appendChild(card);
@@ -6178,7 +6182,7 @@
     var showingHumanExchange = isWoodsonExchange && exchangePlayer === 0;
 
     if (state.bidder === null) {
-      ui.trumpPhaseLabel.textContent = "Trump and Kitty";
+      ui.trumpPhaseLabel.textContent = "Power and Kitty";
       ui.trumpTitle.textContent = "Get Set Up";
       ui.trumpBidAmount.textContent = "-";
       ui.trumpProcessing.classList.add("hidden");
@@ -6205,7 +6209,7 @@
     if (isCallStage) {
       ui.trumpPhaseLabel.textContent = "Call Partner";
       ui.trumpTitle.textContent = "Choose The Partner Card";
-      ui.trumpBidAmount.textContent = PLAYER_NAMES[state.bidder] + " at " + state.winningBid + " • " + SUIT_LABEL[state.trump] + " trump";
+      ui.trumpBidAmount.textContent = PLAYER_NAMES[state.bidder] + " at " + state.winningBid + " • " + SUIT_LABEL[state.trump] + " power";
       ui.trumpProcessing.classList.add("hidden");
       ui.trumpKittyBlock.classList.remove("hidden");
       ui.trumpReferenceBlock.classList.remove("hidden");
@@ -6237,8 +6241,8 @@
     }
 
     if (isWoodsonDeclare) {
-      ui.trumpPhaseLabel.textContent = "Choose Trump";
-      ui.trumpTitle.textContent = "Lock In Trump";
+      ui.trumpPhaseLabel.textContent = "Choose Power";
+      ui.trumpTitle.textContent = "Lock In Power Suit";
       ui.trumpBidAmount.textContent = PLAYER_NAMES[state.bidder] + " at " + state.winningBid;
       ui.trumpProcessing.classList.add("hidden");
       ui.trumpKittyBlock.classList.remove("hidden");
@@ -6274,7 +6278,7 @@
       ui.trumpTitle.textContent = exchangePlayer === 0
         ? "Trade With The Kitty"
         : PLAYER_NAMES[exchangePlayer] + " is trading";
-      ui.trumpBidAmount.textContent = PLAYER_NAMES[state.bidder] + " at " + state.winningBid + " • " + SUIT_LABEL[state.trump] + " trump";
+      ui.trumpBidAmount.textContent = PLAYER_NAMES[state.bidder] + " at " + state.winningBid + " • " + SUIT_LABEL[state.trump] + " power";
       ui.confirmTrump.textContent = "Swap Selected";
       ui.discardStatusRow.classList.remove("hidden");
       if (ui.discardStatusLabel) {
@@ -6318,7 +6322,7 @@
       return;
     }
 
-    ui.trumpPhaseLabel.textContent = "Trump and Kitty";
+    ui.trumpPhaseLabel.textContent = "Power and Kitty";
     ui.trumpTitle.textContent = isWoodsonSetup ? "Review The Kitty" : "Get Set Up";
     ui.trumpBidAmount.textContent = PLAYER_NAMES[state.bidder] + " at " + state.winningBid;
     ui.confirmTrump.textContent = isWoodsonSetup ? "Lock Kitty" : (isWoodsonRuleset() ? "Show Exchange" : "Confirm Selection");
@@ -6341,7 +6345,7 @@
     ui.exchangeDone.classList.add("hidden");
     if (state.bidder !== 0) {
       ui.trumpProcessingText.textContent = state.aiTrumpReady
-        ? PLAYER_NAMES[state.bidder] + " chose " + SUIT_LABEL[state.selectedTrump] + " for trump."
+        ? PLAYER_NAMES[state.bidder] + " chose " + SUIT_LABEL[state.selectedTrump] + " as the Power suit."
         : PLAYER_NAMES[state.bidder] + " is deciding ...";
       ui.trumpProcessingBar.style.width = state.aiTrumpReady || state.aiTrumpMeterStarted ? "100%" : "0";
       ui.aiTrumpContinue.textContent = isWoodsonRuleset() ? "Continue to Exchange" : "Let's Play";
@@ -7203,6 +7207,16 @@
     buildScoringTeamGroup("Them", [1, 3], grouped);
   }
 
+  function shouldShowRedOneTrumpDot(card) {
+    return Boolean(
+      card &&
+      state.trump &&
+      getRuleConfig().redOneAlwaysTrump &&
+      card.rank === 1 &&
+      card.suit === "red"
+    );
+  }
+
   function renderHandGrid(container, hand, clickHandler, mode) {
     hand = hand || [];
     container.innerHTML = "";
@@ -7264,6 +7278,9 @@
       suit.className = "card-suit " + suitClass(card);
       if (mode === "play" && card.isRook && state.trump) {
         button.className += " show-rook-trump rook-trump-" + state.trump;
+      }
+      if (shouldShowRedOneTrumpDot(card)) {
+        button.className += " show-red-one-trump rook-trump-" + state.trump;
       }
       button.appendChild(rank);
       button.appendChild(suit);
@@ -7594,7 +7611,7 @@
     if (state.bidder === 0) {
       return playerLeadMessage(leader);
     }
-    return PLAYER_NAMES[state.bidder] + " chose " + SUIT_LABEL[state.trump] + ". " + playerLeadMessage(leader);
+    return PLAYER_NAMES[state.bidder] + " chose " + SUIT_LABEL[state.trump] + " as the Power suit. " + playerLeadMessage(leader);
   }
 
   function createPlayedCardNode(cardData, isWinner) {
@@ -7608,6 +7625,9 @@
       " " + cardFaceClass(cardData);
     if (cardData.isRook && state.phase === "play" && state.trump) {
       card.className += " show-rook-trump rook-trump-" + state.trump;
+    }
+    if (shouldShowRedOneTrumpDot(cardData)) {
+      card.className += " show-red-one-trump rook-trump-" + state.trump;
     }
     rank = document.createElement("div");
     suit = document.createElement("div");
