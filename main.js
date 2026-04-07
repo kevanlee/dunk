@@ -313,9 +313,9 @@
     mae: "avatar-mae",
     cal: "avatar-cal",
     bea: "avatar-bea",
-    june: "avatar-june",
-    duke: "avatar-duke",
-    ruth: "avatar-ruth"
+    june: "avatar-roy",
+    duke: "avatar-zoe",
+    ruth: "avatar-kai"
   };
   var CLOSE_WIN_MARGIN = 50;
   var SUMMARY_CLOSE_CALL_MARGIN = 10;
