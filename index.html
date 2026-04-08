@@ -222,6 +222,15 @@
             </span>
             <button id="aiTrumpContinue" class="primary-button" type="button" disabled>Let's Play</button>
           </div>
+          <section id="aiPartnerCallSummary" class="partner-call-summary hidden" aria-live="polite">
+            <div id="aiPartnerCallCard" class="partner-call-card hand-grid bidding-hand-grid"></div>
+            <div class="partner-call-copy">
+              <span class="partner-call-label">Chosen partner card</span>
+              <strong id="aiPartnerCallTitle">14 Yellow</strong>
+              <span id="aiPartnerCallLead" class="partner-call-chip">Bidder leads</span>
+              <p id="aiPartnerCallDetail" class="support-text">Partner setup appears here once the computer locks it in.</p>
+            </div>
+          </section>
           <section id="trumpKittyBlock" class="kitty-block">
             <div class="hand-header">
               <span id="trumpHandLabel" class="kitty-legend">Hand and kitty <span class="kitty-legend-icon" aria-hidden="true"></span></span>
@@ -381,6 +390,12 @@
             <div id="summaryScoringGrid" class="summary-scoring-grid"></div>
           </div>
           <div id="summaryHistory" class="round-history hidden">
+            <section id="summaryFinalResult" class="final-result-banner hidden" aria-live="polite">
+              <span id="summaryFinalResultEyebrow" class="final-result-eyebrow">Match Over</span>
+              <strong id="summaryFinalResultTitle" class="final-result-title">You Won The Match</strong>
+              <div id="summaryFinalResultScore" class="final-result-score">Us 500 • Them 420</div>
+              <p id="summaryFinalResultDetail" class="support-text final-result-detail">Your side got to the target first.</p>
+            </section>
             <div class="match-scoreboard">
               <div class="match-score-card">
                 <span id="summaryMatchLabelPrimary">Us</span>
