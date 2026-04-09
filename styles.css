@@ -76,16 +76,10 @@ body {
     rgba(17, 17, 17, 0.08);
 }
 
-.match-summary-backdrop.is-visible {
-  opacity: 0.32;
-}
-
-.match-summary-backdrop.is-win {
-  opacity: 0.34;
-}
-
+.match-summary-backdrop.is-visible,
+.match-summary-backdrop.is-win,
 .match-summary-backdrop.is-loss {
-  opacity: 0.3;
+  opacity: 1;
 }
 
 .hidden {
@@ -115,6 +109,17 @@ body {
   background: transparent;
   border-bottom: 0;
   backdrop-filter: none;
+  transition: background 180ms ease, box-shadow 180ms ease, border-color 180ms ease, backdrop-filter 180ms ease;
+}
+
+.topbar.is-scrolled {
+  background: linear-gradient(180deg, rgba(252, 252, 252, 0.76), rgba(252, 252, 252, 0.62));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(14px) saturate(128%);
+  -webkit-backdrop-filter: blur(14px) saturate(128%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.64),
+    0 8px 16px rgba(17, 17, 17, 0.08);
 }
 
 .topbar-brand {
@@ -285,6 +290,22 @@ body {
   width: min(100%, 400px);
   margin: 0 auto;
   padding: 10px;
+}
+
+.app-footer {
+  width: min(100%, 400px);
+  margin: 0 auto;
+  padding: 4px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+  color: rgba(17, 17, 17, 0.38);
+  font-size: 0.62rem;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  user-select: none;
+}
+
+.app-footer small {
+  font: inherit;
 }
 
 .phase-panel {
@@ -1174,8 +1195,9 @@ h2.is-dealing::after {
 }
 
 .partner-call-chip.is-on {
-  background: rgba(47, 143, 78, 0.16);
-  color: #195f33;
+  background: rgba(44, 75, 255, 0.12);
+  color: rgba(17, 17, 17, 0.82);
+  border: 1px solid rgba(44, 75, 255, 0.14);
 }
 
 .feed-item {
@@ -1860,6 +1882,36 @@ h2.is-dealing::after {
   font-weight: 600;
 }
 
+.play-reaction-toast {
+  margin: 8px auto 0;
+  width: fit-content;
+  max-width: min(100%, 340px);
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: rgba(17, 17, 17, 0.92);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.22;
+  text-align: center;
+  box-shadow:
+    0 10px 20px rgba(17, 17, 17, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  animation: play-reaction-toast-in 160ms ease;
+}
+
+@keyframes play-reaction-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .contract-pill {
   display: inline-flex;
   align-items: center;
@@ -1992,6 +2044,10 @@ h2.is-dealing::after {
   height: 0;
   border-top: 16px solid var(--primary-blue-soft);
   border-left: 16px solid transparent;
+}
+
+.partner-call-card.bidding-hand-grid {
+  grid-template-columns: 72px;
 }
 
 .card,
@@ -2393,6 +2449,10 @@ h2.is-dealing::after {
 .summary-nav .primary-button {
   min-height: 54px;
   width: 100%;
+}
+
+.summary-nav .summary-secondary-action {
+  grid-column: 1 / -1;
 }
 
 .summary-nav .ghost-button {

@@ -45,7 +45,7 @@
       minBid: 80,
       maxBid: 200,
       bidStep: 5,
-      matchTarget: 300,
+      matchTarget: 400,
       openingLeader: "bidder",
       setupFlow: "callPartner",
       teamMode: "calledPartner",
@@ -211,7 +211,7 @@
           title: "Overview",
           rows: [
             ["Players", "5 players, round-only hidden partnership"],
-            ["Match", "First individual player to 300 wins"],
+            ["Match", "First individual player to 400 wins"],
             ["Teams", "Bidder plus called partner versus the other 3"]
           ]
         },
@@ -342,11 +342,13 @@
   var MATCH_SUMMARY_GIF_CONFIG = {
     win: [
       "img/gifs/bg-gif-winning-liz.gif",
-      "img/gifs/bg-gif-winning.gif"
+      "img/gifs/bg-gif-winning.gif",
+      "img/gifs/bg-gif-winning-2.gif"
     ],
     loss: [
       "img/gifs/bg-gif-losing-homer.gif",
-      "img/gifs/bg-gif-losing-ohno.gif"
+      "img/gifs/bg-gif-losing-ohno.gif",
+      "img/gifs/bg-gif-losing-steph.gif"
     ]
   };
   var STICKER_CONFIG = {
@@ -418,12 +420,22 @@
       "img/stickers/summary-team-loss-facepalm.png"
     ]
   };
+  var ACHIEVEMENT_STICKER_ASSETS = {
+    first_match_win: ["img/stickers/sticker-feather.png"],
+    contract_clutch: ["img/stickers/sticker-sunglasses-2.png"],
+    perfect_200: ["img/stickers/sticker-big-mac.png"],
+    ice_water: ["img/stickers/sticker-sunglasses-1.png"],
+    perfect_partner: ["img/stickers/sticker-teamwork.png"],
+    max_pressure: ["img/stickers/sticker-cool.png"],
+    unshakeable: ["img/stickers/sticker-snail-persist.png"]
+  };
+  var COLLECTION_STICKER_ASSET = "img/sticker-book-rook.png";
   var ACHIEVEMENT_DEFS = [
     {
       id: "first_match_win",
       title: "First Feather",
       description: "Win your first completed match.",
-      stickerPool: STICKER_CONFIG.game_win.assets
+      stickerPool: ACHIEVEMENT_STICKER_ASSETS.first_match_win
     },
     {
       id: "bid_caller",
@@ -435,7 +447,7 @@
       id: "contract_clutch",
       title: "Contract Clutch",
       description: "Make 3 bids successfully.",
-      stickerPool: STICKER_CONFIG.bid_made.assets
+      stickerPool: ACHIEVEMENT_STICKER_ASSETS.contract_clutch
     },
     {
       id: "set_em_up",
@@ -453,7 +465,7 @@
       id: "perfect_200",
       title: "Perfect 200",
       description: "Make a 200 bid once.",
-      stickerPool: STICKER_CONFIG.game_win.assets
+      stickerPool: ACHIEVEMENT_STICKER_ASSETS.perfect_200
     },
     {
       id: "close_shave",
@@ -489,7 +501,7 @@
       id: "ice_water",
       title: "Ice Water",
       description: "Make a bid within 5 points of the target.",
-      stickerPool: SUMMARY_STICKER_CONFIG.summary_close_call
+      stickerPool: ACHIEVEMENT_STICKER_ASSETS.ice_water
     },
     {
       id: "no_mercy",
@@ -513,7 +525,7 @@
       id: "perfect_partner",
       title: "Perfect Partner",
       description: "Win 10 matches with the same teammate profile.",
-      stickerPool: STICKER_CONFIG.rook.assets
+      stickerPool: ACHIEVEMENT_STICKER_ASSETS.perfect_partner
     },
     {
       id: "nemesis",
@@ -531,19 +543,19 @@
       id: "max_pressure",
       title: "Max Pressure",
       description: "Win the bid at 200 five times.",
-      stickerPool: STICKER_CONFIG.bid_made.assets
+      stickerPool: ACHIEVEMENT_STICKER_ASSETS.max_pressure
     },
     {
       id: "unshakeable",
       title: "Unshakeable",
       description: "Complete 25 matches.",
-      stickerPool: STICKER_CONFIG.rook.assets
+      stickerPool: ACHIEVEMENT_STICKER_ASSETS.unshakeable
     }
   ];
   var MINI_STICKER_DEFS = {
     first_match_win: {
       label: "First win",
-      assetPool: STICKER_CONFIG.game_win.assets
+      assetPool: ACHIEVEMENT_STICKER_ASSETS.first_match_win
     },
     close_win: {
       label: "Close win",
@@ -555,7 +567,7 @@
     },
     perfect_200: {
       label: "Perfect 200",
-      assetPool: STICKER_CONFIG.bid_made.assets
+      assetPool: ACHIEVEMENT_STICKER_ASSETS.perfect_200
     },
     opponent_set: {
       label: "Opponent set",
@@ -707,6 +719,14 @@
     blueLines: {
       label: "Blue Lines",
       asset: "img/bg-blue-lines.png"
+    },
+    chips: {
+      label: "Chips",
+      asset: "img/bg-chips.png"
+    },
+    business: {
+      label: "Business",
+      asset: "img/bg-business.png"
     }
   };
   var TABLETOP_THEMES = {
@@ -724,10 +744,26 @@
       label: "Aquarium",
       asset: "img/tabletop-aquarium.png",
       style: "classic"
+    },
+    granite: {
+      label: "Granite",
+      asset: "img/tabletop-granite.png",
+      style: "classic"
+    },
+    grass: {
+      label: "Grass",
+      asset: "img/tabletop-grass.png",
+      style: "classic"
+    },
+    spaghetti: {
+      label: "Spaghetti",
+      asset: "img/tabletop-spaghetti.png",
+      style: "classic"
     }
   };
   var DEFAULT_BACKGROUND_THEME_ID = "sunset";
   var DEFAULT_TABLETOP_THEME_ID = "classicFelt";
+  var APP_VERSION = "v0.8.0";
   var STORAGE_SCHEMA_VERSION = 2;
   var PROFILE_STORAGE_KEY = "kentucky-rook.profile";
   var ACTIVE_MATCH_STORAGE_KEY = "kentucky-rook.active-match";
@@ -1346,7 +1382,7 @@
   }
 
   function createCollectionStickerFromSeed(id, earnedAt, matchId) {
-    var baseAsset = stickerAssetFromPool(STICKER_CONFIG.rook.assets) || STICKER_CONFIG.rook.assets[0];
+    var baseAsset = COLLECTION_STICKER_ASSET;
     var x = 10 + seededCollectionMetric(id, 11) * 78;
     var y = 8 + seededCollectionMetric(id, 29) * 78;
     var rotation = Math.round((seededCollectionMetric(id, 47) * 22) - 11);
@@ -3177,9 +3213,11 @@
     ui.aiPartnerCallLead = document.getElementById("aiPartnerCallLead");
     ui.aiPartnerCallDetail = document.getElementById("aiPartnerCallDetail");
     ui.trumpButtons = Array.prototype.slice.call(document.querySelectorAll(".trump-button"));
+    ui.topbar = document.getElementById("topbar");
     ui.playTrump = document.getElementById("playTrump");
     ui.playContract = document.getElementById("playContract");
     ui.playMessage = document.getElementById("playMessage");
+    ui.playReactionToast = document.getElementById("playReactionToast");
     ui.handHint = document.getElementById("handHint");
     ui.playerHand = document.getElementById("playerHand");
     ui.stickerOverlay = document.getElementById("stickerOverlay");
@@ -3220,6 +3258,7 @@
     ui.summaryResult = document.getElementById("summaryResult");
     ui.summaryDetail = document.getElementById("summaryDetail");
     ui.summaryNav = document.getElementById("summaryNav");
+    ui.summarySeeStats = document.getElementById("summarySeeStats");
     ui.toggleScoring = document.getElementById("toggleScoring");
     ui.summaryScoring = document.getElementById("summaryScoring");
     ui.summaryScoringGrid = document.getElementById("summaryScoringGrid");
@@ -3272,9 +3311,19 @@
     ui.historyClose = document.getElementById("historyClose");
     ui.historyBackdrop = document.getElementById("historyBackdrop");
     ui.historyContent = document.getElementById("historyContent");
+    ui.appFooterText = document.getElementById("appFooterText");
+  }
+
+  function syncAppFooter() {
+    if (!ui.appFooterText) {
+      return;
+    }
+    ui.appFooterText.textContent = "Made by Kevan · " + APP_VERSION;
   }
 
   function bindEvents() {
+    window.addEventListener("scroll", syncTopbarScrollState, { passive: true });
+
     ui.menuToggle.addEventListener("click", function () {
       state.menuOpen = true;
       renderMenuSheet();
@@ -3568,6 +3617,15 @@
       startRound();
     });
 
+    ui.summarySeeStats.addEventListener("click", function () {
+      if (state.phase !== "summary" || state.summaryStep !== 2 || !state.gameOver) {
+        return;
+      }
+      state.menuOpen = true;
+      state.menuView = "profile";
+      renderMenuSheet();
+    });
+
     ui.backToRoundSummary.addEventListener("click", function () {
       if (state.phase !== "summary" || state.summaryStep !== 2) {
         return;
@@ -3675,7 +3733,7 @@
       return "Kentucky House Rules is classic 4-player partnership Rook with the full deck, a 5-card kitty, and setback scoring. The bidder takes the kitty, buries five cards, chooses the Power suit, and must reach the contract while both teams race to 500 points.";
     }
     if (rules.id === "fivePlayerCallPartner") {
-      return "5-Player Call Partner uses a full deck and a 7-card nest, with one temporary hidden teammate each round. After winning the bid and setting the kitty, the bidder names a callable card to reveal their partner, and that pair tries to make contract against the other three players.";
+      return "5-Player Call Partner uses a full deck and a 7-card nest, with one temporary hidden teammate each round. After winning the bid and setting the kitty, the bidder names a callable card to reveal their partner, and that pair tries to make contract against the other three players while everyone races to 400 individual points.";
     }
     if (rules.id === "westernKentucky") {
       return "Western Kentucky trims the deck by removing 2, 3, and 4 of each color while keeping house-style flow and setback scoring. The Red 1 is always treated as the highest trump card, followed by the Rook, which makes every trump decision more volatile and tactical.";
@@ -4163,6 +4221,22 @@
     }
   }
 
+  function callPartnerHighBidTolerance(floor) {
+    if (!isCallPartnerRuleset()) {
+      return 0;
+    }
+    if (floor >= 170) {
+      return 15;
+    }
+    if (floor >= 150) {
+      return 10;
+    }
+    if (floor >= 130) {
+      return 5;
+    }
+    return 0;
+  }
+
   function chooseAiBid(player) {
     var plan = evaluateBidPlan(player);
     var profile = getAiProfile(player);
@@ -4174,11 +4248,18 @@
     var activeOpponents = countActiveOpponents(player);
     var target = plan.targetBid;
     var conservativeHand = plan.score < 84;
+    var highBidTolerance = callPartnerHighBidTolerance(floor);
     var bid;
     var extraRoom;
 
     if (target < floor || floor > 175) {
       return null;
+    }
+    if (highBidTolerance > 0) {
+      if (target - floor < highBidTolerance) {
+        return null;
+      }
+      target -= highBidTolerance;
     }
     if (state.currentBid !== null &&
       target === floor &&
@@ -6129,9 +6210,11 @@
     } else if (state.phase === "summary") {
       renderSummaryPhase();
     }
+    applyMatchSummaryBackground();
     renderHistoryDrawer();
     renderSetupRulesDrawer();
     renderMenuSheet();
+    syncTopbarScrollState();
     processAchievementToastQueue();
     saveActiveMatch();
   }
@@ -6612,6 +6695,10 @@
     renderPlayContract();
     ui.playMessage.textContent = currentPlayLaneMessage();
     ui.playMessage.classList.toggle("is-turn", state.currentPlayer === 0 && !state.busy);
+    if (ui.playReactionToast) {
+      ui.playReactionToast.textContent = state.playReactionText || "";
+      ui.playReactionToast.classList.toggle("hidden", !state.playReactionText);
+    }
     ui.handHint.textContent = state.currentPlayer === 0 && !state.busy ? "Your turn to play" : PLAYER_NAMES[state.currentPlayer] + " to play";
     ui.reactionNice.disabled = reactionCoolingDown || state.stickerActive;
     ui.reactionOof.disabled = reactionCoolingDown || state.stickerActive;
@@ -6707,10 +6794,14 @@
   }
 
   function currentPlayLaneMessage() {
-    if (state.roundMessage && state.playReactionText) {
-      return state.roundMessage + " " + state.playReactionText;
+    return state.roundMessage || "";
+  }
+
+  function syncTopbarScrollState() {
+    if (!ui.topbar) {
+      return;
     }
-    return state.roundMessage || state.playReactionText || "";
+    ui.topbar.classList.toggle("is-scrolled", window.scrollY > 8);
   }
 
   function contractPillClass(cardId) {
@@ -6979,6 +7070,8 @@
     }
     ui.nextRound.disabled = state.busy;
     ui.nextRound.textContent = summaryButtonLabel();
+    ui.summarySeeStats.classList.toggle("hidden", !(state.summaryStep === 2 && state.gameOver));
+    ui.summarySeeStats.classList.toggle("summary-secondary-action", state.summaryStep === 2 && state.gameOver);
     ui.summaryGrid.classList.toggle("hidden", state.summaryStep === 2);
     ui.backToRoundSummary.classList.toggle("hidden", state.summaryStep !== 2);
     ui.summaryNav.classList.toggle("has-back", state.summaryStep === 2);
@@ -7107,7 +7200,7 @@
       return;
     }
 
-    if (state.summaryStep === 2 && state.gameOver) {
+    if (state.phase === "summary" && state.summaryStep === 2 && state.gameOver) {
       asset = getMatchSummaryGifAsset();
     }
 
@@ -7238,7 +7331,7 @@
     var bidderName = state.bidder === 0 ? "You" : PLAYER_NAMES[state.bidder];
     var bidderTeam = teamForPlayer(state.bidder);
     var sideLabel = isCallPartnerRuleset() && state.callPartnerPlayer !== null
-      ? (state.bidder === 0 ? "You and " + PLAYER_NAMES[state.callPartnerPlayer] : bidderName + " and " + PLAYER_NAMES[state.callPartnerPlayer])
+      ? (state.bidder === 0 ? "You + " + PLAYER_NAMES[state.callPartnerPlayer] : bidderName + " + " + PLAYER_NAMES[state.callPartnerPlayer])
       : null;
 
     if (isCallPartnerRuleset()) {
@@ -7292,7 +7385,7 @@
     var bidderIsUs = bidderTeam === 0;
     var mood = bidOutcomeMood(bidMargin);
     var bidderSideLabel = isCallPartnerRuleset() && state.callPartnerPlayer !== null
-      ? bidderName + " and " + PLAYER_NAMES[state.callPartnerPlayer]
+      ? bidderName + " + " + PLAYER_NAMES[state.callPartnerPlayer]
       : bidderName;
 
     if (isCallPartnerRuleset()) {
@@ -8095,6 +8188,7 @@
   loadProfile();
   refreshSavedMatchMeta();
   cacheDom();
+  syncAppFooter();
   bindEvents();
   render();
   registerServiceWorker();

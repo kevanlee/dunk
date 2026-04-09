@@ -21,7 +21,7 @@
 <body>
   <div id="matchSummaryBackdrop" class="match-summary-backdrop" aria-hidden="true"></div>
   <div class="app">
-    <header class="topbar">
+    <header id="topbar" class="topbar">
       <div class="topbar-brand">
         <h1 class="app-title">
           <img class="app-title-logo" src="img/rook-wordmark.svg" alt="Rook">
@@ -311,6 +311,7 @@
             </div>
 
             <p id="playMessage" class="play-message">Play a card.</p>
+            <div id="playReactionToast" class="play-reaction-toast hidden" aria-live="polite"></div>
           </section>
 
           <section class="hand-card">
@@ -381,6 +382,7 @@
           <div id="summaryNav" class="summary-nav">
             <button id="backToRoundSummary" class="ghost-button hidden" type="button" aria-label="Back to round summary">←</button>
             <button id="nextRound" class="primary-button" type="button">Next</button>
+            <button id="summarySeeStats" class="ghost-button hidden" type="button">See my stats</button>
           </div>
           <button id="toggleScoring" class="ghost-button summary-toggle" type="button">View scoring cards</button>
           <div id="summaryScoring" class="summary-scoring hidden">
@@ -453,6 +455,10 @@
         </div>
       </section>
     </main>
+
+    <footer class="app-footer" aria-label="App credits">
+      <small id="appFooterText">Made by Kevan · v0.8.0</small>
+    </footer>
 
     <div id="stickerOverlay" class="sticker-overlay" aria-hidden="true"></div>
 
