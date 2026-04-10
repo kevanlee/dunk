@@ -1,9 +1,13 @@
-var CACHE_NAME = "kentucky-rook-v1";
+var CACHE_NAME = "kentucky-rook-v2";
 var APP_SHELL = [
   "./",
   "index.html",
   "styles.css",
-  "main.js",
+  "js/app.js",
+  "js/ai.js",
+  "js/rules.js",
+  "js/storage.js",
+  "js/ui.js",
   "manifest.webmanifest",
   "img/App-icon-180.png",
   "img/App-icon-512.png"

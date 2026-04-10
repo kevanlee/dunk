@@ -842,6 +842,7 @@
   var state = createState();
   var profile = createProfile();
   var savedMatchMeta = null;
+  var matchPersistence = null;
 
   function createState() {
     return {
@@ -1178,6 +1179,7 @@
       state.setupCycleFinalizeId = null;
       clearSetupCycle();
       state.setupSeatPersonaIds = settledIds;
+      markMatchDirty();
       render();
     }, 820);
   }
@@ -1248,44 +1250,19 @@
   }
 
   function safeStorageGet(key) {
-    try {
-      return window.localStorage.getItem(key);
-    } catch (error) {
-      return null;
-    }
+    return safeStorageGetModule(key);
   }
 
   function safeStorageSet(key, value) {
-    try {
-      window.localStorage.setItem(key, value);
-      return true;
-    } catch (error) {
-      return false;
-    }
+    return safeStorageSetModule(key, value);
   }
 
   function safeStorageRemove(key) {
-    try {
-      window.localStorage.removeItem(key);
-      return true;
-    } catch (error) {
-      return false;
-    }
+    return safeStorageRemoveModule(key);
   }
 
   function parseStoredJson(key) {
-    var raw = safeStorageGet(key);
-
-    if (!raw) {
-      return null;
-    }
-
-    try {
-      return JSON.parse(raw);
-    } catch (error) {
-      safeStorageRemove(key);
-      return null;
-    }
+    return parseStoredJsonModule(key);
   }
 
   function normalizeProfile(raw) {
@@ -2099,7 +2076,7 @@
     var payload;
 
     if (state.phase === "welcome") {
-      return;
+      return false;
     }
 
     updateProfileTimestamp();
@@ -2113,12 +2090,45 @@
 
     if (safeStorageSet(ACTIVE_MATCH_STORAGE_KEY, JSON.stringify(payload))) {
       savedMatchMeta = summarizeSavedMatch(payload.state);
+      return true;
     }
+    return false;
   }
 
   function clearActiveMatch() {
+    discardPendingMatchSave();
     safeStorageRemove(ACTIVE_MATCH_STORAGE_KEY);
     savedMatchMeta = null;
+  }
+
+  function initMatchPersistence() {
+    matchPersistence = createPersistenceSchedulerModule({
+      delay: 500,
+      save: function () {
+        return saveActiveMatch();
+      }
+    });
+  }
+
+  function markMatchDirty() {
+    if (!matchPersistence || state.phase === "welcome") {
+      return;
+    }
+    matchPersistence.markMatchDirty();
+  }
+
+  function flushMatchSave(options) {
+    if (!matchPersistence) {
+      return false;
+    }
+    return matchPersistence.flushMatchSave(options || {});
+  }
+
+  function discardPendingMatchSave() {
+    if (!matchPersistence) {
+      return;
+    }
+    matchPersistence.discardPendingSave();
   }
 
   function loadSavedMatchPayload() {
@@ -2145,7 +2155,7 @@
     var nextState = createState();
 
     if (state.phase !== "welcome") {
-      saveActiveMatch();
+      flushMatchSave({ immediate: true });
     }
 
     clearSetupCycle();
@@ -2827,6 +2837,7 @@
     state.callPartnerRevealed = state.askPartnerToLead;
     state.pendingCallPartnerCardId = null;
     state.pendingAskPartnerToLead = false;
+    markMatchDirty();
   }
 
   function chooseAiCalledPartner() {
@@ -2889,6 +2900,7 @@
     state.pendingCallPartnerCardId = null;
     state.pendingAskPartnerToLead = false;
     state.busy = false;
+    markMatchDirty();
 
     if (state.bidder !== 0) {
       aiChoice = chooseAiCalledPartner();
@@ -2904,6 +2916,7 @@
 
   function startPlayFromTrumpSelection() {
     state.trump = state.selectedTrump;
+    markMatchDirty();
     if (isCallPartnerRuleset()) {
       if (state.bidder !== 0 && state.callPartnerCardId) {
         dealForPlay();
@@ -2941,6 +2954,7 @@
     state.exchangeSelectedHandCardId = null;
     state.exchangeSelectedKittyCardId = null;
     state.busy = false;
+    markMatchDirty();
     render();
     maybeRunWoodsonExchangeAi();
   }
@@ -2949,6 +2963,7 @@
     state.exchangeSelectedHandCardId = null;
     state.exchangeSelectedKittyCardId = null;
     state.exchangeIndex += 1;
+    markMatchDirty();
 
     if (state.exchangeIndex >= state.exchangeOrder.length) {
       dealForPlay();
@@ -2991,6 +3006,7 @@
     sortHand(hand, state.trump);
     sortHand(state.kitty, state.trump);
     state.exchangeSwapsUsed[player] += 1;
+    markMatchDirty();
     return true;
   }
 
@@ -3323,6 +3339,17 @@
 
   function bindEvents() {
     window.addEventListener("scroll", syncTopbarScrollState, { passive: true });
+    window.addEventListener("beforeunload", function () {
+      flushMatchSave({ immediate: true });
+    });
+    window.addEventListener("pagehide", function () {
+      flushMatchSave({ immediate: true });
+    });
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden") {
+        flushMatchSave({ immediate: true });
+      }
+    });
 
     ui.menuToggle.addEventListener("click", function () {
       state.menuOpen = true;
@@ -3442,6 +3469,7 @@
       state.gameTypeId = gameTypeId;
       state.rulesetId = rulesetIdForGameType(gameTypeId);
       state.setupSeatPersonaIds = createEmptySetupSeats(gameTypeId);
+      markMatchDirty();
       render();
     });
 
@@ -3493,6 +3521,7 @@
         return;
       }
       state.selectedBid = Math.max(getMinimumBid(), state.selectedBid - getRuleConfig().bidStep);
+      markMatchDirty();
       render();
     });
 
@@ -3501,6 +3530,7 @@
         return;
       }
       state.selectedBid = Math.min(getRuleConfig().maxBid, state.selectedBid + getRuleConfig().bidStep);
+      markMatchDirty();
       render();
     });
 
@@ -3525,6 +3555,7 @@
         return;
       }
       state.biddingStarted = true;
+      markMatchDirty();
       render();
       continueBidding();
     });
@@ -3542,6 +3573,7 @@
           return;
         }
         state.selectedTrump = button.getAttribute("data-trump");
+        markMatchDirty();
         renderTrumpPhase();
       });
     });
@@ -3592,6 +3624,7 @@
     ui.exchangeDone.addEventListener("click", function () {
       if (isCallPartnerRuleset() && state.trumpStage === "callPartner" && !state.busy) {
         state.pendingAskPartnerToLead = !state.pendingAskPartnerToLead;
+        markMatchDirty();
         renderTrumpPhase();
         return;
       }
@@ -4119,6 +4152,7 @@
     dealInitialHands();
     state.hands = cloneHands(state.initialHands);
     syncSelectedBid();
+    markMatchDirty();
     render();
     runDealAnimation();
   }
@@ -4485,7 +4519,7 @@
     };
   }
 
-  function getAiRoundState(player) {
+  function getAiRoundState(player, analysis) {
     var team = teamForPlayer(player);
     var opponentTeam = team === 0 ? 1 : 0;
     var bidderTeam = state.bidder === null ? null : teamForPlayer(state.bidder);
@@ -4536,7 +4570,7 @@
     }
 
     closerWindow = clamp((5 - remainingCards) / 3, 0, 1);
-    closerStrength = state.phase === "play" ? estimateCloserStrength(player, hand, state.trump) : 0;
+    closerStrength = state.phase === "play" ? estimateCloserStrength(player, hand, state.trump, analysis) : 0;
     closerPressure = clamp(closerWindow * (closerStrength / 9), 0, 1);
 
     return {
@@ -4562,9 +4596,9 @@
     };
   }
 
-  function evaluateCloserCandidate(card, player, hand, trump) {
+  function evaluateCloserCandidate(card, player, hand, trump, analysis) {
     var suit = effectiveSuit(card, trump);
-    var higherUnknown = countHigherUnknownCards(card, player, trump, hand);
+    var higherUnknown = countHigherUnknownCards(card, player, trump, hand, analysis);
     var score = cardControlScore(card, trump) * 1.9;
 
     if (suit === trump) {
@@ -4589,17 +4623,17 @@
     };
   }
 
-  function estimateCloserStrength(player, hand, trump) {
+  function estimateCloserStrength(player, hand, trump, analysis) {
     if (!hand || !hand.length || !trump) {
       return 0;
     }
 
     return hand.reduce(function (best, card) {
-      return Math.max(best, evaluateCloserCandidate(card, player, hand, trump).score);
+      return Math.max(best, evaluateCloserCandidate(card, player, hand, trump, analysis).score);
     }, 0);
   }
 
-  function findReservedCloser(player, hand, trump, round) {
+  function findReservedCloser(player, hand, trump, round, analysis) {
     var candidates;
     var threshold;
     var best;
@@ -4609,7 +4643,7 @@
     }
 
     candidates = hand.map(function (card) {
-      return evaluateCloserCandidate(card, player, hand, trump);
+      return evaluateCloserCandidate(card, player, hand, trump, analysis);
     }).sort(function (a, b) {
       return b.score - a.score;
     });
@@ -4754,59 +4788,40 @@
   }
 
   function getPlayedCards() {
-    var cards = [];
-
-    state.completedTricks.forEach(function (trick) {
-      trick.cards.forEach(function (play) {
-        cards.push(play.card);
-      });
-    });
-    state.trick.forEach(function (play) {
-      cards.push(play.card);
-    });
-
-    return cards;
+    return collectPlayedCardsModule(state);
   }
 
-  function countRemainingTrumpOutsidePlayer(player) {
-    var played = {};
-    var hand = state.hands[player] || [];
-
-    getPlayedCards().forEach(function (card) {
-      played[card.id] = true;
+  function buildAiTurnAnalysis(player) {
+    return createAiTurnAnalysisModule({
+      state: state,
+      player: player,
+      hand: state.hands[player] || [],
+      trump: state.trump,
+      rules: getRuleConfig(),
+      suits: SUITS,
+      buildDeck: buildDeckModule
     });
-    hand.forEach(function (card) {
-      played[card.id] = true;
-    });
-
-    return buildDeck().reduce(function (total, card) {
-      if (played[card.id]) {
-        return total;
-      }
-      return total + (effectiveSuit(card, state.trump) === state.trump ? 1 : 0);
-    }, 0);
   }
 
-  function countHigherUnknownCards(card, player, trump, knownCards) {
-    var known = {};
-    var targetSuit = effectiveSuit(card, trump);
-    var knownSet = knownCards || state.hands[player] || [];
-    var leadSuit = targetSuit;
+  function countRemainingTrumpOutsidePlayer(player, analysis) {
+    return countRemainingTrumpOutsidePlayerModule(
+      player,
+      state.hands[player] || [],
+      state.trump,
+      analysis || buildAiTurnAnalysis(player),
+      effectiveSuit
+    );
+  }
 
-    getPlayedCards().forEach(function (playedCard) {
-      known[playedCard.id] = true;
-    });
-    knownSet.forEach(function (knownCard) {
-      known[knownCard.id] = true;
-    });
-    known[card.id] = true;
-
-    return buildDeck().reduce(function (total, candidate) {
-      if (known[candidate.id] || effectiveSuit(candidate, trump) !== targetSuit) {
-        return total;
-      }
-      return total + (playStrength(candidate, leadSuit, trump) > playStrength(card, leadSuit, trump) ? 1 : 0);
-    }, 0);
+  function countHigherUnknownCards(card, player, trump, knownCards, analysis) {
+    return countHigherUnknownCardsModule(
+      card,
+      trump,
+      knownCards || state.hands[player] || [],
+      analysis || buildAiTurnAnalysis(player),
+      effectiveSuit,
+      playStrength
+    );
   }
 
   function cardControlScore(card, trump) {
@@ -5159,30 +5174,26 @@
     return gain >= protection - urgency;
   }
 
-  function estimateVisibleWinnerConfidence(winningPlay, player, playersAfter) {
-    var higherUnknown;
-
+  function estimateVisibleWinnerConfidence(winningPlay, player, playersAfter, analysis) {
     if (!winningPlay) {
       return 0;
     }
-    if (playersAfter <= 0) {
-      return 1;
-    }
-
-    higherUnknown = countHigherUnknownCards(
+    return estimateUnknownWinnerConfidenceModule(
       winningPlay.card,
-      player,
       state.trump,
-      state.hands[player] || []
+      state.hands[player] || [],
+      playersAfter,
+      analysis || buildAiTurnAnalysis(player),
+      effectiveSuit,
+      playStrength
     );
-
-    return clamp(1 - (higherUnknown / Math.max(1, playersAfter + 1)), 0, 1);
   }
 
   function buildAiPlayContext(player) {
+    var analysis = buildAiTurnAnalysis(player);
     var profile = getAiProfile(player);
     var match = getAiMatchState(player, profile);
-    var round = getAiRoundState(player);
+    var round = getAiRoundState(player, analysis);
     var winningPlay = null;
     var playersAfter = (activePlayersForState().length - 1) - state.trick.length;
     var teammateWinning = false;
@@ -5195,12 +5206,12 @@
       teammateWinning = teamForPlayer(winningPlay.player) === teamForPlayer(player) &&
         winningPlay.player !== player;
       if (teammateWinning) {
-        teammateWinConfidence = estimateVisibleWinnerConfidence(winningPlay, player, playersAfter);
+        teammateWinConfidence = estimateVisibleWinnerConfidence(winningPlay, player, playersAfter, analysis);
       }
     }
 
     mode = deriveAiTacticalMode(player, profile, match, round);
-    reservedCloser = findReservedCloser(player, state.hands[player], state.trump, round);
+    reservedCloser = findReservedCloser(player, state.hands[player], state.trump, round, analysis);
 
     return {
       player: player,
@@ -5216,29 +5227,35 @@
       lastTrickSwing: round.lastTrickSwing || (getRuleConfig().lastTrickBonus + buriedKittyPoints()),
       playersAfter: playersAfter,
       isLastToAct: state.trick.length === activePlayersForState().length - 1,
-      remainingTrumpElsewhere: countRemainingTrumpOutsidePlayer(player),
+      remainingTrumpElsewhere: countRemainingTrumpOutsidePlayer(player, analysis),
       winningPlay: winningPlay,
       winningTeam: winningPlay ? teamForPlayer(winningPlay.player) : null,
       teammateWinning: teammateWinning,
-      teammateWinConfidence: teammateWinConfidence
+      teammateWinConfidence: teammateWinConfidence,
+      analysis: analysis
     };
   }
 
   function estimateWinningConfidence(card, context) {
-    var higherUnknown;
-
     if (context.isLastToAct) {
       return 1;
     }
-    higherUnknown = countHigherUnknownCards(card, context.player, state.trump, context.hand);
-    return clamp(1 - (higherUnknown / Math.max(1, context.playersAfter + 1)), 0, 1);
+    return estimateUnknownWinnerConfidenceModule(
+      card,
+      state.trump,
+      context.hand,
+      context.playersAfter,
+      context.analysis,
+      effectiveSuit,
+      playStrength
+    );
   }
 
   function scoreAiLeadChoice(card, context) {
     var profile = context.profile;
     var mode = context.mode;
     var suit = effectiveSuit(card, state.trump);
-    var higherUnknown = countHigherUnknownCards(card, context.player, state.trump, context.hand);
+    var higherUnknown = countHigherUnknownCards(card, context.player, state.trump, context.hand, context.analysis);
     var suitCount = countSuitInHand(context.hand, suit, state.trump);
     var isTrump = suit === state.trump;
     var control = Math.max(0, 3 - higherUnknown);
@@ -5385,6 +5402,7 @@
     advanceBidTurn();
     updateTeammateOnlyBidState();
     syncSelectedBid();
+    markMatchDirty();
   }
 
   function recordPass(player) {
@@ -5393,6 +5411,7 @@
     addBidFeed(biddingPlayerName(player) + " passes.");
     advanceBidTurn();
     updateTeammateOnlyBidState();
+    markMatchDirty();
   }
 
   function addBidFeed(text) {
@@ -5428,6 +5447,7 @@
     addBidFeed(biddingPlayerName(state.bidder) + " wins the bid at " + state.winningBid + ".");
     state.biddingComplete = true;
     state.busy = false;
+    markMatchDirty();
     render();
   }
 
@@ -5450,6 +5470,7 @@
     state.pendingAskPartnerToLead = false;
     state.aiTrumpReady = false;
     state.aiTrumpMeterStarted = false;
+    markMatchDirty();
 
     if (state.bidder !== 0) {
       state.selectedDiscards = chooseAiDiscards(state.kittyReviewHand, state.selectedTrump);
@@ -5474,6 +5495,7 @@
       schedule(function () {
         state.aiTrumpReady = true;
         state.busy = false;
+        markMatchDirty();
         render();
       }, 1500);
       return;
@@ -5524,6 +5546,7 @@
     state.trickCounts = [0, 0];
     state.roundMessage = openingPlayMessage();
     state.busy = false;
+    markMatchDirty();
     render();
     maybeRunAiTurn();
   }
@@ -5615,42 +5638,14 @@
   function chooseAiPlay(player) {
     var context = buildAiPlayContext(player);
     var legal = getLegalCards(player);
-    var scored = legal.map(function (card) {
-      return {
-        card: card,
-        score: state.trick.length === 0
-          ? scoreAiLeadChoice(card, context)
-          : scoreAiFollowChoice(card, context)
-      };
+    return selectBestAiPlayModule({
+      legalCards: legal,
+      context: context,
+      trickLength: state.trick.length,
+      scoreLeadChoice: scoreAiLeadChoice,
+      scoreFollowChoice: scoreAiFollowChoice,
+      shouldReleaseReservedCloser: shouldReleaseReservedCloser
     });
-    var preferred = scored[0];
-    var fallback = null;
-
-    if (!legal.length) {
-      return null;
-    }
-
-    scored.slice(1).forEach(function (entry) {
-      if (entry.score > preferred.score) {
-        preferred = entry;
-      }
-    });
-
-    if (context.reservedCloser && legal.length > 1 && preferred.card.id === context.reservedCloser.id) {
-      scored.forEach(function (entry) {
-        if (entry.card.id === context.reservedCloser.id) {
-          return;
-        }
-        if (!fallback || entry.score > fallback.score) {
-          fallback = entry;
-        }
-      });
-      if (fallback && !shouldReleaseReservedCloser(context, preferred.score, fallback.score)) {
-        preferred = fallback;
-      }
-    }
-
-    return preferred.card;
   }
 
   function recoverAiTurn(player) {
@@ -5723,6 +5718,7 @@
 
     hand.splice(index, 1);
     state.trick.push({ player: player, card: card });
+    markMatchDirty();
     if (isCallPartnerRuleset() && state.callPartnerCardId === card.id && !state.callPartnerRevealed) {
       state.callPartnerRevealed = true;
     }
@@ -5793,6 +5789,7 @@
     clearPlayReaction(false);
     state.roundMessage = trickWinMessage(winner, pointsWon);
     state.busy = true;
+    markMatchDirty();
     if (!isLastTrick && pointsWon >= BIG_TRICK_THRESHOLD) {
       maybeShowAiPlayReaction("big_trick", winner);
     }
@@ -5811,6 +5808,7 @@
       state.currentPlayer = winner;
       state.winningCardPlayer = null;
       state.busy = false;
+      markMatchDirty();
 
       if (isLastTrick) {
         finishRound();
@@ -5920,6 +5918,7 @@
     state.roundMessage = "";
     state.dealer = (state.dealer + 1) % activePlayersForState().length;
     state.roundNumber += 1;
+    markMatchDirty();
 
     if (isCallPartner) {
       state.gameOver = individualMatchWinnerForRound(bidMade, bidderTeam) !== null;
@@ -5954,6 +5953,7 @@
             }
             state.phase = "summary";
             state.busy = false;
+            markMatchDirty();
             render();
           }, SCORING_TOTAL_DELAY);
         }, SCORING_OUTCOME_DELAY);
@@ -5972,125 +5972,35 @@
   }
 
   function determineTrickWinner(trick, leadSuit, trump) {
-    var winningIndex = 0;
-    var winningScore = playStrength(trick[0].card, leadSuit, trump);
-    var index;
-
-    for (index = 1; index < trick.length; index += 1) {
-      var score = playStrength(trick[index].card, leadSuit, trump);
-      if (score > winningScore) {
-        winningScore = score;
-        winningIndex = index;
-      }
-    }
-
-    return winningIndex;
+    return determineTrickWinnerModule(trick, leadSuit, trump, getRuleConfig());
   }
 
   function playStrength(card, leadSuit, trump) {
-    var suit = effectiveSuit(card, trump);
-    var base = 0;
-
-    if (suit === trump) {
-      base = 300;
-    } else if (suit === leadSuit) {
-      base = 200;
-    }
-
-    return base + trickRank(card, trump);
+    return playStrengthModule(card, leadSuit, trump, getRuleConfig());
   }
 
   function trickRank(card, trump) {
-    var rules = getRuleConfig();
-
-    if (rules.redOneAlwaysTrump && !card.isRook && card.suit === "red" && card.rank === 1) {
-      return 16;
-    }
-    if (card.isRook) {
-      return rules.rookMode === "house" ? 10.5 : 15;
-    }
-    if (card.rank === 1) {
-      return 15;
-    }
-    if (rules.rookMode === "house" && card.suit === trump && card.rank === 11) {
-      return 11;
-    }
-    if (rules.rookMode === "house" && card.suit === trump && card.rank === 10) {
-      return 10;
-    }
-    return card.rank;
+    return trickRankModule(card, trump, getRuleConfig());
   }
 
   function effectiveSuit(card, trump) {
-    var rules = getRuleConfig();
-
-    if (card.isRook) {
-      return trump;
-    }
-    if (rules.redOneAlwaysTrump && card.suit === "red" && card.rank === 1) {
-      return trump;
-    }
-    return card.suit;
+    return effectiveSuitModule(card, trump, getRuleConfig());
   }
 
   function cardPoints(card) {
-    var scoring = getRuleConfig().scoring;
-    if (card.isRook) {
-      return scoring.rook;
-    }
-    if (card.rank === 1) {
-      return scoring.rank1;
-    }
-    if (card.rank === 14) {
-      return scoring.rank14;
-    }
-    if (card.rank === 10) {
-      return scoring.rank10;
-    }
-    if (card.rank === 5) {
-      return scoring.rank5;
-    }
-    return 0;
+    return cardPointsModule(card, getRuleConfig());
   }
 
   function getLegalCards(player) {
-    var rules = getRuleConfig();
-    var hand = state.hands[player];
-    if (state.trick.length === 0) {
-      return hand.slice();
-    }
-    if (rules.rookMode === "official") {
-      var ledSuitCards = hand.filter(function (card) {
-        return effectiveSuit(card, state.trump) === state.leadSuit;
-      });
-      var rookCard = hand.find(function (card) {
-        return card.isRook;
-      });
+    return getLegalCardsModule(state, player, getRuleConfig());
+  }
 
-      if (!ledSuitCards.length) {
-        return hand.slice();
-      }
-      if (rookCard && state.leadSuit !== state.trump) {
-        return ledSuitCards.concat([rookCard]).filter(function (card, index, items) {
-          return items.findIndex(function (item) { return item.id === card.id; }) === index;
-        });
-      }
-      return ledSuitCards;
-    }
-    if (!hand.some(function (card) {
-      return effectiveSuit(card, state.trump) === state.leadSuit;
-    })) {
-      return hand.slice();
-    }
-    return hand.filter(function (card) {
-      return effectiveSuit(card, state.trump) === state.leadSuit;
-    });
+  function getLegalCardIdSet(player) {
+    return getLegalCardIdSetModule(state, player, getRuleConfig());
   }
 
   function isCardLegal(player, card) {
-    return getLegalCards(player).some(function (legalCard) {
-      return legalCard.id === card.id;
-    });
+    return getLegalCardIdSet(player).has(card.id);
   }
 
   function teamForPlayer(player) {
@@ -6107,25 +6017,7 @@
   }
 
   function buildDeck() {
-    var ranks = getRuleConfig().includedRanks || [];
-    var deck = [];
-    SUITS.forEach(function (suit) {
-      ranks.forEach(function (rank) {
-        deck.push({
-          id: suit + "-" + rank,
-          suit: suit,
-          rank: rank,
-          isRook: false
-        });
-      });
-    });
-    deck.push({
-      id: "rook",
-      suit: null,
-      rank: null,
-      isRook: true
-    });
-    return deck;
+    return buildDeckModule(getRuleConfig(), SUITS);
   }
 
   function shuffle(items, seed) {
@@ -6178,13 +6070,7 @@
   }
 
   function render() {
-    ui.phaseWelcome.classList.toggle("hidden", state.phase !== "welcome");
-    ui.phaseSetup.classList.toggle("hidden", state.phase !== "setup");
-    ui.phaseBidding.classList.toggle("hidden", state.phase !== "bidding");
-    ui.phaseTrump.classList.toggle("hidden", state.phase !== "trump");
-    ui.phasePlay.classList.toggle("hidden", state.phase !== "play");
-    ui.phaseScoring.classList.toggle("hidden", state.phase !== "scoring");
-    ui.phaseSummary.classList.toggle("hidden", state.phase !== "summary");
+    setPhaseVisibilityModule(ui, state.phase);
     var topbar = currentScoreTextForTopbar();
 
     ui.usScoreText.textContent = topbar.primary;
@@ -6216,7 +6102,6 @@
     renderMenuSheet();
     syncTopbarScrollState();
     processAchievementToastQueue();
-    saveActiveMatch();
   }
 
   function renderWelcomePhase() {
@@ -7587,73 +7472,21 @@
   }
 
   function renderHandGrid(container, hand, clickHandler, mode) {
-    hand = hand || [];
-    container.innerHTML = "";
-
-    hand.forEach(function (card) {
-      var button = document.createElement("button");
-      var rank = document.createElement("div");
-      var suit = document.createElement("div");
-      var legal = mode === "play" && clickHandler ? isCardLegal(0, card) : true;
-      var isWoodsonHand = mode === "woodson-hand";
-      var isWoodsonKitty = mode === "woodson-kitty";
-      var isCallPartnerCard = mode === "call-partner";
-
-      button.type = "button";
-      var isReference = mode === "reference" || mode === "kitty" || isWoodsonHand || isWoodsonKitty;
-      var isDiscardSelected = mode === "kitty" && state.selectedDiscards.indexOf(card.id) !== -1;
-      var isKittyCard = mode === "kitty" && isCardFromKitty(card.id);
-      var isWoodsonSelected = (isWoodsonHand && state.exchangeSelectedHandCardId === card.id) ||
-        (isWoodsonKitty && state.exchangeSelectedKittyCardId === card.id);
-      var isCallPartnerSelected = isCallPartnerCard && state.pendingCallPartnerCardId === card.id;
-      var kittyLegal = mode !== "kitty" || canDiscardFromBidderSetup(card);
-      var woodsonLegal = !isWoodsonHand || canDiscardInWoodsonExchange(card);
-      button.className = "card" +
-        (card.isRook ? " rook-card" : "") +
-        " " + cardFaceClass(card) +
-        (isReference ? " reference-card" : "") +
-        (mode === "kitty" || isWoodsonHand || isWoodsonKitty || isCallPartnerCard ? " selectable-reference" : "") +
-        (mode === "play" && clickHandler && legal ? " playable-card" : "") +
-        (isKittyCard ? " kitty-card" : "") +
-        (isDiscardSelected || isWoodsonSelected || isCallPartnerSelected ? " selected-discard" : "");
-      if (mode === "play" && clickHandler) {
-        button.disabled = false;
-        button.classList.toggle("inactive-card", !legal);
-        button.setAttribute("aria-disabled", legal ? "false" : "true");
-        button.addEventListener("click", function () {
-          if (legal) {
-            clickHandler(card.id);
-          } else {
-            triggerCardLockout(button);
-          }
-        });
-      } else {
-        button.disabled = !clickHandler || !legal || (mode === "kitty" && !kittyLegal) || (isWoodsonHand && !woodsonLegal);
-        if (mode === "kitty") {
-          button.classList.toggle("inactive-card", !kittyLegal);
-        }
-        if (isWoodsonHand) {
-          button.classList.toggle("inactive-card", !woodsonLegal);
-        }
-        if (clickHandler && legal && (mode !== "kitty" || kittyLegal) && (!isWoodsonHand || woodsonLegal)) {
-          button.addEventListener("click", function () {
-            clickHandler(card.id);
-          });
-        }
-      }
-
-      rank.className = "card-rank";
-      rank.textContent = cardLabel(card);
-      suit.className = "card-suit " + suitClass(card);
-      if (mode === "play" && card.isRook && state.trump) {
-        button.className += " show-rook-trump rook-trump-" + state.trump;
-      }
-      if (shouldShowRedOneTrumpDot(card)) {
-        button.className += " show-red-one-trump rook-trump-" + state.trump;
-      }
-      button.appendChild(rank);
-      button.appendChild(suit);
-      container.appendChild(button);
+    renderHandGridModule({
+      container: container,
+      hand: hand || [],
+      clickHandler: clickHandler,
+      mode: mode,
+      state: state,
+      legalCardIdSet: mode === "play" && clickHandler ? getLegalCardIdSet(0) : new Set(),
+      canDiscardFromBidderSetup: canDiscardFromBidderSetup,
+      canDiscardInWoodsonExchange: canDiscardInWoodsonExchange,
+      isCardFromKitty: isCardFromKitty,
+      triggerCardLockout: triggerCardLockout,
+      cardFaceClass: cardFaceClass,
+      cardLabel: cardLabel,
+      suitClass: suitClass,
+      shouldShowRedOneTrumpDot: shouldShowRedOneTrumpDot
     });
   }
 
@@ -7754,6 +7587,7 @@
     } else {
       return;
     }
+    markMatchDirty();
     renderTrumpPhase();
   }
 
@@ -7762,6 +7596,7 @@
       return;
     }
     state.exchangeSelectedHandCardId = state.exchangeSelectedHandCardId === cardId ? null : cardId;
+    markMatchDirty();
     renderTrumpPhase();
   }
 
@@ -7770,6 +7605,7 @@
       return;
     }
     state.exchangeSelectedKittyCardId = state.exchangeSelectedKittyCardId === cardId ? null : cardId;
+    markMatchDirty();
     renderTrumpPhase();
   }
 
@@ -7778,6 +7614,7 @@
       return;
     }
     state.pendingCallPartnerCardId = state.pendingCallPartnerCardId === cardId ? null : cardId;
+    markMatchDirty();
     renderTrumpPhase();
   }
 
@@ -7793,6 +7630,7 @@
     }
     state.exchangeSelectedHandCardId = null;
     state.exchangeSelectedKittyCardId = null;
+    markMatchDirty();
     renderTrumpPhase();
   }
 
@@ -8017,6 +7855,7 @@
     });
     sortHand(state.buriedKitty, state.selectedTrump || state.trump);
     sortHand(state.kittyReviewHand, state.selectedTrump || state.trump);
+    markMatchDirty();
   }
 
   function buildScoringTeamGroup(teamName, players, grouped) {
@@ -8179,12 +8018,13 @@
     }
 
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("sw.js").catch(function () {
+      navigator.serviceWorker.register("/sw.js").catch(function () {
         return null;
       });
     });
   }
 
+  initMatchPersistence();
   loadProfile();
   refreshSavedMatchMeta();
   cacheDom();
