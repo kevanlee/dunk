@@ -2350,9 +2350,7 @@ import {
     state.menuOpen = false;
     state.menuView = "hub";
     updateProfileTimestamp();
-    if (isKentuckyBaselineRuleset(nextState.rulesetId)) {
-      profile.totals.matchesStarted += 1;
-    }
+    profile.totals.matchesStarted += 1;
     saveProfile();
     startRound();
   }
@@ -2360,11 +2358,6 @@ import {
   function recordRoundStats(bidMade) {
     var bidderTeam;
     var bidMargin;
-
-    if (!isKentuckyBaselineRuleset()) {
-      state.profileRoundsTracked = state.roundHistory.length;
-      return;
-    }
 
     if (state.profileRoundsTracked >= state.roundHistory.length) {
       return;
@@ -2422,11 +2415,6 @@ import {
     var won;
 
     if (!state.gameOver || state.profileMatchCompleteRecorded) {
-      return;
-    }
-
-    if (!isKentuckyBaselineRuleset()) {
-      state.profileMatchCompleteRecorded = true;
       return;
     }
 
@@ -3844,7 +3832,7 @@ import {
     ui.menuFullOpponentSetRaw.textContent =
       profile.opponents.opponentSetRounds + "/" + profile.opponents.opponentBidRounds;
     ui.menuFullBidAttempts.textContent = String(bidAttempts);
-    ui.menuFullProgressStatus.textContent = "Tracking " + getRuleConfig().label;
+    ui.menuFullProgressStatus.textContent = "Tracking all game modes";
     ui.menuFullUsPoints.textContent = String(profile.totals.usPointsEarned);
     ui.menuFullThemPoints.textContent = String(profile.totals.themPointsEarned);
     ui.menuFullCurrentStreak.textContent = String(profile.streaks.currentMatchWinStreak);
@@ -6996,7 +6984,7 @@ import {
     ui.summaryScoring.classList.toggle("hidden", state.summaryStep !== 1 || !state.summaryScoringOpen);
     ui.summaryHistory.classList.toggle("hidden", state.summaryStep !== 2);
     ui.summaryStory.classList.toggle("hidden", state.summaryStep !== 1);
-    ui.summaryProfileCard.classList.toggle("hidden", !(state.summaryStep === 2 && state.gameOver && isKentuckyBaselineRuleset()));
+    ui.summaryProfileCard.classList.toggle("hidden", !(state.summaryStep === 2 && state.gameOver));
     ui.summaryFinalResult.classList.toggle("hidden", !(state.summaryStep === 2 && state.gameOver));
     clearSummaryStorySticker();
 
@@ -7050,7 +7038,7 @@ import {
     ui.summaryMatchNote.textContent = matchSummaryNote();
     renderFinalResultBanner();
     applyMatchSummaryBackground();
-    if (state.gameOver && isKentuckyBaselineRuleset()) {
+    if (state.gameOver) {
       renderSummaryProfileCard();
     }
     renderSummaryTable();
@@ -7160,7 +7148,7 @@ import {
     ui.summaryProfileStreak.textContent = String(profile.streaks.currentMatchWinStreak);
     ui.summaryProfileDetail.textContent =
       "Rounds logged: " + profile.totals.roundsCompleted + ". Human bids won: " +
-      profile.human.bidsWon + ". Current ruleset: " + getRuleConfig().label + ".";
+      profile.human.bidsWon + ". Includes all game modes.";
   }
 
   function renderSummaryStorySticker() {
